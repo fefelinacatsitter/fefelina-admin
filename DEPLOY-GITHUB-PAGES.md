@@ -25,11 +25,15 @@ git branch -M main
 
 ### 2. Configurar Variáveis de Ambiente
 
-**No GitHub (Secrets):**
+**No GitHub (Secrets - OBRIGATÓRIO):**
 1. Vá em `Settings` → `Secrets and variables` → `Actions`
-2. Adicione os secrets:
-   - `VITE_SUPABASE_URL`: URL do seu projeto Supabase
-   - `VITE_SUPABASE_ANON_KEY`: Chave anônima do Supabase
+2. Clique na aba **"Secrets"** (não Variables)
+3. Clique em **"New repository secret"**
+4. Adicione os seguintes secrets:
+   - **Nome:** `VITE_SUPABASE_URL` **Valor:** URL do seu projeto Supabase
+   - **Nome:** `VITE_SUPABASE_ANON_KEY` **Valor:** Chave anônima do Supabase
+
+> ⚠️ **IMPORTANTE:** Use **Secrets**, não Variables, para proteger suas credenciais do Supabase!
 
 **Localmente (.env):**
 ```bash
@@ -140,6 +144,16 @@ export default defineConfig({
 - Confirme conexão com Supabase
 
 ## 🐛 Troubleshooting
+
+### Secrets/Variables
+**❌ Erro comum:** Adicionar como Variables em vez de Secrets
+- ✅ **Correto:** `Settings` → `Secrets and variables` → `Actions` → aba **"Secrets"**
+- ❌ **Errado:** aba "Variables"
+
+**❌ Build falha com erro de Supabase:**
+- Verificar se os secrets foram adicionados corretamente
+- Confirmar que os nomes estão exatos: `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
+- Verificar se os valores estão corretos (sem espaços extras)
 
 ### Build Falha
 ```bash

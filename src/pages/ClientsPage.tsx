@@ -374,23 +374,7 @@ export default function ClientsPage() {
             Lista de todos os clientes registrados no sistema.
           </p>
         </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex items-center space-x-4">
-          {/* Seletor de Ordenação */}
-          <div className="flex items-center space-x-2">
-            <label htmlFor="sort-select" className="text-sm font-medium text-gray-700">
-              Ordenar por:
-            </label>
-            <select
-              id="sort-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'recent_services' | 'alphabetical')}
-              className="block w-48 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="recent_services">Serviços Mais Recentes</option>
-              <option value="alphabetical">Ordem Alfabética</option>
-            </select>
-          </div>
-          
+        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
           <button
             type="button"
             onClick={() => setShowAddForm(true)}
@@ -778,9 +762,10 @@ export default function ClientsPage() {
         </div>
       )}
 
-      {/* Campo de Busca */}
-      <div className="mt-6 mb-4">
-        <div className="max-w-md">
+      {/* Controles de Busca e Ordenação - Responsivos */}
+      <div className="mt-6 mb-4 space-y-4 sm:space-y-0 sm:flex sm:items-end sm:justify-between">
+        {/* Campo de Busca */}
+        <div className="flex-1 max-w-md">
           <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
             Buscar Cliente
           </label>
@@ -796,7 +781,7 @@ export default function ClientsPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Digite o nome do cliente..."
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm"
+              className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm"
             />
             {searchTerm && (
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -818,9 +803,85 @@ export default function ClientsPage() {
             </p>
           )}
         </div>
+
+        {/* Seletor de Ordenação */}
+        <div className="flex-shrink-0">
+          <label htmlFor="sort" className="block text-sm font-medium text-gray-700 mb-2">
+            Ordenar por
+          </label>
+          <select
+            id="sort"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'recent_services' | 'alphabetical')}
+            className="block w-full pl-3 pr-10 py-2 text-sm border border-gray-300 bg-white rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="recent_services">Serviços Recentes</option>
+            <option value="alphabetical">Ordem Alfabética</option>
+          </select>
+        </div>
       </div>
 
-      <div className="mt-8 flex flex-col">
+      {/* Versão Mobile - Cards */}
+      <div className="mt-8 md:hidden space-y-4">
+        {loading ? (
+          <div className="text-center text-gray-500 py-4">Carregando...</div>
+        ) : filteredClients.length === 0 ? (
+          <div className="text-center text-gray-500 py-4">
+            {searchTerm ? `Nenhum cliente encontrado para "${searchTerm}"` : 'Nenhum cliente cadastrado ainda.'}
+          </div>
+        ) : (
+          filteredClients.map((client) => (
+            <div key={client.id} className="bg-white rounded-lg shadow-sm border p-4">
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="font-medium text-gray-900 text-lg">{client.nome}</h3>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => openEditForm(client)}
+                    className="text-primary-600 hover:text-primary-900 text-sm"
+                  >
+                    Editar
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteClient(client)}
+                    disabled={deletingClient === client.id}
+                    className={`text-sm ${
+                      deletingClient === client.id 
+                        ? 'text-gray-400 cursor-not-allowed' 
+                        : 'text-red-600 hover:text-red-900'
+                    }`}
+                  >
+                    {deletingClient === client.id ? 'Excluindo...' : 'Excluir'}
+                  </button>
+                </div>
+              </div>
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Diária:</span>
+                  <span className="font-medium">R$ {client.valor_diaria.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">2 Visitas:</span>
+                  <span className="font-medium">R$ {client.valor_duas_visitas.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Endereço:</span>
+                  <p className="text-gray-900 mt-1">{client.endereco_completo}</p>
+                </div>
+                {client.veterinario_confianca && (
+                  <div>
+                    <span className="text-gray-600">Veterinário:</span>
+                    <p className="text-gray-900 mt-1">{client.veterinario_confianca}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Versão Desktop - Tabela */}
+      <div className="mt-8 hidden md:flex flex-col">
         <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
             <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
@@ -918,7 +979,7 @@ export default function ClientsPage() {
               
               <div className="mb-6">
                 <p className="text-sm text-gray-600 mb-4">
-                  Tem certeza que deseja excluir o cliente <strong>"{showDeleteConfirm.nome}"</strong>?
+                  Tem certeza que deseja excluir o cliente <strong>"{showDeleteConfirm?.nome}"</strong>?
                 </p>
                 
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-left">

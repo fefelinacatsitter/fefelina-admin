@@ -44,49 +44,37 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      // Garantir que estamos usando a data local correta
       const today = new Date()
       const year = today.getFullYear()
       const month = String(today.getMonth() + 1).padStart(2, '0')
       const day = String(today.getDate()).padStart(2, '0')
-      const todayStr = `${year}-${month}-${day}`
-      
-      // Buscar estatísticas básicas
-      const [clientsResult, petsResult, servicesResult, visitsResult, upcomingResult, monthlyRevenueResult] = await Promise.all([
-        supabase.from('clients').select('id', { count: 'exact', head: true }),
-        supabase.from('pets').select('id', { count: 'exact', head: true }),
-        supabase.from('services').select('id', { count: 'exact', head: true }).in('status', ['pendente', 'em_andamento', 'concluido']).gte('data_fim', todayStr),
-        supabase.from('visits').select('id', { count: 'exact', head: true }).eq('data', todayStr).neq('status', 'cancelada'),
-        supabase
-          .from('visits')
-          .select(`
-            id,
-            data,
-            horario,
-            tipo_visita,
-            valor,
-            status,
-            status_pagamento,
-            clients (nome),
-            services (nome_servico)
-          `)
-          .gte('data', todayStr)
-          .neq('status', 'cancelada')
-          .order('data', { ascending: true })
-          .order('horario', { ascending: true })
-          .limit(10),
-        // Receita do mês atual
-        supabase
-          .from('visits')
-          .select('valor, status_pagamento')
-          .gte('data', `${year}-${month}-01`)
-          .lte('data', `${year}-${month}-31`)
-          .eq('status_pagamento', 'pago')
-          .neq('status', 'cancelada')
+      const todayString = `${year}-${month}-${day}`
+
+      // Buscar estatísticas
+      const [clientsResult, petsResult, servicesResult, visitsResult, revenueResult, monthlyVisitsResult] = await Promise.all([
+        supabase.from('clients').select('*', { count: 'exact' }),
+        supabase.from('pets').select('*', { count: 'exact' }),
+        supabase.from('services').select('*', { count: 'exact' }).eq('status', 'ativo'),
+        supabase.from('visits').select('*', { count: 'exact' }).eq('data', todayString),
+        supabase.from('visits').select('valor').eq('status_pagamento', 'pago').gte('data', `${year}-${month}-01`).lte('data', `${year}-${month}-31`),
+        supabase.from('visits').select('*', { count: 'exact' }).eq('status', 'realizada').gte('data', `${year}-${month}-01`).lte('data', `${year}-${month}-31`)
       ])
 
-      const monthlyRevenue = monthlyRevenueResult.data?.reduce((sum, visit) => sum + visit.valor, 0) || 0
-      const monthlyVisits = monthlyRevenueResult.count || 0
+      // Buscar próximas visitas
+      const upcomingResult = await supabase
+        .from('visits')
+        .select(`
+          *,
+          clients(nome),
+          services(nome_servico)
+        `)
+        .gte('data', todayString)
+        .order('data', { ascending: true })
+        .order('horario', { ascending: true })
+        .limit(10)
+
+      // Calcular receita mensal
+      const monthlyRevenue = revenueResult.data?.reduce((sum, visit) => sum + visit.valor, 0) || 0
 
       setStats({
         totalClients: clientsResult.count || 0,
@@ -94,7 +82,7 @@ export default function Dashboard() {
         activeServices: servicesResult.count || 0,
         visitsToday: visitsResult.count || 0,
         monthlyRevenue,
-        monthlyVisits
+        monthlyVisits: monthlyVisitsResult.count || 0
       })
 
       setUpcomingVisits((upcomingResult.data || []).map(visit => ({
@@ -117,7 +105,6 @@ export default function Dashboard() {
   }
 
   const formatDate = (dateString: string) => {
-    // Criar data corretamente para evitar problemas de fuso horário
     const [year, month, day] = dateString.split('-').map(Number)
     const date = new Date(year, month - 1, day)
     
@@ -143,37 +130,17 @@ export default function Dashboard() {
       cancelada: 'bg-red-100 text-red-800'
     }
     
+    return styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800'
+  }
+
+  const getStatusLabel = (status: string) => {
     const labels = {
       agendada: 'Agendada',
       realizada: 'Realizada',
       cancelada: 'Cancelada'
     }
     
-    return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800'}`}>
-        {labels[status as keyof typeof labels] || status}
-      </span>
-    )
-  }
-
-  const getPaymentStatusBadge = (status: string) => {
-    const styles = {
-      pendente: 'bg-yellow-100 text-yellow-800',
-      pendente_plataforma: 'bg-orange-100 text-orange-800',
-      pago: 'bg-green-100 text-green-800'
-    }
-    
-    const labels = {
-      pendente: 'Pendente',
-      pendente_plataforma: 'Pendente Plataforma',
-      pago: 'Pago'
-    }
-    
-    return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800'}`}>
-        {labels[status as keyof typeof labels] || status}
-      </span>
-    )
+    return labels[status as keyof typeof labels] || status
   }
 
   if (loading) {
@@ -189,7 +156,8 @@ export default function Dashboard() {
       <h1 className="page-title-fefelina">Dashboard</h1>
       <div className="divider-fefelina"></div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Cards de estatísticas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="stats-card-fefelina">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -197,7 +165,7 @@ export default function Dashboard() {
                 <span>C</span>
               </div>
             </div>
-            <div className="ml-5 w-0 flex-1">
+            <div className="ml-4 w-0 flex-1">
               <dl>
                 <dt className="text-sm font-medium text-gray-500 truncate">Total de Clientes</dt>
                 <dd className="text-lg font-semibold text-gray-900">{stats.totalClients}</dd>
@@ -213,7 +181,7 @@ export default function Dashboard() {
                 <span>P</span>
               </div>
             </div>
-            <div className="ml-5 w-0 flex-1">
+            <div className="ml-4 w-0 flex-1">
               <dl>
                 <dt className="text-sm font-medium text-gray-500 truncate">Total de Pets</dt>
                 <dd className="text-lg font-semibold text-gray-900">{stats.totalPets}</dd>
@@ -229,7 +197,7 @@ export default function Dashboard() {
                 <span>S</span>
               </div>
             </div>
-            <div className="ml-5 w-0 flex-1">
+            <div className="ml-4 w-0 flex-1">
               <dl>
                 <dt className="text-sm font-medium text-gray-500 truncate">Serviços Ativos</dt>
                 <dd className="text-lg font-semibold text-gray-900">{stats.activeServices}</dd>
@@ -245,7 +213,7 @@ export default function Dashboard() {
                 <span>V</span>
               </div>
             </div>
-            <div className="ml-5 w-0 flex-1">
+            <div className="ml-4 w-0 flex-1">
               <dl>
                 <dt className="text-sm font-medium text-gray-500 truncate">Visitas Hoje</dt>
                 <dd className="text-lg font-semibold text-gray-900">{stats.visitsToday}</dd>
@@ -255,136 +223,57 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Cards Financeiros do Mês */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumo Financeiro - {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="stats-card-fefelina">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="icon-fefelina bg-green-500">
-                  <span>R$</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Receita do Mês</dt>
-                  <dd className="text-lg font-semibold text-gray-900">
-                    {new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    }).format(stats.monthlyRevenue)}
-                  </dd>
-                  <dd className="text-sm text-green-600">Valores já recebidos</dd>
-                </dl>
-              </div>
+      {/* Seção inferior responsiva */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        {/* Gráfico de Receita */}
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Receita Mensal</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+              <span className="text-sm md:text-base text-gray-600">Este Mês</span>
+              <span className="font-semibold text-green-600">{formatCurrency(stats.monthlyRevenue)}</span>
             </div>
-          </div>
-
-          <div className="stats-card-fefelina">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="icon-fefelina bg-blue-500">
-                  <span>📊</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Visitas Pagas no Mês</dt>
-                  <dd className="text-lg font-semibold text-gray-900">{stats.monthlyVisits}</dd>
-                  <dd className="text-sm text-blue-600">Visitas já realizadas e pagas</dd>
-                </dl>
-              </div>
+            <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+              <span className="text-sm md:text-base text-gray-600">Visitas do Mês</span>
+              <span className="font-semibold text-blue-600">{stats.monthlyVisits}</span>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="card-fefelina">
-        <h3 className="section-title-fefelina mb-4">
-          Próximas Visitas
-        </h3>
-        <div className="section-divider-fefelina"></div>
-        
-        {upcomingVisits.length === 0 ? (
-          <div className="empty-state-fefelina">
-            <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <h4 className="text-lg font-medium text-gray-900 mb-2">Nenhuma visita agendada</h4>
-            <p className="text-gray-500">Não há visitas programadas para os próximos dias.</p>
-          </div>
-        ) : (
-          <div className="overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Data
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Horário
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valor
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pagamento
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {upcomingVisits.map((visit) => (
-                  <tr key={visit.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(visit.data)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {visit.horario}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {visit.clients?.nome}
+        {/* Próximas Visitas */}
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Próximas Visitas</h3>
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {upcomingVisits.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">Nenhuma visita agendada</p>
+            ) : (
+              upcomingVisits.slice(0, 5).map((visit) => (
+                <div key={visit.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-gray-900 truncate">
+                          {visit.clients?.nome || 'Cliente não encontrado'}
+                        </span>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(visit.status)}`}>
+                          {getStatusLabel(visit.status)}
+                        </span>
                       </div>
-                      {visit.services?.nome_servico && (
-                        <div className="text-sm text-gray-500">
-                          {visit.services.nome_servico}
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <div>{formatDate(visit.data)} às {visit.horario}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="capitalize">{visit.tipo_visita}</span>
+                          <span>•</span>
+                          <span className="font-medium text-green-600">{formatCurrency(visit.valor)}</span>
                         </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        visit.tipo_visita === 'inteira' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                      }`}>
-                        {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(visit.valor)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(visit.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getPaymentStatusBadge(visit.status_pagamento)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

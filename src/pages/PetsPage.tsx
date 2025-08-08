@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 
 interface Pet {
   id: string
@@ -24,8 +25,12 @@ export default function PetsPage() {
   const [pets, setPets] = useState<Pet[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [updating, setUpdating] = useState(false)
+  const [deletingPet, setDeletingPet] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [editingPet, setEditingPet] = useState<Pet | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<Pet | null>(null)
   const [formData, setFormData] = useState({
     nome: '',
     caracteristica: '',
@@ -77,6 +82,18 @@ export default function PetsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Prevenir múltiplos envios
+    if (editingPet ? updating : submitting) {
+      toast.error('Aguarde, o pet está sendo salvo...')
+      return
+    }
+
+    if (editingPet) {
+      setUpdating(true)
+    } else {
+      setSubmitting(true)
+    }
+    
     const petData = {
       nome: formData.nome,
       caracteristica: formData.caracteristica,
@@ -92,36 +109,55 @@ export default function PetsPage() {
           .eq('id', editingPet.id)
         
         if (error) throw error
+        toast.success(`Pet "${formData.nome}" atualizado com sucesso!`)
       } else {
         const { error } = await supabase
           .from('pets')
           .insert([petData])
         
         if (error) throw error
+        toast.success(`Pet "${formData.nome}" adicionado com sucesso!`)
       }
 
       await fetchPets()
       closeModal()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar pet:', error)
-      alert('Erro ao salvar pet. Tente novamente.')
+      toast.error(`Erro ao salvar pet: ${error.message}`)
+    } finally {
+      if (editingPet) {
+        setUpdating(false)
+      } else {
+        setSubmitting(false)
+      }
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este pet?')) return
+  const handleDelete = async (pet: Pet) => {
+    setShowDeleteConfirm(pet)
+  }
+
+  const confirmDeletePet = async () => {
+    if (!showDeleteConfirm) return
+
+    const pet = showDeleteConfirm
+    setDeletingPet(pet.id)
+    setShowDeleteConfirm(null)
 
     try {
       const { error } = await supabase
         .from('pets')
         .delete()
-        .eq('id', id)
+        .eq('id', pet.id)
 
       if (error) throw error
+      toast.success(`Pet "${pet.nome}" excluído com sucesso!`)
       await fetchPets()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao excluir pet:', error)
-      alert('Erro ao excluir pet. Tente novamente.')
+      toast.error(`Erro ao excluir pet: ${error.message}`)
+    } finally {
+      setDeletingPet(null)
     }
   }
 
@@ -234,8 +270,13 @@ export default function PetsPage() {
                     </svg>
                   </button>
                   <button
-                    onClick={() => handleDelete(pet.id)}
-                    className="text-red-600 hover:text-red-700 transition-colors"
+                    onClick={() => handleDelete(pet)}
+                    disabled={deletingPet === pet.id}
+                    className={`transition-colors ${
+                      deletingPet === pet.id 
+                        ? 'text-red-400 cursor-not-allowed' 
+                        : 'text-red-600 hover:text-red-700'
+                    }`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -349,9 +390,17 @@ export default function PetsPage() {
               <div className="flex space-x-3">
                 <button
                   type="submit"
-                  className="btn-fefelina flex-1"
+                  disabled={editingPet ? updating : submitting}
+                  className="btn-fefelina flex-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {editingPet ? 'Atualizar Pet' : 'Cadastrar Pet'}
+                  {(editingPet ? updating : submitting) ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Salvando...
+                    </>
+                  ) : (
+                    editingPet ? 'Atualizar Pet' : 'Cadastrar Pet'
+                  )}
                 </button>
                 <button
                   type="button"
@@ -362,6 +411,53 @@ export default function PetsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative mx-auto p-6 border w-full max-w-md shadow-fefelina-hover rounded-2xl bg-white">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Confirmar Exclusão
+              </h3>
+              
+              <div className="mb-6">
+                <p className="text-sm text-gray-600 mb-4">
+                  Tem certeza que deseja excluir o pet <strong>"{showDeleteConfirm.nome}"</strong>?
+                </p>
+                
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-left">
+                  <p className="text-sm font-medium text-red-800 mb-1">⚠️ ATENÇÃO:</p>
+                  <p className="text-sm text-red-700">Esta ação não pode ser desfeita.</p>
+                </div>
+              </div>
+              
+              <div className="flex justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeletePet}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Confirmar Exclusão
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

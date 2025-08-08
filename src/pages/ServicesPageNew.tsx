@@ -54,7 +54,7 @@ export default function ServicesPage() {
     client_id: '',
     data_inicio: '',
     data_fim: '',
-    status: 'pendente' as const,
+    status: 'pendente' as 'pendente' | 'em_andamento' | 'concluido' | 'pago',
     desconto_plataforma_default: 0
   })
 

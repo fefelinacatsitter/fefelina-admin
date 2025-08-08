@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import { Session } from '@supabase/supabase-js'
+import { Toaster } from 'react-hot-toast'
 import LoginPage from './pages/LoginPage'
 import Dashboard from './pages/Dashboard'
 import ClientsPage from './pages/ClientsPage'
@@ -54,6 +55,42 @@ function App() {
           <Route path="/finances" element={<FinancesPage />} />
         </Routes>
       </Layout>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#fff',
+            color: '#374151',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+            fontSize: '14px',
+            fontWeight: '500',
+          },
+          success: {
+            style: {
+              border: '1px solid #10b981',
+              color: '#047857',
+            },
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            style: {
+              border: '1px solid #ef4444',
+              color: '#dc2626',
+            },
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
     </Router>
   )
 }

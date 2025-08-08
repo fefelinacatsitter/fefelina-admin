@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 
 interface Visit {
   id: string
@@ -23,6 +24,7 @@ interface Visit {
 export default function VisitsPage() {
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
+  const [updatingVisit, setUpdatingVisit] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState<'todas' | 'hoje' | 'proximas' | 'realizadas'>('hoje')
   const [hasFutureVisits, setHasFutureVisits] = useState(false)
 
@@ -108,6 +110,13 @@ export default function VisitsPage() {
   }
 
   const updateVisitStatus = async (visitId: string, status: 'agendada' | 'realizada' | 'cancelada') => {
+    if (updatingVisit === visitId) {
+      toast.error('Aguarde, a visita está sendo atualizada...')
+      return
+    }
+
+    setUpdatingVisit(visitId)
+
     try {
       const { error } = await supabase
         .from('visits')
@@ -115,14 +124,31 @@ export default function VisitsPage() {
         .eq('id', visitId)
 
       if (error) throw error
+      
+      const statusLabels = {
+        'agendada': 'agendada',
+        'realizada': 'marcada como realizada',
+        'cancelada': 'cancelada'
+      }
+      
+      toast.success(`Visita ${statusLabels[status]} com sucesso!`)
       await fetchVisits()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao atualizar status da visita:', error)
-      alert('Erro ao atualizar status da visita')
+      toast.error(`Erro ao atualizar status da visita: ${error.message}`)
+    } finally {
+      setUpdatingVisit(null)
     }
   }
 
   const updatePaymentStatus = async (visitId: string, status_pagamento: 'pendente_plataforma' | 'pendente' | 'pago') => {
+    if (updatingVisit === visitId) {
+      toast.error('Aguarde, o pagamento está sendo atualizado...')
+      return
+    }
+
+    setUpdatingVisit(visitId)
+
     try {
       const { error } = await supabase
         .from('visits')
@@ -130,10 +156,20 @@ export default function VisitsPage() {
         .eq('id', visitId)
 
       if (error) throw error
+      
+      const statusLabels = {
+        'pendente_plataforma': 'pendente na plataforma',
+        'pendente': 'pendente',
+        'pago': 'pago'
+      }
+      
+      toast.success(`Status de pagamento atualizado para "${statusLabels[status_pagamento]}"!`)
       await fetchVisits()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao atualizar status de pagamento:', error)
-      alert('Erro ao atualizar status de pagamento')
+      toast.error(`Erro ao atualizar status de pagamento: ${error.message}`)
+    } finally {
+      setUpdatingVisit(null)
     }
   }
 
@@ -329,7 +365,8 @@ export default function VisitsPage() {
                       <select
                         value={visit.status}
                         onChange={(e) => updateVisitStatus(visit.id, e.target.value as any)}
-                        className="text-xs border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded"
+                        disabled={updatingVisit === visit.id}
+                        className="text-xs border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="agendada">Agendada</option>
                         <option value="realizada">Realizada</option>
@@ -340,7 +377,8 @@ export default function VisitsPage() {
                       <select
                         value={visit.status_pagamento}
                         onChange={(e) => updatePaymentStatus(visit.id, e.target.value as any)}
-                        className="text-xs border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded"
+                        disabled={updatingVisit === visit.id}
+                        className="text-xs border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="pendente_plataforma">Pendente Plataforma</option>
                         <option value="pendente">Pendente</option>
@@ -352,17 +390,27 @@ export default function VisitsPage() {
                         {visit.status === 'agendada' && (
                           <button
                             onClick={() => updateVisitStatus(visit.id, 'realizada')}
-                            className="text-green-600 hover:text-green-900 text-xs font-medium"
+                            disabled={updatingVisit === visit.id}
+                            className={`text-xs font-medium ${
+                              updatingVisit === visit.id 
+                                ? 'text-gray-400 cursor-not-allowed' 
+                                : 'text-green-600 hover:text-green-900'
+                            }`}
                           >
-                            Marcar Realizada
+                            {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Realizada'}
                           </button>
                         )}
                         {visit.status_pagamento !== 'pago' && (
                           <button
                             onClick={() => updatePaymentStatus(visit.id, 'pago')}
-                            className="text-blue-600 hover:text-blue-900 text-xs font-medium"
+                            disabled={updatingVisit === visit.id}
+                            className={`text-xs font-medium ${
+                              updatingVisit === visit.id 
+                                ? 'text-gray-400 cursor-not-allowed' 
+                                : 'text-blue-600 hover:text-blue-900'
+                            }`}
                           >
-                            Marcar Pago
+                            {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Pago'}
                           </button>
                         )}
                       </div>

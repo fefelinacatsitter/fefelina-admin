@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react'
 import { supabase, Client, Pet } from '../lib/supabase'
+import toast from 'react-hot-toast'
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
+  const [deletingClient, setDeletingClient] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [updating, setUpdating] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [existingPets, setExistingPets] = useState<Pet[]>([])
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<Client | null>(null)
   const [formData, setFormData] = useState({
     nome: '',
     valor_diaria: '',
@@ -40,6 +45,14 @@ export default function ClientsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Prevenir múltiplos envios
+    if (submitting) {
+      toast.error('Aguarde, o cliente está sendo salvo...')
+      return
+    }
+
+    setSubmitting(true)
     
     try {
       // 1. Inserir o cliente primeiro
@@ -80,7 +93,12 @@ export default function ClientsPage() {
       }
 
       // 3. Sucesso - limpar formulário e recarregar lista
-      alert('Cliente e pets adicionados com sucesso!')
+      toast.success(
+        petsToInsert.length > 0 
+          ? `Cliente "${formData.nome}" e ${petsToInsert.length} pet(s) adicionados com sucesso!`
+          : `Cliente "${formData.nome}" adicionado com sucesso!`
+      )
+      
       setFormData({
         nome: '',
         valor_diaria: '',
@@ -94,7 +112,9 @@ export default function ClientsPage() {
 
     } catch (error: any) {
       console.error('Erro ao adicionar cliente:', error)
-      alert('Erro ao adicionar cliente: ' + error.message)
+      toast.error(`Erro ao adicionar cliente: ${error.message}`)
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -155,6 +175,14 @@ export default function ClientsPage() {
     
     if (!editingClient) return
     
+    // Prevenir múltiplos envios
+    if (updating) {
+      toast.error('Aguarde, as alterações estão sendo salvas...')
+      return
+    }
+
+    setUpdating(true)
+    
     try {
       // 1. Atualizar dados do cliente
       const { error: clientError } = await supabase
@@ -194,13 +222,20 @@ export default function ClientsPage() {
       }
 
       // 3. Sucesso - limpar formulário e recarregar lista
-      alert('Cliente atualizado com sucesso!')
+      toast.success(
+        newPetsToInsert.length > 0 
+          ? `Cliente "${formData.nome}" atualizado e ${newPetsToInsert.length} novo(s) pet(s) adicionado(s)!`
+          : `Cliente "${formData.nome}" atualizado com sucesso!`
+      )
+      
       closeEditForm()
       fetchClients()
 
     } catch (error: any) {
       console.error('Erro ao atualizar cliente:', error)
-      alert('Erro ao atualizar cliente: ' + error.message)
+      toast.error(`Erro ao atualizar cliente: ${error.message}`)
+    } finally {
+      setUpdating(false)
     }
   }
 
@@ -216,6 +251,69 @@ export default function ClientsPage() {
       veterinario_confianca: ''
     })
     setPets([{ nome: '', caracteristica: '', observacoes: '' }])
+  }
+
+  const handleDeleteClient = async (client: Client) => {
+    setShowDeleteConfirm(client)
+  }
+
+  const confirmDeleteClient = async () => {
+    if (!showDeleteConfirm) return
+
+    const client = showDeleteConfirm
+    setDeletingClient(client.id)
+    setShowDeleteConfirm(null)
+
+    try {
+      // Buscar IDs dos serviços do cliente primeiro
+      const { data: servicesData } = await supabase
+        .from('services')
+        .select('id')
+        .eq('client_id', client.id)
+
+      const serviceIds = servicesData?.map(s => s.id) || []
+
+      // Excluir em cascata de forma organizada
+      if (serviceIds.length > 0) {
+        // 1. Excluir visitas dos serviços
+        await supabase
+          .from('visits')
+          .delete()
+          .in('service_id', serviceIds)
+
+        // 2. Excluir serviços
+        await supabase
+          .from('services')
+          .delete()
+          .eq('client_id', client.id)
+      }
+
+      // 3. Excluir pets
+      await supabase
+        .from('pets')
+        .delete()
+        .eq('client_id', client.id)
+
+      // 4. Excluir cliente
+      const { error: clientError } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', client.id)
+
+      if (clientError) {
+        throw clientError
+      }
+
+      // Sucesso
+      toast.success(`Cliente "${client.nome}" excluído com sucesso!`)
+      fetchClients()
+
+    } catch (error: any) {
+      console.error('Erro ao excluir cliente:', error)
+      toast.error(`Erro ao excluir cliente: ${error.message}`)
+    } finally {
+      setDeletingClient(null)
+    }
   }
   return (
     <div>
@@ -401,9 +499,17 @@ export default function ClientsPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
+                    disabled={submitting}
+                    className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    Salvar Cliente e Pets
+                    {submitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Salvando...
+                      </>
+                    ) : (
+                      'Salvar Cliente e Pets'
+                    )}
                   </button>
                 </div>
               </form>
@@ -587,9 +693,17 @@ export default function ClientsPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
+                    disabled={updating}
+                    className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    Salvar Alterações
+                    {updating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Salvando...
+                      </>
+                    ) : (
+                      'Salvar Alterações'
+                    )}
                   </button>
                 </div>
               </form>
@@ -657,8 +771,16 @@ export default function ClientsPage() {
                           >
                             Editar
                           </button>
-                          <button className="text-red-600 hover:text-red-900">
-                            Excluir
+                          <button 
+                            onClick={() => handleDeleteClient(client)}
+                            disabled={deletingClient === client.id}
+                            className={`${
+                              deletingClient === client.id 
+                                ? 'text-gray-400 cursor-not-allowed' 
+                                : 'text-red-600 hover:text-red-900'
+                            }`}
+                          >
+                            {deletingClient === client.id ? 'Excluindo...' : 'Excluir'}
                           </button>
                         </td>
                       </tr>
@@ -670,6 +792,58 @@ export default function ClientsPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative mx-auto p-6 border w-full max-w-md shadow-fefelina-hover rounded-2xl bg-white">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Confirmar Exclusão
+              </h3>
+              
+              <div className="mb-6">
+                <p className="text-sm text-gray-600 mb-4">
+                  Tem certeza que deseja excluir o cliente <strong>"{showDeleteConfirm.nome}"</strong>?
+                </p>
+                
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-left">
+                  <p className="text-sm font-medium text-red-800 mb-2">⚠️ ATENÇÃO: Esta ação irá excluir também:</p>
+                  <ul className="text-sm text-red-700 space-y-1">
+                    <li>• Todos os pets do cliente</li>
+                    <li>• Todos os serviços relacionados</li>
+                    <li>• Todas as visitas agendadas</li>
+                  </ul>
+                  <p className="text-sm font-medium text-red-800 mt-2">Esta ação não pode ser desfeita.</p>
+                </div>
+              </div>
+              
+              <div className="flex justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteClient}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Confirmar Exclusão
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

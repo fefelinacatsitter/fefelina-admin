@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 
 interface Service {
   id: string
@@ -44,10 +45,14 @@ export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [updating, setUpdating] = useState(false)
+  const [deletingService, setDeletingService] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [visits, setVisits] = useState<Visit[]>([])
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<Service | null>(null)
   
   const [formData, setFormData] = useState<{
     nome_servico: string
@@ -229,16 +234,28 @@ export default function ServicesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Prevenir múltiplos envios
+    if (editingService ? updating : submitting) {
+      toast.error('Aguarde, o serviço está sendo salvo...')
+      return
+    }
+
     if (!selectedClient || visits.length === 0) {
-      alert('Selecione um cliente e adicione pelo menos uma visita')
+      toast.error('Selecione um cliente e adicione pelo menos uma visita')
       return
     }
 
     // Validar se todas as visitas têm data preenchida
     const visitsWithoutDate = visits.filter(v => !v.data)
     if (visitsWithoutDate.length > 0) {
-      alert('Todas as visitas devem ter uma data preenchida')
+      toast.error('Todas as visitas devem ter uma data preenchida')
       return
+    }
+
+    if (editingService) {
+      setUpdating(true)
+    } else {
+      setSubmitting(true)
     }
 
     try {
@@ -302,30 +319,52 @@ export default function ServicesPage() {
         if (visitsError) throw visitsError
       }
 
+      toast.success(
+        editingService 
+          ? `Serviço "${formData.nome_servico || 'Sem nome'}" atualizado com ${visits.length} visita(s)!`
+          : `Serviço "${formData.nome_servico || 'Sem nome'}" criado com ${visits.length} visita(s)!`
+      )
+
       await fetchServices()
       closeModal()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar serviço:', error)
-      alert('Erro ao salvar serviço')
+      toast.error(`Erro ao salvar serviço: ${error.message}`)
+    } finally {
+      if (editingService) {
+        setUpdating(false)
+      } else {
+        setSubmitting(false)
+      }
     }
   }
 
-  const deleteService = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este serviço? Todas as visitas associadas também serão excluídas.')) {
-      return
-    }
+  const deleteService = async (service: Service) => {
+    setShowDeleteConfirm(service)
+  }
+
+  const confirmDeleteService = async () => {
+    if (!showDeleteConfirm) return
+
+    const service = showDeleteConfirm
+    setDeletingService(service.id)
+    setShowDeleteConfirm(null)
 
     try {
       const { error } = await supabase
         .from('services')
         .delete()
-        .eq('id', id)
+        .eq('id', service.id)
 
       if (error) throw error
+      
+      toast.success(`Serviço "${service.nome_servico || 'Sem nome'}" excluído com sucesso!`)
       await fetchServices()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao excluir serviço:', error)
-      alert('Erro ao excluir serviço')
+      toast.error(`Erro ao excluir serviço: ${error.message}`)
+    } finally {
+      setDeletingService(null)
     }
   }
 
@@ -420,61 +459,70 @@ export default function ServicesPage() {
           </div>
         </div>
       ) : (
-        <div className="mt-8 grid grid-cols-1 gap-6">
+        <div className="mt-8 grid grid-cols-1 gap-3">
           {services.map((service) => (
             <div key={service.id} className="card-fefelina">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">
+              <div className="p-3">
+                {/* Layout horizontal: Info do serviço | Métricas | Status | Ações */}
+                <div className="flex items-center">
+                  {/* Informações do serviço */}
+                  <div className="flex-1 min-w-0 pr-3">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate mb-1">
                       {service.nome_servico || `Serviço para ${service.clients?.nome}`}
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      Cliente: <span className="font-medium">{service.clients?.nome}</span>
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Período: {formatDate(service.data_inicio)} até {formatDate(service.data_fim)}
-                    </p>
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <span className="font-medium">{service.clients?.nome}</span>
+                      <span className="text-gray-400">•</span>
+                      <span className="text-gray-500">{formatDate(service.data_inicio)} - {formatDate(service.data_fim)}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  
+                  {/* Métricas centralizadas - movidas mais para a esquerda */}
+                  <div className="flex items-center justify-center gap-4 px-2 min-w-[240px]">
+                    <div className="text-center">
+                      <div className="text-gray-500 font-medium mb-0.5 text-xs">Visitas</div>
+                      <div className="font-semibold text-gray-900 text-sm">{service.total_visitas}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-500 font-medium mb-0.5 text-xs">Total</div>
+                      <div className="font-semibold text-gray-900 text-sm">{formatCurrency(service.total_valor)}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-500 font-medium mb-0.5 text-xs">A Receber</div>
+                      <div className="font-semibold text-primary-600 text-sm">{formatCurrency(service.total_a_receber)}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Status e botões de ação - área fixa à direita */}
+                  <div className="flex items-center space-x-3 flex-shrink-0 pl-6">
                     {getStatusBadge(service.status)}
+                    
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => openModal(service)}
+                        className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => deleteService(service)}
+                        disabled={deletingService === service.id}
+                        className={`inline-flex items-center px-2.5 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded transition-colors ${
+                          deletingService === service.id 
+                            ? 'text-red-400 bg-red-50 cursor-not-allowed' 
+                            : 'text-red-700 bg-white hover:bg-red-50'
+                        }`}
+                      >
+                        <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        {deletingService === service.id ? 'Excluindo...' : 'Excluir'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm text-gray-600">Total de Visitas</p>
-                    <p className="text-lg font-semibold text-gray-900">{service.total_visitas}</p>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm text-gray-600">Valor Total</p>
-                    <p className="text-lg font-semibold text-gray-900">{formatCurrency(service.total_valor)}</p>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm text-gray-600">Valor a Receber</p>
-                    <p className="text-lg font-semibold text-primary-600">{formatCurrency(service.total_a_receber)}</p>
-                  </div>
-                </div>
-                
-                <div className="flex justify-end space-x-3">
-                  <button
-                    onClick={() => openModal(service)}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => deleteService(service.id)}
-                    className="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
-                  >
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Excluir
-                  </button>
                 </div>
               </div>
             </div>
@@ -488,7 +536,7 @@ export default function ServicesPage() {
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeModal}></div>
             
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
+            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg leading-6 font-medium text-gray-900">
                   {editingService ? 'Editar Serviço' : 'Novo Serviço'}
@@ -754,12 +802,71 @@ export default function ServicesPage() {
                   </button>
                   <button
                     type="submit"
-                    className="btn-fefelina"
+                    disabled={editingService ? updating : submitting}
+                    className="btn-fefelina disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    {editingService ? 'Atualizar Serviço' : 'Criar Serviço'}
+                    {(editingService ? updating : submitting) ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Salvando...
+                      </>
+                    ) : (
+                      editingService ? 'Atualizar Serviço' : 'Criar Serviço'
+                    )}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative mx-auto p-6 border w-full max-w-md shadow-fefelina-hover rounded-2xl bg-white">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Confirmar Exclusão
+              </h3>
+              
+              <div className="mb-6">
+                <p className="text-sm text-gray-600 mb-4">
+                  Tem certeza que deseja excluir o serviço <strong>"{showDeleteConfirm.nome_servico || 'Sem nome'}"</strong>?
+                </p>
+                
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-left">
+                  <p className="text-sm font-medium text-red-800 mb-2">⚠️ ATENÇÃO: Esta ação irá excluir também:</p>
+                  <ul className="text-sm text-red-700 space-y-1">
+                    <li>• Todas as {showDeleteConfirm.total_visitas} visitas do serviço</li>
+                    <li>• Todos os registros de pagamento</li>
+                  </ul>
+                  <p className="text-sm font-medium text-red-800 mt-2">Esta ação não pode ser desfeita.</p>
+                </div>
+              </div>
+              
+              <div className="flex justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteService}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Confirmar Exclusão
+                </button>
+              </div>
             </div>
           </div>
         </div>

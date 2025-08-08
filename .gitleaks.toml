@@ -1,0 +1,18 @@
+# Configuração do Gitleaks para o projeto Fefelina Admin
+
+[allowlist]
+description = "Arquivos de exemplo e documentação"
+paths = [
+    ".env.example",
+    "README.md",
+    "DEPLOY-GITHUB-PAGES.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md"
+]
+
+regexes = [
+    "SUBSTITUA_PELO_SEU_PROJETO",
+    "SUBSTITUA_PELA_SUA_CHAVE",
+    "sua_chave_anonima",
+    "seu_projeto_id"
+]

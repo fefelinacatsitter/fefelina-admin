@@ -42,7 +42,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
               <div className="flex-shrink-0 flex items-center px-4 mb-6">
                 <img 
-                  src="/src/assets/fefelina-logo.png" 
+                  src="/fefelina-admin/fefelina-logo.png" 
                   alt="Fefelina Logo" 
                   className="w-8 h-8 mr-2 rounded-lg shadow-sm"
                 />
@@ -90,7 +90,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
               <div className="flex items-center flex-shrink-0 px-4 mb-2">
                 <img 
-                  src="/src/assets/fefelina-logo.png" 
+                  src="/fefelina-admin/fefelina-logo.png" 
                   alt="Fefelina Logo" 
                   className="w-10 h-10 mr-3 rounded-lg shadow-sm"
                 />
@@ -143,7 +143,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className="flex-1 px-4 flex justify-between items-center">
               <div className="flex items-center">
                 <img 
-                  src="/src/assets/fefelina-logo.png" 
+                  src="/fefelina-admin/fefelina-logo.png" 
                   alt="Fefelina Logo" 
                   className="w-8 h-8 mr-2 rounded-lg shadow-sm"
                 />

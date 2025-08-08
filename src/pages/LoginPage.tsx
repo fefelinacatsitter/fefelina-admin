@@ -29,7 +29,7 @@ export default function LoginPage() {
         <div className="text-center">
           {/* Logo Fefelina */}
           <img 
-            src="/src/assets/fefelina-logo.png" 
+            src="/fefelina-admin/fefelina-logo.png" 
             alt="Fefelina Logo" 
             className="mx-auto w-20 h-20 mb-6 drop-shadow-lg"
           />

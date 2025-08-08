@@ -13,6 +13,9 @@ export default function ClientsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [existingPets, setExistingPets] = useState<Pet[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<Client | null>(null)
+  const [sortBy, setSortBy] = useState<'recent_services' | 'alphabetical'>('recent_services')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filteredClients, setFilteredClients] = useState<Client[]>([])
   const [formData, setFormData] = useState({
     nome: '',
     valor_diaria: '',
@@ -26,20 +29,67 @@ export default function ClientsPage() {
 
   useEffect(() => {
     fetchClients()
-  }, [])
+  }, [sortBy])
+
+  // Filtrar clientes baseado no termo de busca
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredClients(clients)
+    } else {
+      const filtered = clients.filter(client =>
+        client.nome.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      setFilteredClients(filtered)
+    }
+  }, [clients, searchTerm])
 
   const fetchClients = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('clients')
-      .select('*')
-      .order('created_at', { ascending: false })
     
-    if (error) {
+    try {
+      if (sortBy === 'recent_services') {
+        // Ordenar por serviços mais recentes
+        const { data, error } = await supabase
+          .from('clients')
+          .select(`
+            *,
+            services (
+              data_inicio,
+              data_fim,
+              created_at
+            )
+          `)
+        
+        if (error) throw error
+        
+        // Ordenar do lado do cliente por serviço mais recente
+        const sortedClients = (data || []).sort((a, b) => {
+          const aLatestService = a.services?.length > 0 
+            ? Math.max(...a.services.map((s: any) => new Date(s.created_at).getTime()))
+            : 0
+          const bLatestService = b.services?.length > 0 
+            ? Math.max(...b.services.map((s: any) => new Date(s.created_at).getTime()))
+            : 0
+          
+          return bLatestService - aLatestService
+        })
+        
+        setClients(sortedClients)
+      } else {
+        // Ordenar alfabeticamente
+        const { data, error } = await supabase
+          .from('clients')
+          .select('*')
+          .order('nome', { ascending: true })
+        
+        if (error) throw error
+        setClients(data || [])
+      }
+    } catch (error) {
       console.error('Erro ao buscar clientes:', error)
-    } else {
-      setClients(data || [])
+      setClients([])
     }
+    
     setLoading(false)
   }
 
@@ -324,7 +374,23 @@ export default function ClientsPage() {
             Lista de todos os clientes registrados no sistema.
           </p>
         </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex items-center space-x-4">
+          {/* Seletor de Ordenação */}
+          <div className="flex items-center space-x-2">
+            <label htmlFor="sort-select" className="text-sm font-medium text-gray-700">
+              Ordenar por:
+            </label>
+            <select
+              id="sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'recent_services' | 'alphabetical')}
+              className="block w-48 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="recent_services">Serviços Mais Recentes</option>
+              <option value="alphabetical">Ordem Alfabética</option>
+            </select>
+          </div>
+          
           <button
             type="button"
             onClick={() => setShowAddForm(true)}
@@ -712,6 +778,48 @@ export default function ClientsPage() {
         </div>
       )}
 
+      {/* Campo de Busca */}
+      <div className="mt-6 mb-4">
+        <div className="max-w-md">
+          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+            Buscar Cliente
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              id="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Digite o nome do cliente..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm"
+            />
+            {searchTerm && (
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="h-5 w-5 text-gray-400 hover:text-gray-600"
+                >
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+          {searchTerm && (
+            <p className="mt-1 text-sm text-gray-500">
+              {filteredClients.length} cliente(s) encontrado(s) para "{searchTerm}"
+            </p>
+          )}
+        </div>
+      </div>
+
       <div className="mt-8 flex flex-col">
         <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
@@ -743,14 +851,14 @@ export default function ClientsPage() {
                         Carregando...
                       </td>
                     </tr>
-                  ) : clients.length === 0 ? (
+                  ) : filteredClients.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                        Nenhum cliente cadastrado ainda.
+                        {searchTerm ? `Nenhum cliente encontrado para "${searchTerm}"` : 'Nenhum cliente cadastrado ainda.'}
                       </td>
                     </tr>
                   ) : (
-                    clients.map((client) => (
+                    filteredClients.map((client) => (
                       <tr key={client.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {client.nome}

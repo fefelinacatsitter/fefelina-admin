@@ -11,6 +11,7 @@ const navigation = [
   { name: 'Pets', href: '/pets' },
   { name: 'Serviços', href: '/services' },
   { name: 'Visitas', href: '/visits' },
+  { name: 'Finanças', href: '/finances' },
 ]
 
 export default function Layout({ children }: LayoutProps) {

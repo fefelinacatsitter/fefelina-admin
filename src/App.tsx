@@ -8,6 +8,7 @@ import ClientsPage from './pages/ClientsPage'
 import PetsPage from './pages/PetsPage'
 import ServicesPage from './pages/ServicesPage'
 import VisitsPage from './pages/VisitsPage'
+import FinancesPage from './pages/FinancesPage'
 import Layout from './components/Layout'
 
 function App() {
@@ -50,6 +51,7 @@ function App() {
           <Route path="/pets" element={<PetsPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/visits" element={<VisitsPage />} />
+          <Route path="/finances" element={<FinancesPage />} />
         </Routes>
       </Layout>
     </Router>

@@ -6,6 +6,8 @@ interface DashboardStats {
   totalPets: number
   activeServices: number
   visitsToday: number
+  monthlyRevenue: number
+  monthlyVisits: number
 }
 
 interface UpcomingVisit {
@@ -29,7 +31,9 @@ export default function Dashboard() {
     totalClients: 0,
     totalPets: 0,
     activeServices: 0,
-    visitsToday: 0
+    visitsToday: 0,
+    monthlyRevenue: 0,
+    monthlyVisits: 0
   })
   const [upcomingVisits, setUpcomingVisits] = useState<UpcomingVisit[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,7 +52,7 @@ export default function Dashboard() {
       const todayStr = `${year}-${month}-${day}`
       
       // Buscar estatísticas básicas
-      const [clientsResult, petsResult, servicesResult, visitsResult, upcomingResult] = await Promise.all([
+      const [clientsResult, petsResult, servicesResult, visitsResult, upcomingResult, monthlyRevenueResult] = await Promise.all([
         supabase.from('clients').select('id', { count: 'exact', head: true }),
         supabase.from('pets').select('id', { count: 'exact', head: true }),
         supabase.from('services').select('id', { count: 'exact', head: true }).in('status', ['pendente', 'em_andamento', 'concluido']).gte('data_fim', todayStr),
@@ -70,14 +74,27 @@ export default function Dashboard() {
           .neq('status', 'cancelada')
           .order('data', { ascending: true })
           .order('horario', { ascending: true })
-          .limit(10)
+          .limit(10),
+        // Receita do mês atual
+        supabase
+          .from('visits')
+          .select('valor, status_pagamento')
+          .gte('data', `${year}-${month}-01`)
+          .lte('data', `${year}-${month}-31`)
+          .eq('status_pagamento', 'pago')
+          .neq('status', 'cancelada')
       ])
+
+      const monthlyRevenue = monthlyRevenueResult.data?.reduce((sum, visit) => sum + visit.valor, 0) || 0
+      const monthlyVisits = monthlyRevenueResult.count || 0
 
       setStats({
         totalClients: clientsResult.count || 0,
         totalPets: petsResult.count || 0,
         activeServices: servicesResult.count || 0,
-        visitsToday: visitsResult.count || 0
+        visitsToday: visitsResult.count || 0,
+        monthlyRevenue,
+        monthlyVisits
       })
 
       setUpcomingVisits((upcomingResult.data || []).map(visit => ({
@@ -233,6 +250,51 @@ export default function Dashboard() {
                 <dt className="text-sm font-medium text-gray-500 truncate">Visitas Hoje</dt>
                 <dd className="text-lg font-semibold text-gray-900">{stats.visitsToday}</dd>
               </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Cards Financeiros do Mês */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumo Financeiro - {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="stats-card-fefelina">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="icon-fefelina bg-green-500">
+                  <span>R$</span>
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Receita do Mês</dt>
+                  <dd className="text-lg font-semibold text-gray-900">
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    }).format(stats.monthlyRevenue)}
+                  </dd>
+                  <dd className="text-sm text-green-600">Valores já recebidos</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+          <div className="stats-card-fefelina">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="icon-fefelina bg-blue-500">
+                  <span>📊</span>
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Visitas Pagas no Mês</dt>
+                  <dd className="text-lg font-semibold text-gray-900">{stats.monthlyVisits}</dd>
+                  <dd className="text-sm text-blue-600">Visitas já realizadas e pagas</dd>
+                </dl>
+              </div>
             </div>
           </div>
         </div>

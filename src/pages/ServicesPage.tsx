@@ -8,7 +8,7 @@ interface Service {
   nome_servico?: string
   data_inicio: string
   data_fim: string
-  status: 'pendente' | 'em_andamento' | 'concluido' | 'pago'
+  status: 'pendente' | 'em_andamento' | 'concluido'
   status_pagamento: 'pendente' | 'pendente_plataforma' | 'pago_parcialmente' | 'pago'
   desconto_plataforma_default: number
   total_visitas: number
@@ -99,7 +99,7 @@ export default function ServicesPage() {
       const todayStr = `${year}-${month}-${day}`
       
       const activeServices = (data || []).filter(service => 
-        service.data_fim >= todayStr || service.status !== 'pago'
+        service.data_fim >= todayStr || service.status_pagamento !== 'pago'
       )
       
       setServices(activeServices)
@@ -380,15 +380,13 @@ export default function ServicesPage() {
     const styles = {
       pendente: 'bg-orange-100 text-orange-800',
       em_andamento: 'bg-blue-100 text-blue-800',
-      concluido: 'bg-gray-100 text-gray-800',
-      pago: 'bg-green-100 text-green-800'
+      concluido: 'bg-gray-100 text-gray-800'
     }
     
     const labels = {
       pendente: 'Pendente',
       em_andamento: 'Em Andamento',
-      concluido: 'Concluído',
-      pago: 'Pago'
+      concluido: 'Concluído'
     }
     
     return (

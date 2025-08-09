@@ -125,25 +125,11 @@ export default function FinancesPage() {
   }
 
   const fetchRevenueData = async (startDate: string, endDate: string) => {
-    // Buscar receitas totais por status
-    const { data: statusTotals } = await supabase
-      .from('visits')
-      .select('status_pagamento, valor')
-      .gte('data', startDate)
-      .lte('data', endDate)
-      .neq('status', 'cancelada')
-
-    const totalReceived = statusTotals
-      ?.filter(v => v.status_pagamento === 'pago')
-      .reduce((sum, v) => sum + v.valor, 0) || 0
-
-    const totalPending = statusTotals
-      ?.filter(v => v.status_pagamento === 'pendente')
-      .reduce((sum, v) => sum + v.valor, 0) || 0
-
-    const totalPendingPlatform = statusTotals
-      ?.filter(v => v.status_pagamento === 'pendente_plataforma')
-      .reduce((sum, v) => sum + v.valor, 0) || 0
+    // TODO: Atualizar para buscar dados através dos serviços pagos
+    // Por enquanto, retornando valores zerados
+    const totalReceived = 0
+    const totalPending = 0
+    const totalPendingPlatform = 0
 
     // Buscar dados mensais para gráficos
     const { data: monthlyData } = await supabase

@@ -17,7 +17,6 @@ interface UpcomingVisit {
   tipo_visita: 'inteira' | 'meia'
   valor: number
   status: string
-  status_pagamento: string
   clients: {
     nome: string
   } | null
@@ -56,7 +55,7 @@ export default function Dashboard() {
         supabase.from('pets').select('*', { count: 'exact' }),
         supabase.from('services').select('*', { count: 'exact' }).eq('status', 'ativo'),
         supabase.from('visits').select('*', { count: 'exact' }).eq('data', todayString),
-        supabase.from('visits').select('valor').eq('status_pagamento', 'pago').gte('data', `${year}-${month}-01`).lte('data', `${year}-${month}-31`),
+        supabase.from('services').select('total_a_receber').eq('status', 'pago').gte('data_inicio', `${year}-${month}-01`).lte('data_fim', `${year}-${month}-31`),
         supabase.from('visits').select('*', { count: 'exact' }).eq('status', 'realizada').gte('data', `${year}-${month}-01`).lte('data', `${year}-${month}-31`)
       ])
 
@@ -74,7 +73,7 @@ export default function Dashboard() {
         .limit(10)
 
       // Calcular receita mensal
-      const monthlyRevenue = revenueResult.data?.reduce((sum, visit) => sum + visit.valor, 0) || 0
+      const monthlyRevenue = revenueResult.data?.reduce((sum, service) => sum + service.total_a_receber, 0) || 0
 
       setStats({
         totalClients: clientsResult.count || 0,

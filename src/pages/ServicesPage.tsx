@@ -29,7 +29,6 @@ interface Visit {
   tipo_visita: 'inteira' | 'meia'
   valor: number
   status: 'agendada' | 'realizada' | 'cancelada'
-  status_pagamento: 'pendente_plataforma' | 'pendente' | 'pago'
   desconto_plataforma: number
   observacoes?: string
 }
@@ -135,7 +134,6 @@ export default function ServicesPage() {
       tipo_visita: 'inteira',
       valor: calculateVisitValue(selectedClient, 'inteira'),
       status: 'agendada',
-      status_pagamento: 'pendente',
       desconto_plataforma: formData.desconto_plataforma_default,
       observacoes: ''
     }
@@ -630,7 +628,6 @@ export default function ServicesPage() {
                     <h5 className="text-sm font-medium text-blue-900 mb-2">ℹ️ Informações automáticas</h5>
                     <ul className="text-xs text-blue-800 space-y-1">
                       <li>• <strong>Período:</strong> Será calculado automaticamente baseado na primeira e última visita</li>
-                      <li>• <strong>Status:</strong> Será atualizado automaticamente baseado no pagamento das visitas</li>
                       <li>• <strong>Totais:</strong> Serão calculados automaticamente baseado nas visitas cadastradas</li>
                     </ul>
                   </div>
@@ -789,21 +786,6 @@ export default function ServicesPage() {
                                 onChange={(e) => updateVisit(index, 'desconto_plataforma', parseFloat(e.target.value) || 0)}
                                 className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                               />
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Status Pagamento
-                              </label>
-                              <select
-                                value={visit.status_pagamento}
-                                onChange={(e) => updateVisit(index, 'status_pagamento', e.target.value)}
-                                className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                              >
-                                <option value="pendente_plataforma">Pendente Plataforma</option>
-                                <option value="pendente">Pendente</option>
-                                <option value="pago">Pago</option>
-                              </select>
                             </div>
                           </div>
 

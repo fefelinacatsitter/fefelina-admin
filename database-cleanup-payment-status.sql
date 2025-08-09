@@ -12,12 +12,7 @@ ALTER TABLE visits DROP COLUMN IF EXISTS status_pagamento;
 COMMENT ON COLUMN visits.status IS 'Status da execução da visita: agendada, realizada ou cancelada (sem controle de pagamento)';
 
 -- Step 2: Update services table to remove 'pago' from status field constraint
--- First remove the old constraint
-ALTER TABLE services DROP CONSTRAINT IF EXISTS services_status_check;
-
--- Add new constraint without 'pago' option (payment is now controlled by status_pagamento)
-ALTER TABLE services ADD CONSTRAINT services_status_check 
-CHECK (status IN ('pendente', 'em_andamento', 'concluido'));
+-- First, migrate existing data BEFORE applying new constraints
 
 -- Update any existing services that have status = 'pago' to 'concluido' and status_pagamento = 'pago'
 UPDATE services 
@@ -28,6 +23,13 @@ WHERE status = 'pago' AND status_pagamento IS NULL;
 UPDATE services 
 SET status = 'concluido' 
 WHERE status = 'pago' AND status_pagamento IS NOT NULL;
+
+-- Now remove the old constraint
+ALTER TABLE services DROP CONSTRAINT IF EXISTS services_status_check;
+
+-- Add new constraint without 'pago' option (payment is now controlled by status_pagamento)
+ALTER TABLE services ADD CONSTRAINT services_status_check 
+CHECK (status IN ('pendente', 'em_andamento', 'concluido'));
 
 -- Update comment for services status
 COMMENT ON COLUMN services.status IS 'Status de execução do serviço: pendente, em_andamento ou concluido (sem controle de pagamento)';

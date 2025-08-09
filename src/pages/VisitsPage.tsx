@@ -347,9 +347,7 @@ export default function VisitsPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Pagamento
-                    </th>
+
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ações
                     </th>
@@ -403,18 +401,7 @@ export default function VisitsPage() {
                           <option value="cancelada">Cancelada</option>
                         </select>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <select
-                          value={visit.status_pagamento}
-                          onChange={(e) => updatePaymentStatus(visit.id, e.target.value as any)}
-                          disabled={updatingVisit === visit.id}
-                          className="text-xs border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <option value="pendente_plataforma">Pendente Plataforma</option>
-                          <option value="pendente">Pendente</option>
-                          <option value="pago">Pago</option>
-                        </select>
-                      </td>
+
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex space-x-2">
                           {visit.status === 'agendada' && (
@@ -428,19 +415,6 @@ export default function VisitsPage() {
                               }`}
                             >
                               {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Realizada'}
-                            </button>
-                          )}
-                          {visit.status_pagamento !== 'pago' && (
-                            <button
-                              onClick={() => updatePaymentStatus(visit.id, 'pago')}
-                              disabled={updatingVisit === visit.id}
-                              className={`text-xs font-medium ${
-                                updatingVisit === visit.id 
-                                  ? 'text-gray-400 cursor-not-allowed' 
-                                  : 'text-blue-600 hover:text-blue-900'
-                              }`}
-                            >
-                              {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Pago'}
                             </button>
                           )}
                         </div>

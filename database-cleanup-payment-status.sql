@@ -45,8 +45,9 @@ WHERE table_name = 'services' AND table_schema = 'public'
 AND column_name LIKE '%status%'
 ORDER BY ordinal_position;
 
--- Show table structures (alternative to \d commands)
+-- Show visits table structure
 SELECT 
+    'visits' as table_name,
     column_name, 
     data_type, 
     is_nullable, 
@@ -57,7 +58,9 @@ WHERE table_name = 'visits'
 AND table_schema = 'public'
 ORDER BY ordinal_position;
 
+-- Show services table structure
 SELECT 
+    'services' as table_name,
     column_name, 
     data_type, 
     is_nullable, 

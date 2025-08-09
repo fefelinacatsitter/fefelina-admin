@@ -37,9 +37,7 @@ SELECT 'visits_columns' as table_name, column_name, data_type
 FROM information_schema.columns 
 WHERE table_name = 'visits' AND table_schema = 'public'
 AND column_name LIKE '%status%'
-ORDER BY ordinal_position
-
-UNION ALL
+ORDER BY ordinal_position;
 
 SELECT 'services_columns' as table_name, column_name, data_type 
 FROM information_schema.columns 
@@ -47,6 +45,25 @@ WHERE table_name = 'services' AND table_schema = 'public'
 AND column_name LIKE '%status%'
 ORDER BY ordinal_position;
 
--- Show updated table structures
-\d visits
-\d services
+-- Show table structures (alternative to \d commands)
+SELECT 
+    column_name, 
+    data_type, 
+    is_nullable, 
+    column_default,
+    character_maximum_length
+FROM information_schema.columns 
+WHERE table_name = 'visits' 
+AND table_schema = 'public'
+ORDER BY ordinal_position;
+
+SELECT 
+    column_name, 
+    data_type, 
+    is_nullable, 
+    column_default,
+    character_maximum_length
+FROM information_schema.columns 
+WHERE table_name = 'services' 
+AND table_schema = 'public'
+ORDER BY ordinal_position;

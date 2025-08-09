@@ -182,7 +182,7 @@ export default function ClientsPage() {
   }
 
   const addPetField = () => {
-    setPets([...pets, { nome: '', caracteristica: '', observacoes: '' }])
+    setPets([{ nome: '', caracteristica: '', observacoes: '' }, ...pets])
   }
 
   const removePetField = (index: number) => {

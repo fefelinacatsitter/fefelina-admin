@@ -77,19 +77,20 @@ export default function VisitsPage() {
 
       switch (selectedFilter) {
         case 'hoje':
-          // Filtrar apenas visitas para hoje, excluindo canceladas
-          query = query.eq('data', todayStr).neq('status', 'cancelada')
+          // Filtrar apenas visitas para hoje, excluindo canceladas e realizadas
+          query = query.eq('data', todayStr).neq('status', 'cancelada').neq('status', 'realizada')
           break
         case 'proximas':
           // Filtrar visitas de hoje e futuras, excluindo canceladas
           query = query.gte('data', todayStr).neq('status', 'cancelada')
           break
         case 'realizadas':
-          // Filtrar apenas visitas realizadas
-          query = query.eq('status', 'realizada')
+          // Filtrar apenas visitas realizadas, ordenando da mais recente para a mais antiga
+          query = query.eq('status', 'realizada').order('data', { ascending: false }).order('horario', { ascending: false })
           break
         default:
-          // todas - sem filtro adicional
+          // todas - sem filtro adicional, mas ordenar da mais recente para a mais antiga
+          query = query.order('data', { ascending: false }).order('horario', { ascending: false })
           break
       }
 
@@ -200,6 +201,19 @@ export default function VisitsPage() {
     }
   }
 
+  // Ordenação decrescente para filtros realizadas e todas
+  const getSortedVisits = () => {
+    if (selectedFilter === 'realizadas' || selectedFilter === 'todas') {
+      return [...visits].sort((a, b) => {
+        if (a.data === b.data) {
+          return b.horario.localeCompare(a.horario)
+        }
+        return b.data.localeCompare(a.data)
+      })
+    }
+    return visits
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -297,130 +311,200 @@ export default function VisitsPage() {
           </div>
         </div>
       ) : (
-        <div className="card-fefelina">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Data/Horário
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente/Serviço
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valor
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pagamento
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {visits.map((visit) => (
-                  <tr key={visit.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {formatDate(visit.data)}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {visit.horario}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {visit.clients?.nome}
-                      </div>
-                      {visit.services?.nome_servico && (
-                        <div className="text-sm text-gray-500">
-                          {visit.services.nome_servico}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        visit.tipo_visita === 'inteira' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                      }`}>
-                        {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(visit.valor)}
-                      {visit.desconto_plataforma > 0 && (
-                        <div className="text-xs text-gray-500">
-                          Desc: {visit.desconto_plataforma}%
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <select
-                        value={visit.status}
-                        onChange={(e) => updateVisitStatus(visit.id, e.target.value as any)}
-                        disabled={updatingVisit === visit.id}
-                        className="text-xs border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="agendada">Agendada</option>
-                        <option value="realizada">Realizada</option>
-                        <option value="cancelada">Cancelada</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <select
-                        value={visit.status_pagamento}
-                        onChange={(e) => updatePaymentStatus(visit.id, e.target.value as any)}
-                        disabled={updatingVisit === visit.id}
-                        className="text-xs border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="pendente_plataforma">Pendente Plataforma</option>
-                        <option value="pendente">Pendente</option>
-                        <option value="pago">Pago</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex space-x-2">
-                        {visit.status === 'agendada' && (
-                          <button
-                            onClick={() => updateVisitStatus(visit.id, 'realizada')}
-                            disabled={updatingVisit === visit.id}
-                            className={`text-xs font-medium ${
-                              updatingVisit === visit.id 
-                                ? 'text-gray-400 cursor-not-allowed' 
-                                : 'text-green-600 hover:text-green-900'
-                            }`}
-                          >
-                            {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Realizada'}
-                          </button>
-                        )}
-                        {visit.status_pagamento !== 'pago' && (
-                          <button
-                            onClick={() => updatePaymentStatus(visit.id, 'pago')}
-                            disabled={updatingVisit === visit.id}
-                            className={`text-xs font-medium ${
-                              updatingVisit === visit.id 
-                                ? 'text-gray-400 cursor-not-allowed' 
-                                : 'text-blue-600 hover:text-blue-900'
-                            }`}
-                          >
-                            {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Pago'}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <>
+          {/* Mobile: Cards */}
+          <div className="block md:hidden space-y-4">
+            {getSortedVisits().map((visit) => (
+              <div key={visit.id} className="border rounded-lg p-4 shadow-sm bg-white">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <div className="font-semibold text-primary-700 text-base">{formatDate(visit.data)} <span className="text-xs text-gray-500">{visit.horario}</span></div>
+                    <div className="text-sm text-gray-700">{visit.clients?.nome}</div>
+                    {visit.services?.nome_servico && (
+                      <div className="text-xs text-gray-500">{visit.services.nome_servico}</div>
+                    )}
+                  </div>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${visit.tipo_visita === 'inteira' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>{visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}</span>
+                </div>
+                <div className="flex flex-wrap gap-2 items-center mb-2">
+                  <span className="text-sm font-medium text-gray-900">{formatCurrency(visit.valor)}</span>
+                  {visit.desconto_plataforma > 0 && (
+                    <span className="text-xs text-gray-500">Desc: {visit.desconto_plataforma}%</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 items-center mb-2">
+                  <span className="text-xs font-medium">Status:</span>
+                  <select
+                    value={visit.status}
+                    onChange={(e) => updateVisitStatus(visit.id, e.target.value as any)}
+                    disabled={updatingVisit === visit.id}
+                    className="text-xs border-0 bg-gray-100 focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="agendada">Agendada</option>
+                    <option value="realizada">Realizada</option>
+                    <option value="cancelada">Cancelada</option>
+                  </select>
+                  <span className="text-xs font-medium">Pagamento:</span>
+                  <select
+                    value={visit.status_pagamento}
+                    onChange={(e) => updatePaymentStatus(visit.id, e.target.value as any)}
+                    disabled={updatingVisit === visit.id}
+                    className="text-xs border-0 bg-gray-100 focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="pendente_plataforma">Pendente Plataforma</option>
+                    <option value="pendente">Pendente</option>
+                    <option value="pago">Pago</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 mt-2">
+                  {visit.status === 'agendada' && (
+                    <button
+                      onClick={() => updateVisitStatus(visit.id, 'realizada')}
+                      disabled={updatingVisit === visit.id}
+                      className={`text-xs font-medium px-2 py-1 rounded bg-green-100 text-green-700 ${updatingVisit === visit.id ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-200'}`}
+                    >
+                      {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Realizada'}
+                    </button>
+                  )}
+                  {visit.status_pagamento !== 'pago' && (
+                    <button
+                      onClick={() => updatePaymentStatus(visit.id, 'pago')}
+                      disabled={updatingVisit === visit.id}
+                      className={`text-xs font-medium px-2 py-1 rounded bg-blue-100 text-blue-700 ${updatingVisit === visit.id ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200'}`}
+                    >
+                      {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Pago'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+          {/* Desktop: Tabela */}
+          <div className="hidden md:block card-fefelina">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Data/Horário
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Cliente/Serviço
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tipo
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Valor
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Pagamento
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Ações
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {getSortedVisits().map((visit) => (
+                    <tr key={visit.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {formatDate(visit.data)}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {visit.horario}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {visit.clients?.nome}
+                        </div>
+                        {visit.services?.nome_servico && (
+                          <div className="text-sm text-gray-500">
+                            {visit.services.nome_servico}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          visit.tipo_visita === 'inteira' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                        }`}>
+                          {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatCurrency(visit.valor)}
+                        {visit.desconto_plataforma > 0 && (
+                          <div className="text-xs text-gray-500">
+                            Desc: {visit.desconto_plataforma}%
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <select
+                          value={visit.status}
+                          onChange={(e) => updateVisitStatus(visit.id, e.target.value as any)}
+                          disabled={updatingVisit === visit.id}
+                          className="text-xs border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <option value="agendada">Agendada</option>
+                          <option value="realizada">Realizada</option>
+                          <option value="cancelada">Cancelada</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <select
+                          value={visit.status_pagamento}
+                          onChange={(e) => updatePaymentStatus(visit.id, e.target.value as any)}
+                          disabled={updatingVisit === visit.id}
+                          className="text-xs border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <option value="pendente_plataforma">Pendente Plataforma</option>
+                          <option value="pendente">Pendente</option>
+                          <option value="pago">Pago</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex space-x-2">
+                          {visit.status === 'agendada' && (
+                            <button
+                              onClick={() => updateVisitStatus(visit.id, 'realizada')}
+                              disabled={updatingVisit === visit.id}
+                              className={`text-xs font-medium ${
+                                updatingVisit === visit.id 
+                                  ? 'text-gray-400 cursor-not-allowed' 
+                                  : 'text-green-600 hover:text-green-900'
+                              }`}
+                            >
+                              {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Realizada'}
+                            </button>
+                          )}
+                          {visit.status_pagamento !== 'pago' && (
+                            <button
+                              onClick={() => updatePaymentStatus(visit.id, 'pago')}
+                              disabled={updatingVisit === visit.id}
+                              className={`text-xs font-medium ${
+                                updatingVisit === visit.id 
+                                  ? 'text-gray-400 cursor-not-allowed' 
+                                  : 'text-blue-600 hover:text-blue-900'
+                              }`}
+                            >
+                              {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Pago'}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

@@ -64,6 +64,10 @@ export default function ServicesPage() {
     desconto_plataforma_default: 0
   })
 
+  // States para múltiplas visitas
+  const [multiVisitStart, setMultiVisitStart] = useState("");
+  const [multiVisitDays, setMultiVisitDays] = useState(2);
+
   useEffect(() => {
     fetchServices()
     fetchClients()
@@ -404,6 +408,27 @@ export default function ServicesPage() {
     return date.toLocaleDateString('pt-BR')
   }
 
+  // Função para gerar múltiplas visitas
+  const handleGenerateMultipleVisits = () => {
+    if (!selectedClient || !multiVisitStart || multiVisitDays < 2) return;
+    if (visits.length === 0) {
+      toast.error("Cadastre pelo menos uma visita para usar como base!")
+      return;
+    }
+    const base = visits[0];
+    const newVisits = [];
+    for (let i = 0; i < multiVisitDays; i++) {
+      const date = new Date(multiVisitStart);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().slice(0, 10);
+      newVisits.push({
+        ...base,
+        data: dateStr
+      });
+    }
+    setVisits(newVisits);
+  }
+
   const { totalVisitas, totalValor, totalAReceber } = calculateTotals()
 
   if (loading) {
@@ -464,7 +489,7 @@ export default function ServicesPage() {
             <div key={service.id} className="card-fefelina">
               <div className="p-3">
                 {/* Layout horizontal: Info do serviço | Métricas | Status | Ações */}
-                <div className="flex items-center">
+                <div className="flex flex-col md:flex-row md:items-center gap-2">
                   {/* Informações do serviço */}
                   <div className="flex-1 min-w-0 pr-3">
                     <h3 className="text-sm font-semibold text-gray-900 truncate mb-1">
@@ -477,8 +502,8 @@ export default function ServicesPage() {
                     </div>
                   </div>
                   
-                  {/* Métricas centralizadas - movidas mais para a esquerda */}
-                  <div className="flex items-center justify-center gap-4 px-2 min-w-[240px]">
+                  {/* Métricas centralizadas - lado a lado no desktop, empilhadas no mobile */}
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-4 px-2 min-w-0 md:min-w-[240px] w-full md:w-auto">
                     <div className="text-center">
                       <div className="text-gray-500 font-medium mb-0.5 text-xs">Visitas</div>
                       <div className="font-semibold text-gray-900 text-sm">{service.total_visitas}</div>
@@ -494,7 +519,7 @@ export default function ServicesPage() {
                   </div>
                   
                   {/* Status e botões de ação - área fixa à direita */}
-                  <div className="flex items-center space-x-3 flex-shrink-0 pl-6">
+                  <div className="flex flex-row md:flex-col items-center space-x-3 md:space-x-0 md:space-y-2 flex-shrink-0 pl-0 md:pl-6">
                     {getStatusBadge(service.status)}
                     
                     <div className="flex items-center space-x-2">
@@ -613,19 +638,51 @@ export default function ServicesPage() {
 
                 {/* Seção de Visitas */}
                 <div className="border-t pt-6">
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2">
                     <h4 className="text-md font-medium text-gray-900">Visitas</h4>
-                    <button
-                      type="button"
-                      onClick={addVisit}
-                      disabled={!selectedClient}
-                      className="btn-fefelina-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      Adicionar Visita
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        type="button"
+                        onClick={addVisit}
+                        disabled={!selectedClient}
+                        className="btn-fefelina-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Adicionar Visita
+                      </button>
+                      {/* Botão e inputs para gerar múltiplas visitas */}
+                      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                        <input
+                          type="date"
+                          id="multiVisitStart"
+                          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          value={multiVisitStart}
+                          onChange={e => setMultiVisitStart(e.target.value)}
+                          disabled={!selectedClient}
+                        />
+                        <input
+                          type="number"
+                          id="multiVisitDays"
+                          min="2"
+                          max="30"
+                          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 w-20"
+                          value={multiVisitDays}
+                          onChange={e => setMultiVisitDays(Number(e.target.value))}
+                          disabled={!selectedClient}
+                          placeholder="Dias"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleGenerateMultipleVisits}
+                          disabled={!selectedClient || !multiVisitStart || multiVisitDays < 2}
+                          className="btn-fefelina-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Gerar Múltiplas Visitas
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {visits.length === 0 ? (

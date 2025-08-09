@@ -125,32 +125,45 @@ export default function FinancesPage() {
   }
 
   const fetchRevenueData = async (startDate: string, endDate: string) => {
-    // TODO: Atualizar para buscar dados através dos serviços pagos
-    // Por enquanto, retornando valores zerados
-    const totalReceived = 0
-    const totalPending = 0
-    const totalPendingPlatform = 0
-
-    // Buscar dados mensais para gráficos
-    const { data: monthlyData } = await supabase
-      .from('visits')
+    // Buscar dados de receita através dos serviços
+    const { data: services } = await supabase
+      .from('services')
       .select(`
-        data,
-        valor,
         status_pagamento,
+        total_a_receber,
+        data_inicio,
+        data_fim,
         clients(nome)
       `)
-      .gte('data', startDate)
-      .lte('data', endDate)
-      .neq('status', 'cancelada')
-      .order('data')
+      .gte('data_inicio', startDate)
+      .lte('data_fim', endDate)
+      .order('data_inicio')
 
-    // Agrupar por mês
-    const monthlyRevenue = groupByMonth(monthlyData || [])
+    const servicesData = services || []
+
+    // Calcular totais por status de pagamento
+    const totalReceived = servicesData
+      .filter(s => s.status_pagamento === 'pago')
+      .reduce((sum, s) => sum + s.total_a_receber, 0)
+
+    const totalPartiallyPaid = servicesData
+      .filter(s => s.status_pagamento === 'pago_parcialmente')
+      .reduce((sum, s) => sum + s.total_a_receber, 0)
+
+    const totalPending = servicesData
+      .filter(s => s.status_pagamento === 'pendente')
+      .reduce((sum, s) => sum + s.total_a_receber, 0)
+
+    const totalPendingPlatform = servicesData
+      .filter(s => s.status_pagamento === 'pendente_plataforma')
+      .reduce((sum, s) => sum + s.total_a_receber, 0)
+
+    // Agrupar por mês para o gráfico
+    const monthlyRevenue = groupServicesByMonth(servicesData)
 
     return {
       totalReceived,
-      totalPending,
+      totalPending: totalPending + totalPartiallyPaid,
       totalPendingPlatform,
       monthlyRevenue
     }
@@ -158,29 +171,30 @@ export default function FinancesPage() {
 
   const fetchStatusDistribution = async (startDate: string, endDate: string) => {
     const { data } = await supabase
-      .from('visits')
-      .select('status_pagamento, valor')
-      .gte('data', startDate)
-      .lte('data', endDate)
-      .neq('status', 'cancelada')
+      .from('services')
+      .select('status_pagamento, total_a_receber')
+      .gte('data_inicio', startDate)
+      .lte('data_fim', endDate)
 
-    const statusGroups = data?.reduce((acc, visit) => {
-      const status = visit.status_pagamento
+    const statusGroups = data?.reduce((acc, service) => {
+      const status = service.status_pagamento
       if (!acc[status]) {
         acc[status] = 0
       }
-      acc[status] += visit.valor
+      acc[status] += service.total_a_receber
       return acc
     }, {} as Record<string, number>) || {}
 
     const colors = {
       pago: '#10B981',
+      pago_parcialmente: '#3B82F6',
       pendente: '#F59E0B',
       pendente_plataforma: '#EF4444'
     }
 
     const labels = {
       pago: 'Pago',
+      pago_parcialmente: 'Pago Parcialmente',
       pendente: 'Pendente',
       pendente_plataforma: 'Pendente Plataforma'
     }
@@ -194,61 +208,57 @@ export default function FinancesPage() {
 
   const fetchRecentTransactions = async () => {
     const { data } = await supabase
-      .from('visits')
+      .from('services')
       .select(`
         id,
-        data,
-        valor,
+        data_inicio,
+        data_fim,
+        total_a_receber,
         status_pagamento,
-        clients(nome),
-        services(nome_servico)
+        nome_servico,
+        clients(nome)
       `)
-      .neq('status', 'cancelada')
-      .order('data', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(10)
 
-    return data?.map(visit => ({
-      id: visit.id,
-      client: (visit.clients as any)?.nome || 'Cliente não informado',
-      service: (visit.services as any)?.nome_servico || 'Serviço',
-      date: visit.data,
-      amount: visit.valor,
-      status: visit.status_pagamento
+    return data?.map(service => ({
+      id: service.id,
+      client: (service.clients as any)?.nome || 'Cliente não informado',
+      service: service.nome_servico || 'Serviço',
+      date: service.data_inicio,
+      amount: service.total_a_receber,
+      status: service.status_pagamento
     })) || []
   }
 
-  const groupByMonth = (data: any[]): Array<{
+  const groupServicesByMonth = (data: any[]): Array<{
     month: string
     revenue: number
     visits: number
   }> => {
-    const grouped = data.reduce((acc, visit) => {
-      const date = new Date(visit.data)
+    const grouped = data.reduce((acc, service) => {
+      const date = new Date(service.data_inicio)
       const monthKey = format(date, 'yyyy-MM')
+      const monthLabel = format(date, 'MMM yyyy', { locale: ptBR })
       
       if (!acc[monthKey]) {
         acc[monthKey] = {
-          month: format(date, 'MMM yyyy', { locale: ptBR }),
+          month: monthLabel,
           revenue: 0,
           visits: 0
         }
       }
       
-      if (visit.status_pagamento === 'pago') {
-        acc[monthKey].revenue += visit.valor
+      if (service.status_pagamento === 'pago') {
+        acc[monthKey].revenue += service.total_a_receber
       }
       acc[monthKey].visits += 1
       
       return acc
-    }, {} as Record<string, any>)
+    }, {} as Record<string, { month: string, revenue: number, visits: number }>)
 
-    return Object.values(grouped).sort((a: any, b: any) => 
-      new Date(a.month).getTime() - new Date(b.month).getTime()
-    ) as Array<{
-      month: string
-      revenue: number
-      visits: number
-    }>
+    return (Object.values(grouped) as Array<{ month: string, revenue: number, visits: number }>)
+      .sort((a, b) => a.month.localeCompare(b.month))
   }
 
   const formatCurrency = (value: number) => {

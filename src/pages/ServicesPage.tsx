@@ -9,6 +9,7 @@ interface Service {
   data_inicio: string
   data_fim: string
   status: 'pendente' | 'em_andamento' | 'concluido' | 'pago'
+  status_pagamento: 'pendente' | 'pendente_plataforma' | 'pago_parcialmente' | 'pago'
   desconto_plataforma_default: number
   total_visitas: number
   total_valor: number
@@ -56,10 +57,12 @@ export default function ServicesPage() {
   const [formData, setFormData] = useState<{
     nome_servico: string
     client_id: string
+    status_pagamento: 'pendente' | 'pendente_plataforma' | 'pago_parcialmente' | 'pago'
     desconto_plataforma_default: number
   }>({
     nome_servico: '',
     client_id: '',
+    status_pagamento: 'pendente',
     desconto_plataforma_default: 0
   })
 
@@ -174,6 +177,7 @@ export default function ServicesPage() {
       setFormData({
         nome_servico: service.nome_servico || '',
         client_id: service.client_id,
+        status_pagamento: service.status_pagamento || 'pendente',
         desconto_plataforma_default: service.desconto_plataforma_default
       })
       setSelectedClient(clients.find(c => c.id === service.client_id) || null)
@@ -183,6 +187,7 @@ export default function ServicesPage() {
       setFormData({
         nome_servico: '',
         client_id: '',
+        status_pagamento: 'pendente',
         desconto_plataforma_default: 0
       })
       setVisits([])
@@ -212,6 +217,7 @@ export default function ServicesPage() {
     setFormData({
       nome_servico: '',
       client_id: '',
+      status_pagamento: 'pendente',
       desconto_plataforma_default: 0
     })
     setVisits([])
@@ -392,6 +398,45 @@ export default function ServicesPage() {
     )
   }
 
+  const getPaymentStatusBadge = (status_pagamento: string) => {
+    const styles = {
+      pendente: 'bg-red-100 text-red-800',
+      pendente_plataforma: 'bg-yellow-100 text-yellow-800',
+      pago_parcialmente: 'bg-blue-100 text-blue-800',
+      pago: 'bg-green-100 text-green-800'
+    }
+    
+    const labels = {
+      pendente: 'Pendente',
+      pendente_plataforma: 'Pendente Plataforma',
+      pago_parcialmente: 'Pago Parcialmente',
+      pago: 'Pago'
+    }
+    
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status_pagamento as keyof typeof styles]}`}>
+        {labels[status_pagamento as keyof typeof labels]}
+      </span>
+    )
+  }
+
+  const markServiceAsPaid = async (serviceId: string) => {
+    try {
+      const { error } = await supabase
+        .from('services')
+        .update({ status_pagamento: 'pago' })
+        .eq('id', serviceId)
+
+      if (error) throw error
+      
+      toast.success('Serviço marcado como pago!')
+      await fetchServices()
+    } catch (error: any) {
+      console.error('Erro ao marcar serviço como pago:', error)
+      toast.error(`Erro ao marcar serviço como pago: ${error.message}`)
+    }
+  }
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -518,9 +563,23 @@ export default function ServicesPage() {
                   
                   {/* Status e botões de ação - área fixa à direita */}
                   <div className="flex flex-row md:flex-col items-center space-x-3 md:space-x-0 md:space-y-2 flex-shrink-0 pl-0 md:pl-6">
-                    {getStatusBadge(service.status)}
+                    <div className="flex flex-col items-center space-y-1">
+                      {getStatusBadge(service.status)}
+                      {getPaymentStatusBadge(service.status_pagamento)}
+                    </div>
                     
                     <div className="flex items-center space-x-2">
+                      {service.status_pagamento !== 'pago' && (
+                        <button
+                          onClick={() => markServiceAsPaid(service.id)}
+                          className="inline-flex items-center px-2.5 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 transition-colors"
+                        >
+                          <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Marcar Pago
+                        </button>
+                      )}
                       <button
                         onClick={() => openModal(service)}
                         className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
@@ -602,6 +661,22 @@ export default function ServicesPage() {
                           {client.nome}
                         </option>
                       ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Status de Pagamento
+                    </label>
+                    <select
+                      value={formData.status_pagamento}
+                      onChange={(e) => setFormData({ ...formData, status_pagamento: e.target.value as any })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="pendente">Pendente</option>
+                      <option value="pendente_plataforma">Pendente Plataforma</option>
+                      <option value="pago_parcialmente">Pago Parcialmente</option>
+                      <option value="pago">Pago</option>
                     </select>
                   </div>
 

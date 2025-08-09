@@ -10,7 +10,6 @@ interface Visit {
   tipo_visita: 'inteira' | 'meia'
   valor: number
   status: 'agendada' | 'realizada' | 'cancelada'
-  status_pagamento: 'pendente_plataforma' | 'pendente' | 'pago'
   desconto_plataforma: number
   observacoes?: string
   clients: {
@@ -137,38 +136,6 @@ export default function VisitsPage() {
     } catch (error: any) {
       console.error('Erro ao atualizar status da visita:', error)
       toast.error(`Erro ao atualizar status da visita: ${error.message}`)
-    } finally {
-      setUpdatingVisit(null)
-    }
-  }
-
-  const updatePaymentStatus = async (visitId: string, status_pagamento: 'pendente_plataforma' | 'pendente' | 'pago') => {
-    if (updatingVisit === visitId) {
-      toast.error('Aguarde, o pagamento está sendo atualizado...')
-      return
-    }
-
-    setUpdatingVisit(visitId)
-
-    try {
-      const { error } = await supabase
-        .from('visits')
-        .update({ status_pagamento })
-        .eq('id', visitId)
-
-      if (error) throw error
-      
-      const statusLabels = {
-        'pendente_plataforma': 'pendente na plataforma',
-        'pendente': 'pendente',
-        'pago': 'pago'
-      }
-      
-      toast.success(`Status de pagamento atualizado para "${statusLabels[status_pagamento]}"!`)
-      await fetchVisits()
-    } catch (error: any) {
-      console.error('Erro ao atualizar status de pagamento:', error)
-      toast.error(`Erro ao atualizar status de pagamento: ${error.message}`)
     } finally {
       setUpdatingVisit(null)
     }
@@ -344,17 +311,6 @@ export default function VisitsPage() {
                     <option value="realizada">Realizada</option>
                     <option value="cancelada">Cancelada</option>
                   </select>
-                  <span className="text-xs font-medium">Pagamento:</span>
-                  <select
-                    value={visit.status_pagamento}
-                    onChange={(e) => updatePaymentStatus(visit.id, e.target.value as any)}
-                    disabled={updatingVisit === visit.id}
-                    className="text-xs border-0 bg-gray-100 focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="pendente_plataforma">Pendente Plataforma</option>
-                    <option value="pendente">Pendente</option>
-                    <option value="pago">Pago</option>
-                  </select>
                 </div>
                 <div className="flex gap-2 mt-2">
                   {visit.status === 'agendada' && (
@@ -364,15 +320,6 @@ export default function VisitsPage() {
                       className={`text-xs font-medium px-2 py-1 rounded bg-green-100 text-green-700 ${updatingVisit === visit.id ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-200'}`}
                     >
                       {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Realizada'}
-                    </button>
-                  )}
-                  {visit.status_pagamento !== 'pago' && (
-                    <button
-                      onClick={() => updatePaymentStatus(visit.id, 'pago')}
-                      disabled={updatingVisit === visit.id}
-                      className={`text-xs font-medium px-2 py-1 rounded bg-blue-100 text-blue-700 ${updatingVisit === visit.id ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200'}`}
-                    >
-                      {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Pago'}
                     </button>
                   )}
                 </div>

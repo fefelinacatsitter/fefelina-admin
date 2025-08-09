@@ -8,7 +8,6 @@ interface Service {
   nome_servico?: string
   data_inicio: string
   data_fim: string
-  status: 'pendente' | 'em_andamento' | 'concluido'
   status_pagamento: 'pendente' | 'pendente_plataforma' | 'pago_parcialmente' | 'pago'
   desconto_plataforma_default: number
   total_visitas: number
@@ -376,26 +375,6 @@ export default function ServicesPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      pendente: 'bg-orange-100 text-orange-800',
-      em_andamento: 'bg-blue-100 text-blue-800',
-      concluido: 'bg-gray-100 text-gray-800'
-    }
-    
-    const labels = {
-      pendente: 'Pendente',
-      em_andamento: 'Em Andamento',
-      concluido: 'Concluído'
-    }
-    
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status as keyof typeof styles]}`}>
-        {labels[status as keyof typeof labels]}
-      </span>
-    )
-  }
-
   const getPaymentStatusBadge = (status_pagamento: string) => {
     const styles = {
       pendente: 'bg-red-100 text-red-800',
@@ -562,7 +541,6 @@ export default function ServicesPage() {
                   {/* Status e botões de ação - área fixa à direita */}
                   <div className="flex flex-row md:flex-col items-center space-x-3 md:space-x-0 md:space-y-2 flex-shrink-0 pl-0 md:pl-6">
                     <div className="flex flex-col items-center space-y-1">
-                      {getStatusBadge(service.status)}
                       {getPaymentStatusBadge(service.status_pagamento)}
                     </div>
                     

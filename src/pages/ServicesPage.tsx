@@ -312,11 +312,15 @@ export default function ServicesPage() {
       }
 
       // Inserir visitas
-      const visitsToInsert = visits.map(visit => ({
-        ...visit,
-        service_id: savedService.id,
-        client_id: formData.client_id
-      }))
+      const visitsToInsert = visits.map(visit => {
+        // Remove o ID para permitir que o banco gere novos IDs
+        const { id, ...visitWithoutId } = visit
+        return {
+          ...visitWithoutId,
+          service_id: savedService.id,
+          client_id: formData.client_id
+        }
+      })
       
       if (visitsToInsert.length > 0) {
         const { error: visitsError } = await supabase

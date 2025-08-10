@@ -53,6 +53,11 @@ export default function ServicesPage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<Service | null>(null)
   
+  // Estados para filtros
+  const [selectedFilter, setSelectedFilter] = useState<'ativos' | 'concluidos' | 'todos'>('ativos')
+  const [filterStartDate, setFilterStartDate] = useState('')
+  const [filterEndDate, setFilterEndDate] = useState('')
+  
   const [formData, setFormData] = useState<{
     nome_servico: string
     client_id: string
@@ -72,7 +77,7 @@ export default function ServicesPage() {
   useEffect(() => {
     fetchServices()
     fetchClients()
-  }, [])
+  }, [selectedFilter, filterStartDate, filterEndDate])
 
   const fetchServices = async () => {
     try {
@@ -90,18 +95,59 @@ export default function ServicesPage() {
 
       if (error) throw error
       
-      // Filtrar serviços que ainda estão ativos (data_fim >= hoje)
+      // Obter data de hoje
       const today = new Date()
       const year = today.getFullYear()
       const month = String(today.getMonth() + 1).padStart(2, '0')
       const day = String(today.getDate()).padStart(2, '0')
       const todayStr = `${year}-${month}-${day}`
       
-      const activeServices = (data || []).filter(service => 
-        service.data_fim >= todayStr || service.status_pagamento !== 'pago'
-      )
+      let filteredServices = data || []
       
-      setServices(activeServices)
+      // Aplicar filtros
+      switch (selectedFilter) {
+        case 'ativos':
+          // Serviços ativos: data_fim >= hoje OU status_pagamento !== 'pago'
+          filteredServices = filteredServices.filter(service => 
+            service.data_fim >= todayStr || service.status_pagamento !== 'pago'
+          )
+          break
+        case 'concluidos':
+          // Serviços concluídos: data_fim < hoje E status_pagamento = 'pago'
+          filteredServices = filteredServices.filter(service => 
+            service.data_fim < todayStr && service.status_pagamento === 'pago'
+          )
+          
+          // Se não houver filtro de data específico, limitar aos últimos 6 meses
+          if (!filterStartDate && !filterEndDate) {
+            const sixMonthsAgo = new Date()
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+            const sixMonthsAgoStr = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}-${String(sixMonthsAgo.getDate()).padStart(2, '0')}`
+            
+            filteredServices = filteredServices.filter(service => 
+              service.data_inicio >= sixMonthsAgoStr
+            )
+          }
+          break
+        case 'todos':
+          // Todos os serviços - sem filtro adicional
+          break
+      }
+      
+      // Aplicar filtro por data se especificado
+      if (filterStartDate) {
+        filteredServices = filteredServices.filter(service => 
+          service.data_inicio >= filterStartDate
+        )
+      }
+      
+      if (filterEndDate) {
+        filteredServices = filteredServices.filter(service => 
+          service.data_fim <= filterEndDate
+        )
+      }
+      
+      setServices(filteredServices)
     } catch (error) {
       console.error('Erro ao buscar serviços:', error)
     } finally {
@@ -199,7 +245,7 @@ export default function ServicesPage() {
     try {
       const { data, error } = await supabase
         .from('visits')
-        .select('*')
+        .select('id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, observacoes, client_id, created_at')
         .eq('service_id', serviceId)
         .order('data', { ascending: true })
 
@@ -484,6 +530,81 @@ export default function ServicesPage() {
             </svg>
             Novo Serviço
           </button>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="mt-6 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Filtros por status */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedFilter('ativos')}
+              className={`px-4 py-2 text-sm font-medium rounded-md ${
+                selectedFilter === 'ativos'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Ativos
+            </button>
+            <button
+              onClick={() => setSelectedFilter('concluidos')}
+              className={`px-4 py-2 text-sm font-medium rounded-md ${
+                selectedFilter === 'concluidos'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Concluídos
+              {selectedFilter === 'concluidos' && !filterStartDate && !filterEndDate && (
+                <span className="ml-1 text-xs opacity-75">(6m)</span>
+              )}
+            </button>
+            <button
+              onClick={() => setSelectedFilter('todos')}
+              className={`px-4 py-2 text-sm font-medium rounded-md ${
+                selectedFilter === 'todos'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Todos
+            </button>
+          </div>
+          
+          {/* Filtros por data (apenas quando "concluidos" ou "todos" estiver selecionado) */}
+          {(selectedFilter === 'concluidos' || selectedFilter === 'todos') && (
+            <div className="flex flex-col sm:flex-row gap-2 items-center">
+              <span className="text-sm text-gray-600 whitespace-nowrap">Período:</span>
+              <input
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Data início"
+              />
+              <span className="text-sm text-gray-500">até</span>
+              <input
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                className="text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Data fim"
+              />
+              {(filterStartDate || filterEndDate) && (
+                <button
+                  onClick={() => {
+                    setFilterStartDate('')
+                    setFilterEndDate('')
+                  }}
+                  className="text-sm text-gray-500 hover:text-gray-700 px-2 py-1 rounded"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

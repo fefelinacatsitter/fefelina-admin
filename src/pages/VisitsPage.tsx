@@ -60,7 +60,7 @@ export default function VisitsPage() {
       let query = supabase
         .from('visits')
         .select(`
-          *,
+          id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, observacoes, client_id, created_at,
           clients (nome),
           services (nome_servico)
         `)

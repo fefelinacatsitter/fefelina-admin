@@ -54,16 +54,16 @@ export default function Dashboard() {
         supabase.from('clients').select('*', { count: 'exact' }),
         supabase.from('pets').select('*', { count: 'exact' }),
         supabase.from('services').select('*', { count: 'exact' }).neq('status_pagamento', 'pago'),
-        supabase.from('visits').select('*', { count: 'exact' }).eq('data', todayString),
+        supabase.from('visits').select('id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, observacoes, client_id, created_at', { count: 'exact' }).eq('data', todayString),
         supabase.from('services').select('total_a_receber').eq('status_pagamento', 'pago').gte('data_inicio', `${year}-${month}-01`).lte('data_fim', `${year}-${month}-31`),
-        supabase.from('visits').select('*', { count: 'exact' }).eq('status', 'realizada').gte('data', `${year}-${month}-01`).lte('data', `${year}-${month}-31`)
+        supabase.from('visits').select('id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, observacoes, client_id, created_at', { count: 'exact' }).eq('status', 'realizada').gte('data', `${year}-${month}-01`).lte('data', `${year}-${month}-31`)
       ])
 
       // Buscar próximas visitas
       const upcomingResult = await supabase
         .from('visits')
         .select(`
-          *,
+          id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, observacoes, client_id, created_at,
           clients(nome),
           services(nome_servico)
         `)

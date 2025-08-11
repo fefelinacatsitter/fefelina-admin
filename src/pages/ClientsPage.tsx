@@ -48,30 +48,63 @@ export default function ClientsPage() {
     
     try {
       if (sortBy === 'recent_services') {
-        // Ordenar por serviços mais recentes
+        // Ordenar por atividade mais recente (visitas realizadas)
         const { data, error } = await supabase
           .from('clients')
           .select(`
             *,
             services (
+              id,
               data_inicio,
               data_fim,
-              created_at
+              status,
+              visits (
+                data,
+                status
+              )
             )
           `)
         
         if (error) throw error
         
-        // Ordenar do lado do cliente por serviço mais recente
+        // Ordenar do lado do cliente por atividade mais recente
         const sortedClients = (data || []).sort((a, b) => {
-          const aLatestService = a.services?.length > 0 
-            ? Math.max(...a.services.map((s: any) => new Date(s.created_at).getTime()))
-            : 0
-          const bLatestService = b.services?.length > 0 
-            ? Math.max(...b.services.map((s: any) => new Date(s.created_at).getTime()))
-            : 0
+          // Para cada cliente, encontrar a data da visita realizada mais recente
+          const getLatestActivityDate = (client: any) => {
+            let latestDate = 0
+            
+            if (client.services?.length > 0) {
+              client.services.forEach((service: any) => {
+                // Verificar visitas realizadas do serviço
+                if (service.visits?.length > 0) {
+                  service.visits.forEach((visit: any) => {
+                    if (visit.status === 'realizada') {
+                      const visitDate = new Date(visit.data).getTime()
+                      if (visitDate > latestDate) {
+                        latestDate = visitDate
+                      }
+                    }
+                  })
+                }
+                
+                // Se não houver visitas realizadas, mas o serviço está concluído,
+                // usar a data fim do serviço como fallback
+                if (latestDate === 0 && service.status === 'concluido' && service.data_fim) {
+                  const serviceEndDate = new Date(service.data_fim).getTime()
+                  if (serviceEndDate > latestDate) {
+                    latestDate = serviceEndDate
+                  }
+                }
+              })
+            }
+            
+            return latestDate
+          }
           
-          return bLatestService - aLatestService
+          const aLatestActivity = getLatestActivityDate(a)
+          const bLatestActivity = getLatestActivityDate(b)
+          
+          return bLatestActivity - aLatestActivity
         })
         
         setClients(sortedClients)

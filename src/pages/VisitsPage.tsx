@@ -26,11 +26,15 @@ export default function VisitsPage() {
   const [updatingVisit, setUpdatingVisit] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState<'todas' | 'hoje' | 'proximas' | 'realizadas'>('hoje')
   const [hasFutureVisits, setHasFutureVisits] = useState(false)
+  
+  // Estados para filtros de data
+  const [filterStartDate, setFilterStartDate] = useState('')
+  const [filterEndDate, setFilterEndDate] = useState('')
 
   useEffect(() => {
     fetchVisits()
     checkFutureVisits()
-  }, [selectedFilter])
+  }, [selectedFilter, filterStartDate, filterEndDate])
 
   const checkFutureVisits = async () => {
     try {
@@ -86,11 +90,29 @@ export default function VisitsPage() {
         case 'realizadas':
           // Filtrar apenas visitas realizadas, ordenando da mais recente para a mais antiga
           query = query.eq('status', 'realizada').order('data', { ascending: false }).order('horario', { ascending: false })
+          
+          // Se não houver filtro de data específico, limitar aos últimos 3 meses
+          if (!filterStartDate && !filterEndDate) {
+            const threeMonthsAgo = new Date()
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+            const threeMonthsAgoStr = `${threeMonthsAgo.getFullYear()}-${String(threeMonthsAgo.getMonth() + 1).padStart(2, '0')}-${String(threeMonthsAgo.getDate()).padStart(2, '0')}`
+            
+            query = query.gte('data', threeMonthsAgoStr)
+          }
           break
         default:
           // todas - sem filtro adicional, mas ordenar da mais recente para a mais antiga
           query = query.order('data', { ascending: false }).order('horario', { ascending: false })
           break
+      }
+
+      // Aplicar filtro por data se especificado
+      if (filterStartDate) {
+        query = query.gte('data', filterStartDate)
+      }
+
+      if (filterEndDate) {
+        query = query.lte('data', filterEndDate)
       }
 
       const { data, error } = await query
@@ -245,6 +267,52 @@ export default function VisitsPage() {
             Todas
           </button>
         </div>
+        
+        {/* Filtros por data */}
+        {(selectedFilter === 'realizadas' || selectedFilter === 'todas') && (
+          <div className="mt-4 flex flex-wrap gap-4 items-end">
+            <div>
+              <label htmlFor="filter-start-date" className="block text-sm font-medium text-gray-700 mb-1">
+                Data inicial
+              </label>
+              <input
+                type="date"
+                id="filter-start-date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="filter-end-date" className="block text-sm font-medium text-gray-700 mb-1">
+                Data final
+              </label>
+              <input
+                type="date"
+                id="filter-end-date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+            {(filterStartDate || filterEndDate) && (
+              <button
+                onClick={() => {
+                  setFilterStartDate('')
+                  setFilterEndDate('')
+                }}
+                className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-md"
+              >
+                Limpar filtros
+              </button>
+            )}
+            {selectedFilter === 'realizadas' && !filterStartDate && !filterEndDate && (
+              <div className="text-sm text-gray-500 bg-yellow-50 border border-yellow-200 rounded-md px-3 py-2">
+                Mostrando apenas os últimos 3 meses
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {visits.length === 0 ? (
@@ -261,7 +329,9 @@ export default function VisitsPage() {
                 : selectedFilter === 'hoje' && !hasFutureVisits
                 ? 'Você não tem nenhuma visita agendada'
                 : selectedFilter === 'realizadas'
-                ? ''
+                ? (!filterStartDate && !filterEndDate 
+                  ? 'Nenhuma visita realizada nos últimos 3 meses'
+                  : 'Nenhuma visita realizada no período selecionado')
                 : 'Nenhuma visita agendada'
               }
             </h3>
@@ -271,7 +341,9 @@ export default function VisitsPage() {
                 : selectedFilter === 'hoje' && !hasFutureVisits
                 ? 'Agendar uma visita para começar.'
                 : selectedFilter === 'realizadas'
-                ? ''
+                ? (!filterStartDate && !filterEndDate 
+                  ? 'Use os filtros de data para buscar em outros períodos.'
+                  : 'Tente ajustar o período de busca.')
                 : 'Agendar uma visita para começar.'
               }
             </p>

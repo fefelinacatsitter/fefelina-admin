@@ -1311,56 +1311,91 @@ export default function ServicesPage() {
                       Nenhuma visita encontrada para este serviço.
                     </div>
                   ) : (
-                    <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                      <table className="min-w-full divide-y divide-gray-300">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Data/Horário
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Tipo
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Valor
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Desconto
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Status
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Observações
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {viewingVisits.map((visit, index) => (
-                            <tr key={visit.id || index} className="hover:bg-gray-50">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <div>
-                                  <div className="font-medium">{formatDate(visit.data)}</div>
-                                  <div className="text-gray-500">{visit.horario}</div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  visit.tipo_visita === 'inteira' 
-                                    ? 'bg-blue-100 text-blue-800' 
-                                    : 'bg-purple-100 text-purple-800'
-                                }`}>
-                                  {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {formatCurrency(visit.valor)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {visit.desconto_plataforma}%
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    <>
+                      {/* Versão Desktop - Tabela */}
+                      <div className="hidden md:block overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                        <table className="min-w-full divide-y divide-gray-300">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Data/Horário
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Tipo
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Valor
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Desconto
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Observações
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {viewingVisits.map((visit, index) => (
+                              <tr key={visit.id || index} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <div>
+                                    <div className="font-medium">{formatDate(visit.data)}</div>
+                                    <div className="text-gray-500">{visit.horario}</div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    visit.tipo_visita === 'inteira' 
+                                      ? 'bg-blue-100 text-blue-800' 
+                                      : 'bg-purple-100 text-purple-800'
+                                  }`}>
+                                    {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                  {formatCurrency(visit.valor)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  {visit.desconto_plataforma}%
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    visit.status === 'realizada' 
+                                      ? 'bg-green-100 text-green-800'
+                                      : visit.status === 'agendada'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {visit.status === 'realizada' ? 'Realizada' : 
+                                     visit.status === 'agendada' ? 'Agendada' : 'Cancelada'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                                  <div className="truncate" title={visit.observacoes || ''}>
+                                    {visit.observacoes || '-'}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Versão Mobile - Cards */}
+                      <div className="md:hidden space-y-4">
+                        {viewingVisits.map((visit, index) => (
+                          <div key={visit.id || index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                            {/* Header do card com data e status */}
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">{formatDate(visit.data)}</div>
+                                <div className="text-xs text-gray-500">{visit.horario}</div>
+                              </div>
+                              <div className="flex flex-col items-end space-y-1">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                   visit.status === 'realizada' 
                                     ? 'bg-green-100 text-green-800'
                                     : visit.status === 'agendada'
@@ -1370,17 +1405,39 @@ export default function ServicesPage() {
                                   {visit.status === 'realizada' ? 'Realizada' : 
                                    visit.status === 'agendada' ? 'Agendada' : 'Cancelada'}
                                 </span>
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
-                                <div className="truncate" title={visit.observacoes || ''}>
-                                  {visit.observacoes || '-'}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  visit.tipo_visita === 'inteira' 
+                                    ? 'bg-blue-100 text-blue-800' 
+                                    : 'bg-purple-100 text-purple-800'
+                                }`}>
+                                  {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Informações financeiras */}
+                            <div className="grid grid-cols-2 gap-4 mb-3">
+                              <div>
+                                <div className="text-xs text-gray-500 mb-1">Valor</div>
+                                <div className="text-sm font-medium text-gray-900">{formatCurrency(visit.valor)}</div>
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500 mb-1">Desconto Plataforma</div>
+                                <div className="text-sm font-medium text-gray-900">{visit.desconto_plataforma}%</div>
+                              </div>
+                            </div>
+
+                            {/* Observações */}
+                            {visit.observacoes && (
+                              <div className="border-t border-gray-100 pt-3">
+                                <div className="text-xs text-gray-500 mb-1">Observações</div>
+                                <div className="text-sm text-gray-900">{visit.observacoes}</div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
 

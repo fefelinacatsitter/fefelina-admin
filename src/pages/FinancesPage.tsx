@@ -239,7 +239,9 @@ export default function FinancesPage() {
     visits: number
   }> => {
     const grouped = data.reduce((acc, service) => {
-      const date = new Date(service.data_inicio)
+      // Criar data usando ano, mês e dia separadamente para evitar problemas de timezone
+      const [year, month, day] = service.data_inicio.split('-').map(Number)
+      const date = new Date(year, month - 1, day)
       const monthKey = format(date, 'yyyy-MM')
       const monthLabel = format(date, 'MMM yyyy', { locale: ptBR })
       

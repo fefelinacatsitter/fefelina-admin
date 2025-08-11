@@ -59,6 +59,11 @@ export default function ServicesPage() {
   const [viewingVisits, setViewingVisits] = useState<Visit[]>([])
   const [loadingDetails, setLoadingDetails] = useState(false)
   
+  // Estados para menu de contexto mobile
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [selectedServiceForMenu, setSelectedServiceForMenu] = useState<Service | null>(null)
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
+  
   // Estados para filtros
   const [selectedFilter, setSelectedFilter] = useState<'ativos' | 'concluidos' | 'todos'>('ativos')
   const [filterStartDate, setFilterStartDate] = useState('')
@@ -501,6 +506,35 @@ export default function ServicesPage() {
     setLoadingDetails(false)
   }
 
+  // Funções para menu de contexto mobile
+  const handleMobileLongPress = (service: Service) => {
+    if (window.innerWidth < 768) {
+      setSelectedServiceForMenu(service)
+      setShowMobileMenu(true)
+    }
+  }
+
+  const handleMobilePress = (service: Service) => {
+    if (window.innerWidth < 768) {
+      const timer = setTimeout(() => {
+        handleMobileLongPress(service)
+      }, 500) // 500ms para long press
+      setLongPressTimer(timer)
+    }
+  }
+
+  const handleMobileRelease = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer)
+      setLongPressTimer(null)
+    }
+  }
+
+  const closeMobileMenu = () => {
+    setShowMobileMenu(false)
+    setSelectedServiceForMenu(null)
+  }
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -669,7 +703,18 @@ export default function ServicesPage() {
         <div className="mt-8 grid grid-cols-1 gap-3">
           {services.map((service) => (
             <div key={service.id} className="card-fefelina">
-              <div className="p-3">
+              <div 
+                className="p-3 cursor-pointer md:cursor-default"
+                onClick={() => {
+                  // No mobile, clique no card abre os detalhes
+                  if (window.innerWidth < 768) {
+                    openDetailsModal(service)
+                  }
+                }}
+                onTouchStart={() => handleMobilePress(service)}
+                onTouchEnd={handleMobileRelease}
+                onTouchCancel={handleMobileRelease}
+              >
                 {/* Layout horizontal: Info do serviço | Métricas | Status | Ações */}
                 <div className="flex flex-col md:flex-row md:items-center gap-2">
                   {/* Informações do serviço */}
@@ -706,60 +751,84 @@ export default function ServicesPage() {
                       {getPaymentStatusBadge(service.status_pagamento)}
                     </div>
                     
-                    {/* Linha de botões principais */}
-                    <div className="flex flex-wrap items-center gap-2 justify-center">
-                      <button
-                        onClick={() => openDetailsModal(service)}
-                        className="inline-flex items-center px-2 py-1.5 border border-blue-300 shadow-sm text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 transition-colors"
-                      >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {/* Botões visíveis apenas no desktop */}
+                    <div className="hidden md:flex flex-col gap-2">
+                      {/* Linha de botões principais */}
+                      <div className="flex flex-wrap items-center gap-2 justify-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openDetailsModal(service)
+                          }}
+                          className="inline-flex items-center px-2 py-1.5 border border-blue-300 shadow-sm text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 transition-colors"
+                        >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          Ver Detalhes
+                        </button>
+                        
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openModal(service)
+                          }}
+                          className="inline-flex items-center px-2 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                        >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Editar
+                        </button>
+                      </div>
+                      
+                      {/* Linha de botões secundários */}
+                      <div className="flex flex-wrap items-center gap-2 justify-center">
+                        {service.status_pagamento !== 'pago' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              markServiceAsPaid(service.id)
+                            }}
+                            className="inline-flex items-center px-2 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 transition-colors"
+                          >
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Marcar Pago
+                          </button>
+                        )}
+                        
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteService(service)
+                          }}
+                          disabled={deletingService === service.id}
+                          className={`inline-flex items-center px-2 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded transition-colors ${
+                            deletingService === service.id 
+                              ? 'text-red-400 bg-red-50 cursor-not-allowed' 
+                              : 'text-red-700 bg-white hover:bg-red-50'
+                          }`}
+                        >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          {deletingService === service.id ? 'Excluindo...' : 'Excluir'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Indicador visual para mobile mostrando que o card é clicável */}
+                    <div className="flex md:hidden items-center justify-center mt-2">
+                      <div className="flex items-center text-xs text-gray-500">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                        <span className="hidden sm:inline">Ver Detalhes</span>
-                        <span className="sm:hidden">Detalhes</span>
-                      </button>
-                      
-                      <button
-                        onClick={() => openModal(service)}
-                        className="inline-flex items-center px-2 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                      >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        Editar
-                      </button>
-                    </div>
-                    
-                    {/* Linha de botões secundários */}
-                    <div className="flex flex-wrap items-center gap-2 justify-center">
-                      {service.status_pagamento !== 'pago' && (
-                        <button
-                          onClick={() => markServiceAsPaid(service.id)}
-                          className="inline-flex items-center px-2 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 transition-colors"
-                        >
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          <span className="hidden sm:inline">Marcar Pago</span>
-                          <span className="sm:hidden">Pago</span>
-                        </button>
-                      )}
-                      
-                      <button
-                        onClick={() => deleteService(service)}
-                        disabled={deletingService === service.id}
-                        className={`inline-flex items-center px-2 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded transition-colors ${
-                          deletingService === service.id 
-                            ? 'text-red-400 bg-red-50 cursor-not-allowed' 
-                            : 'text-red-700 bg-white hover:bg-red-50'
-                        }`}
-                      >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        {deletingService === service.id ? 'Excluindo...' : 'Excluir'}
-                      </button>
+                        Toque para ver detalhes • Mantenha pressionado para ações
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1335,6 +1404,74 @@ export default function ServicesPage() {
                     Editar Serviço
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Menu de Contexto Mobile */}
+      {showMobileMenu && selectedServiceForMenu && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-end justify-center md:hidden">
+          <div className="relative mx-auto p-6 border w-full max-w-sm shadow-fefelina-hover rounded-t-2xl bg-white">
+            <div className="text-center">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Ações do Serviço
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {selectedServiceForMenu.nome_servico || `Serviço para ${selectedServiceForMenu.clients?.nome}`}
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    closeMobileMenu()
+                    openModal(selectedServiceForMenu)
+                  }}
+                  className="w-full inline-flex items-center justify-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Editar Serviço
+                </button>
+
+                {selectedServiceForMenu.status_pagamento !== 'pago' && (
+                  <button
+                    onClick={() => {
+                      closeMobileMenu()
+                      markServiceAsPaid(selectedServiceForMenu.id)
+                    }}
+                    className="w-full inline-flex items-center justify-center px-4 py-3 border border-green-300 shadow-sm text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Marcar como Pago
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    closeMobileMenu()
+                    deleteService(selectedServiceForMenu)
+                  }}
+                  className="w-full inline-flex items-center justify-center px-4 py-3 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Excluir Serviço
+                </button>
+
+                <button
+                  onClick={closeMobileMenu}
+                  className="w-full px-4 py-3 text-sm font-medium text-gray-500 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancelar
+                </button>
               </div>
             </div>
           </div>

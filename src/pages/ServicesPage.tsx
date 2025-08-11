@@ -53,6 +53,12 @@ export default function ServicesPage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<Service | null>(null)
   
+  // Estados para modal de visualização de detalhes
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [viewingService, setViewingService] = useState<Service | null>(null)
+  const [viewingVisits, setViewingVisits] = useState<Visit[]>([])
+  const [loadingDetails, setLoadingDetails] = useState(false)
+  
   // Estados para filtros
   const [selectedFilter, setSelectedFilter] = useState<'ativos' | 'concluidos' | 'todos'>('ativos')
   const [filterStartDate, setFilterStartDate] = useState('')
@@ -464,6 +470,37 @@ export default function ServicesPage() {
     }
   }
 
+  // Função para abrir modal de detalhes
+  const openDetailsModal = async (service: Service) => {
+    setViewingService(service)
+    setShowDetailsModal(true)
+    setLoadingDetails(true)
+    
+    try {
+      // Buscar visitas do serviço
+      const { data: visitsData, error } = await supabase
+        .from('visits')
+        .select('*')
+        .eq('service_id', service.id)
+        .order('data', { ascending: true })
+
+      if (error) throw error
+      setViewingVisits(visitsData || [])
+    } catch (error: any) {
+      console.error('Erro ao buscar visitas do serviço:', error)
+      toast.error(`Erro ao buscar detalhes: ${error.message}`)
+    } finally {
+      setLoadingDetails(false)
+    }
+  }
+
+  const closeDetailsModal = () => {
+    setShowDetailsModal(false)
+    setViewingService(null)
+    setViewingVisits([])
+    setLoadingDetails(false)
+  }
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -664,42 +701,61 @@ export default function ServicesPage() {
                   </div>
                   
                   {/* Status e botões de ação - área fixa à direita */}
-                  <div className="flex flex-row md:flex-col items-center space-x-3 md:space-x-0 md:space-y-2 flex-shrink-0 pl-0 md:pl-6">
+                  <div className="flex flex-col md:flex-col items-center space-y-2 md:space-y-2 flex-shrink-0 pl-0 md:pl-6">
                     <div className="flex flex-col items-center space-y-1">
                       {getPaymentStatusBadge(service.status_pagamento)}
                     </div>
                     
-                    <div className="flex items-center space-x-2">
-                      {service.status_pagamento !== 'pago' && (
-                        <button
-                          onClick={() => markServiceAsPaid(service.id)}
-                          className="inline-flex items-center px-2.5 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 transition-colors"
-                        >
-                          <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Marcar Pago
-                        </button>
-                      )}
+                    {/* Linha de botões principais */}
+                    <div className="flex flex-wrap items-center gap-2 justify-center">
+                      <button
+                        onClick={() => openDetailsModal(service)}
+                        className="inline-flex items-center px-2 py-1.5 border border-blue-300 shadow-sm text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 transition-colors"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <span className="hidden sm:inline">Ver Detalhes</span>
+                        <span className="sm:hidden">Detalhes</span>
+                      </button>
+                      
                       <button
                         onClick={() => openModal(service)}
-                        className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                        className="inline-flex items-center px-2 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                       >
-                        <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                         Editar
                       </button>
+                    </div>
+                    
+                    {/* Linha de botões secundários */}
+                    <div className="flex flex-wrap items-center gap-2 justify-center">
+                      {service.status_pagamento !== 'pago' && (
+                        <button
+                          onClick={() => markServiceAsPaid(service.id)}
+                          className="inline-flex items-center px-2 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 transition-colors"
+                        >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="hidden sm:inline">Marcar Pago</span>
+                          <span className="sm:hidden">Pago</span>
+                        </button>
+                      )}
+                      
                       <button
                         onClick={() => deleteService(service)}
                         disabled={deletingService === service.id}
-                        className={`inline-flex items-center px-2.5 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded transition-colors ${
+                        className={`inline-flex items-center px-2 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded transition-colors ${
                           deletingService === service.id 
                             ? 'text-red-400 bg-red-50 cursor-not-allowed' 
                             : 'text-red-700 bg-white hover:bg-red-50'
                         }`}
                       >
-                        <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                         {deletingService === service.id ? 'Excluindo...' : 'Excluir'}
@@ -1081,6 +1137,204 @@ export default function ServicesPage() {
                 >
                   Confirmar Exclusão
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalhes do Serviço */}
+      {showDetailsModal && viewingService && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeDetailsModal}></div>
+            
+            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Detalhes do Serviço
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Visualização completa do serviço e suas visitas
+                  </p>
+                </div>
+                <button onClick={closeDetailsModal} className="text-gray-400 hover:text-gray-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Informações Básicas do Serviço */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Informações do Serviço</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Nome do Serviço</label>
+                      <div className="mt-1 text-sm text-gray-900">
+                        {viewingService.nome_servico || 'Não informado'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Cliente</label>
+                      <div className="mt-1 text-sm text-gray-900">
+                        {viewingService.clients?.nome || 'Cliente não encontrado'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Status de Pagamento</label>
+                      <div className="mt-1">
+                        {getPaymentStatusBadge(viewingService.status_pagamento)}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Desconto Plataforma Padrão</label>
+                      <div className="mt-1 text-sm text-gray-900">
+                        {viewingService.desconto_plataforma_default}%
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Período do Serviço</label>
+                      <div className="mt-1 text-sm text-gray-900">
+                        {formatDate(viewingService.data_inicio)} - {formatDate(viewingService.data_fim)}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Data de Criação</label>
+                      <div className="mt-1 text-sm text-gray-900">
+                        {formatDate(viewingService.created_at.split('T')[0])}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resumo Financeiro */}
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Resumo Financeiro</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-900">{viewingService.total_visitas}</div>
+                      <div className="text-sm text-gray-600">Total de Visitas</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-900">{formatCurrency(viewingService.total_valor)}</div>
+                      <div className="text-sm text-gray-600">Valor Total</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-primary-600">{formatCurrency(viewingService.total_a_receber)}</div>
+                      <div className="text-sm text-gray-600">Valor a Receber</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lista de Visitas */}
+                <div>
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Visitas do Serviço</h4>
+                  
+                  {loadingDetails ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    </div>
+                  ) : viewingVisits.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      Nenhuma visita encontrada para este serviço.
+                    </div>
+                  ) : (
+                    <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                      <table className="min-w-full divide-y divide-gray-300">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Data/Horário
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Tipo
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Valor
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Desconto
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Observações
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {viewingVisits.map((visit, index) => (
+                            <tr key={visit.id || index} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div>
+                                  <div className="font-medium">{formatDate(visit.data)}</div>
+                                  <div className="text-gray-500">{visit.horario}</div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  visit.tipo_visita === 'inteira' 
+                                    ? 'bg-blue-100 text-blue-800' 
+                                    : 'bg-purple-100 text-purple-800'
+                                }`}>
+                                  {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {formatCurrency(visit.valor)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {visit.desconto_plataforma}%
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  visit.status === 'realizada' 
+                                    ? 'bg-green-100 text-green-800'
+                                    : visit.status === 'agendada'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {visit.status === 'realizada' ? 'Realizada' : 
+                                   visit.status === 'agendada' ? 'Agendada' : 'Cancelada'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                                <div className="truncate" title={visit.observacoes || ''}>
+                                  {visit.observacoes || '-'}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botões de Ação */}
+                <div className="flex justify-end space-x-3 pt-6 border-t">
+                  <button
+                    type="button"
+                    onClick={closeDetailsModal}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Fechar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeDetailsModal()
+                      openModal(viewingService)
+                    }}
+                    className="btn-fefelina"
+                  >
+                    Editar Serviço
+                  </button>
+                </div>
               </div>
             </div>
           </div>

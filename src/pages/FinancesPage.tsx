@@ -75,7 +75,7 @@ export default function FinancesPage() {
       const [revenueData, statusData, transactionsData] = await Promise.all([
         fetchRevenueData(startDate, endDate),
         fetchStatusDistribution(startDate, endDate),
-        fetchRecentTransactions()
+        fetchRecentTransactions(startDate, endDate)
       ])
 
       setFinancialData({
@@ -206,7 +206,7 @@ export default function FinancesPage() {
     }))
   }
 
-  const fetchRecentTransactions = async () => {
+  const fetchRecentTransactions = async (startDate: string, endDate: string) => {
     const { data } = await supabase
       .from('services')
       .select(`
@@ -218,8 +218,10 @@ export default function FinancesPage() {
         nome_servico,
         clients(nome)
       `)
+      .gte('data_inicio', startDate)
+      .lte('data_fim', endDate)
       .order('created_at', { ascending: false })
-      .limit(10)
+      .limit(20)
 
     return data?.map(service => ({
       id: service.id,
@@ -544,10 +546,15 @@ export default function FinancesPage() {
         </div>
       </div>
 
-      {/* Transações Recentes */}
+      {/* Transações do Período */}
       <div className="mt-8 card-fefelina">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Transações Recentes</h3>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Transações do Período</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Serviços filtrados pelo período selecionado
+            </p>
+          </div>
           <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
             Ver todas
           </button>

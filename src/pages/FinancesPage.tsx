@@ -259,8 +259,9 @@ export default function FinancesPage() {
       return acc
     }, {} as Record<string, { month: string, revenue: number, visits: number }>)
 
-    return (Object.values(grouped) as Array<{ month: string, revenue: number, visits: number }>)
-      .sort((a, b) => a.month.localeCompare(b.month))
+    // Obter as chaves ordenadas e mapear para os valores
+    const sortedKeys = Object.keys(grouped).sort()
+    return sortedKeys.map(key => grouped[key])
   }
 
   const formatCurrency = (value: number) => {

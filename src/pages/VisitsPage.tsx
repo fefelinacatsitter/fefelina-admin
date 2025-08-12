@@ -2,6 +2,80 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
+// Funções auxiliares para validação de data
+const validateDateInput = (value: string): string => {
+  // Remove caracteres não numéricos exceto hífens
+  const cleaned = value.replace(/[^\d-]/g, '')
+  
+  // Se o valor estiver vazio, retorna vazio
+  if (!cleaned) return ''
+  
+  // Divide a data em partes
+  const parts = cleaned.split('-')
+  
+  if (parts.length >= 1) {
+    // Limita o ano a 4 dígitos
+    const year = parts[0].slice(0, 4)
+    
+    // Valida se o ano é válido (entre 1900 e 2100)
+    if (year.length === 4) {
+      const yearNum = parseInt(year)
+      if (yearNum < 1900 || yearNum > 2100) {
+        return '' // Retorna vazio para anos inválidos
+      }
+    }
+    
+    // Reconstrói a data com as validações
+    let result = year
+    
+    if (parts.length >= 2 && parts[1]) {
+      // Limita o mês a 2 dígitos e valida (01-12)
+      let month = parts[1].slice(0, 2)
+      if (month.length === 2) {
+        const monthNum = parseInt(month)
+        if (monthNum < 1 || monthNum > 12) {
+          month = '12' // Corrige para dezembro se inválido
+        }
+      }
+      result += '-' + month
+      
+      if (parts.length >= 3 && parts[2]) {
+        // Limita o dia a 2 dígitos e valida (01-31)
+        let day = parts[2].slice(0, 2)
+        if (day.length === 2) {
+          const dayNum = parseInt(day)
+          if (dayNum < 1 || dayNum > 31) {
+            day = '01' // Corrige para dia 1 se inválido
+          }
+        }
+        result += '-' + day
+      }
+    }
+    
+    return result
+  }
+  
+  return cleaned
+}
+
+const isValidDate = (dateString: string): boolean => {
+  if (!dateString) return false
+  
+  // Verifica o formato YYYY-MM-DD
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+  if (!dateRegex.test(dateString)) return false
+  
+  const date = new Date(dateString + 'T00:00:00')
+  const [year, month, day] = dateString.split('-').map(Number)
+  
+  // Verifica se a data é válida
+  return date.getFullYear() === year &&
+         date.getMonth() === month - 1 &&
+         date.getDate() === day &&
+         year >= 1900 &&
+         year <= 2100
+}
+
 interface Visit {
   id: string
   service_id: string
@@ -279,7 +353,22 @@ export default function VisitsPage() {
                 type="date"
                 id="filter-start-date"
                 value={filterStartDate}
-                onChange={(e) => setFilterStartDate(e.target.value)}
+                onChange={(e) => {
+                  const validatedDate = validateDateInput(e.target.value)
+                  if (!validatedDate || isValidDate(validatedDate)) {
+                    setFilterStartDate(validatedDate)
+                  } else {
+                    toast.error('Data inválida. Use o formato AAAA-MM-DD com ano entre 1900 e 2100.')
+                  }
+                }}
+                onBlur={(e) => {
+                  if (e.target.value && !isValidDate(e.target.value)) {
+                    toast.error('Data inválida. Corrigindo automaticamente.')
+                    setFilterStartDate('')
+                  }
+                }}
+                min="1900-01-01"
+                max="2100-12-31"
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
@@ -291,7 +380,22 @@ export default function VisitsPage() {
                 type="date"
                 id="filter-end-date"
                 value={filterEndDate}
-                onChange={(e) => setFilterEndDate(e.target.value)}
+                onChange={(e) => {
+                  const validatedDate = validateDateInput(e.target.value)
+                  if (!validatedDate || isValidDate(validatedDate)) {
+                    setFilterEndDate(validatedDate)
+                  } else {
+                    toast.error('Data inválida. Use o formato AAAA-MM-DD com ano entre 1900 e 2100.')
+                  }
+                }}
+                onBlur={(e) => {
+                  if (e.target.value && !isValidDate(e.target.value)) {
+                    toast.error('Data inválida. Corrigindo automaticamente.')
+                    setFilterEndDate('')
+                  }
+                }}
+                min="1900-01-01"
+                max="2100-12-31"
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500"
               />
             </div>

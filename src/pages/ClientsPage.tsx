@@ -57,7 +57,6 @@ export default function ClientsPage() {
               id,
               data_inicio,
               data_fim,
-              status,
               visits (
                 data,
                 status
@@ -87,12 +86,19 @@ export default function ClientsPage() {
                   })
                 }
                 
-                // Se não houver visitas realizadas, mas o serviço está concluído,
-                // usar a data fim do serviço como fallback
-                if (latestDate === 0 && service.status === 'concluido' && service.data_fim) {
+                // Se não houver visitas realizadas, usar a data fim do serviço como fallback
+                if (latestDate === 0 && service.data_fim) {
                   const serviceEndDate = new Date(service.data_fim).getTime()
                   if (serviceEndDate > latestDate) {
                     latestDate = serviceEndDate
+                  }
+                }
+                
+                // Se ainda não houver data, usar data_inicio como último fallback
+                if (latestDate === 0 && service.data_inicio) {
+                  const serviceStartDate = new Date(service.data_inicio).getTime()
+                  if (serviceStartDate > latestDate) {
+                    latestDate = serviceStartDate
                   }
                 }
               })
@@ -104,7 +110,21 @@ export default function ClientsPage() {
           const aLatestActivity = getLatestActivityDate(a)
           const bLatestActivity = getLatestActivityDate(b)
           
-          return bLatestActivity - aLatestActivity
+          // Se ambos têm atividade, ordenar por data mais recente
+          if (aLatestActivity > 0 && bLatestActivity > 0) {
+            return bLatestActivity - aLatestActivity
+          }
+          
+          // Se apenas um tem atividade, esse vem primeiro
+          if (aLatestActivity > 0 && bLatestActivity === 0) {
+            return -1
+          }
+          if (bLatestActivity > 0 && aLatestActivity === 0) {
+            return 1
+          }
+          
+          // Se nenhum tem atividade, ordenar alfabeticamente
+          return a.nome.localeCompare(b.nome)
         })
         
         setClients(sortedClients)

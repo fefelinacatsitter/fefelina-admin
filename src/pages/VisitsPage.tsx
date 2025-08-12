@@ -48,7 +48,7 @@ export default function VisitsPage() {
         .from('visits')
         .select('id')
         .gt('data', todayStr)
-        .neq('status', 'cancelada')
+        .eq('status', 'agendada')
         .limit(1)
 
       if (error) throw error
@@ -80,12 +80,12 @@ export default function VisitsPage() {
 
       switch (selectedFilter) {
         case 'hoje':
-          // Filtrar apenas visitas para hoje, excluindo canceladas e realizadas
-          query = query.eq('data', todayStr).neq('status', 'cancelada').neq('status', 'realizada')
+          // Filtrar apenas visitas para hoje com status agendada
+          query = query.eq('data', todayStr).eq('status', 'agendada')
           break
         case 'proximas':
-          // Filtrar visitas de hoje e futuras, excluindo canceladas
-          query = query.gte('data', todayStr).neq('status', 'cancelada')
+          // Filtrar visitas de hoje e futuras, excluindo canceladas e realizadas (apenas agendadas)
+          query = query.gte('data', todayStr).eq('status', 'agendada')
           break
         case 'realizadas':
           // Filtrar apenas visitas realizadas, ordenando da mais recente para a mais antiga

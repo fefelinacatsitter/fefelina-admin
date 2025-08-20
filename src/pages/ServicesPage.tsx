@@ -225,7 +225,17 @@ export default function ServicesPage() {
           }
           break
         case 'todos':
-          // Todos os serviços - sem filtro adicional, mas já ordenados por data_inicio decrescente
+          // Todos os serviços - sem filtro por status, mas com limite de período
+          // Se não houver filtro de data específico, limitar aos últimos 6 meses
+          if (!filterStartDate && !filterEndDate) {
+            const sixMonthsAgo = new Date()
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+            const sixMonthsAgoStr = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}-${String(sixMonthsAgo.getDate()).padStart(2, '0')}`
+            
+            filteredServices = filteredServices.filter(service => 
+              service.data_inicio >= sixMonthsAgoStr
+            )
+          }
           break
       }
       

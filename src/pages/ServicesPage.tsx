@@ -166,7 +166,7 @@ export default function ServicesPage() {
 
   const fetchServices = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('services')
         .select(`
           *,
@@ -176,7 +176,17 @@ export default function ServicesPage() {
             valor_duas_visitas
           )
         `)
-        .order('created_at', { ascending: false })
+
+      // Aplicar ordenação baseada no filtro selecionado
+      if (selectedFilter === 'concluidos' || selectedFilter === 'todos') {
+        // Para serviços concluídos e todos: ordenar por data_inicio decrescente (mais recentes primeiro)
+        query = query.order('data_inicio', { ascending: false })
+      } else {
+        // Para serviços ativos: manter ordenação por created_at decrescente
+        query = query.order('created_at', { ascending: false })
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       
@@ -215,7 +225,7 @@ export default function ServicesPage() {
           }
           break
         case 'todos':
-          // Todos os serviços - sem filtro adicional
+          // Todos os serviços - sem filtro adicional, mas já ordenados por data_inicio decrescente
           break
       }
       

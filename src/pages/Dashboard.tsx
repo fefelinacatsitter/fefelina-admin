@@ -49,14 +49,19 @@ export default function Dashboard() {
       const day = String(today.getDate()).padStart(2, '0')
       const todayString = `${year}-${month}-${day}`
 
+      // Calcular último dia do mês corretamente
+      const lastDayOfMonth = new Date(year, today.getMonth() + 1, 0).getDate()
+      const monthEndString = `${year}-${month}-${String(lastDayOfMonth).padStart(2, '0')}`
+
       // Buscar estatísticas
-      const [clientsResult, petsResult, servicesResult, visitsResult, revenueResult, monthlyVisitsResult] = await Promise.all([
+      const [clientsResult, petsResult, servicesResult, visitsResult, monthlyVisitsResult, paidServicesResult] = await Promise.all([
         supabase.from('clients').select('*', { count: 'exact' }),
         supabase.from('pets').select('*', { count: 'exact' }),
         supabase.from('services').select('*', { count: 'exact' }).neq('status_pagamento', 'pago'),
         supabase.from('visits').select('id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, observacoes, client_id, created_at', { count: 'exact' }).eq('data', todayString),
-        supabase.from('services').select('total_a_receber').eq('status_pagamento', 'pago').gte('data_inicio', `${year}-${month}-01`).lte('data_fim', `${year}-${month}-31`),
-        supabase.from('visits').select('id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, observacoes, client_id, created_at', { count: 'exact' }).eq('status', 'realizada').gte('data', `${year}-${month}-01`).lte('data', `${year}-${month}-31`)
+        supabase.from('visits').select('valor, desconto_plataforma').eq('status', 'realizada').gte('data', `${year}-${month}-01`).lte('data', monthEndString),
+        // Buscar TODOS os serviços pagos deste mês
+        supabase.from('services').select('total_a_receber, data_inicio, data_fim, status_pagamento').eq('status_pagamento', 'pago').gte('data_inicio', `${year}-${month}-01`).lte('data_fim', monthEndString)
       ])
 
       // Buscar próximas visitas
@@ -72,8 +77,18 @@ export default function Dashboard() {
         .order('horario', { ascending: true })
         .limit(10)
 
-      // Calcular receita mensal
-      const monthlyRevenue = revenueResult.data?.reduce((sum, service) => sum + service.total_a_receber, 0) || 0
+      // Calcular receita mensal - priorizar serviços pagos, depois visitas realizadas
+      const revenueFromPaidServices = paidServicesResult.data?.reduce((sum: number, service: any) => {
+        return sum + service.total_a_receber
+      }, 0) || 0
+
+      const revenueFromVisits = monthlyVisitsResult.data?.reduce((sum: number, visit: any) => {
+        const valorLiquido = visit.valor - (visit.desconto_plataforma || 0)
+        return sum + valorLiquido
+      }, 0) || 0
+
+      // Se houver serviços pagos, usar esse valor, senão usar visitas realizadas
+      const monthlyRevenue = revenueFromPaidServices > 0 ? revenueFromPaidServices : revenueFromVisits
 
       setStats({
         totalClients: clientsResult.count || 0,
@@ -81,7 +96,7 @@ export default function Dashboard() {
         activeServices: servicesResult.count || 0,
         visitsToday: visitsResult.count || 0,
         monthlyRevenue,
-        monthlyVisits: monthlyVisitsResult.count || 0
+        monthlyVisits: Math.max(monthlyVisitsResult.data?.length || 0, paidServicesResult.data?.length || 0)
       })
 
       setUpcomingVisits((upcomingResult.data || []).map(visit => ({

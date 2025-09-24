@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase, CaixaMovimento } from '../lib/supabase'
 
 export default function FinanceiroPage() {

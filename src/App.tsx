@@ -10,6 +10,8 @@ import PetsPage from './pages/PetsPage'
 import ServicesPage from './pages/ServicesPage'
 import VisitsPage from './pages/VisitsPage'
 import FinancesPage from './pages/FinancesPage'
+import RelatoriosPage from './pages/RelatoriosPage'
+import FinanceiroPage from './pages/FinanceiroPage'
 import Layout from './components/Layout'
 
 function App() {
@@ -53,6 +55,8 @@ function App() {
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/visits" element={<VisitsPage />} />
           <Route path="/finances" element={<FinancesPage />} />
+          <Route path="/reports" element={<RelatoriosPage />} />
+          <Route path="/financial" element={<FinanceiroPage />} />
         </Routes>
       </Layout>
       <Toaster 

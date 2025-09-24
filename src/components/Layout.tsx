@@ -14,6 +14,8 @@ const navigation = [
   { name: 'Serviços', href: '/services' },
   { name: 'Visitas', href: '/visits' },
   { name: 'Finanças', href: '/finances' },
+  { name: 'Relatórios', href: '/reports' },
+  { name: 'Caixa', href: '/financial' },
 ]
 
 export default function Layout({ children }: LayoutProps) {

@@ -53,3 +53,13 @@ export interface Visit {
   created_at: string
   updated_at: string
 }
+
+export interface CaixaMovimento {
+  id: string
+  data: string
+  valor: number
+  tipo: 'receitas_servicos' | 'receitas_outros' | 'despesas_servicos' | 'despesas_outros' | 'rendimentos' | 'pagamento_mensal'
+  descricao?: string
+  created_at: string
+  updated_at: string
+}

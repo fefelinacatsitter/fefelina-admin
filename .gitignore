@@ -34,3 +34,21 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# Arquivos temporários de desenvolvimento
+*.sql
+*-migration*.sql
+*-setup*.sql
+*-dados*.sql
+*-test*.sql
+test-*.js
+test-*.ts
+
+# Arquivos de backup
+*.bak
+*.backup
+*.temp
+
+# Arquivos de debug
+debug-*
+console-*

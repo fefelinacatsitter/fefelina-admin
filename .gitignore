@@ -52,3 +52,16 @@ test-*.ts
 # Arquivos de debug
 debug-*
 console-*
+
+# Documentação de desenvolvimento (manter apenas README.md e copilot-instructions.md)
+CORRECOES-*.md
+IMPLEMENTACAO-*.md
+CHANGELOG-*.md
+DEPLOY-*.md
+FINAL-*.md
+SISTEMA-*.md
+MELHORIAS-*.md
+*-IMPLEMENTATION.md
+*-COMPLETO.md
+*-IMPLEMENTADAS.md
+CONTRIBUTING.md

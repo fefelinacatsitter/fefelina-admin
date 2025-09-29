@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Area, AreaChart
+  PieChart, Pie, Cell, BarChart, Bar
 } from 'recharts'
 import { 
   TrendingUp, DollarSign, Filter,
@@ -478,7 +478,7 @@ export default function FinancesPage() {
           </div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={financialData.monthlyRevenue}>
+              <BarChart data={financialData.monthlyRevenue}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis 
                   dataKey="month" 
@@ -494,15 +494,12 @@ export default function FinancesPage() {
                   formatter={(value) => [formatCurrency(Number(value)), 'Receita']}
                   labelStyle={{ color: '#374151' }}
                 />
-                <Area 
-                  type="monotone" 
+                <Bar 
                   dataKey="revenue" 
-                  stroke="#059669" 
                   fill="#10b981" 
-                  fillOpacity={0.1}
-                  strokeWidth={2}
+                  radius={[4, 4, 0, 0]}
                 />
-              </AreaChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>

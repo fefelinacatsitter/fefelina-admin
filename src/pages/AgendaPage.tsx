@@ -85,6 +85,11 @@ export default function AgendaPage() {
         .order('horario', { ascending: true })
 
       if (error) throw error
+      
+      console.log('Período buscado:', format(startDate, 'yyyy-MM-dd'), 'até', format(endDate, 'yyyy-MM-dd'))
+      console.log('Total de visitas encontradas:', data?.length || 0)
+      console.log('Visitas:', data)
+      
       setVisits(data || [])
     } catch (error) {
       console.error('Erro ao buscar visitas:', error)
@@ -99,11 +104,16 @@ export default function AgendaPage() {
   }
 
   const getVisitsForDayAndTime = (day: Date, timeSlot: string) => {
-    return visits.filter(visit => {
+    const filtered = visits.filter(visit => {
       const visitDate = parseISO(visit.data)
-      const visitHour = visit.horario.substring(0, 5) // Pega HH:MM
-      return isSameDay(visitDate, day) && visitHour === timeSlot
+      const visitHour = visit.horario.substring(0, 2) // Pega apenas a hora (HH)
+      const slotHour = timeSlot.substring(0, 2) // Pega apenas a hora do slot
+      const matchesDay = isSameDay(visitDate, day)
+      const matchesHour = visitHour === slotHour
+      
+      return matchesDay && matchesHour
     })
+    return filtered
   }
 
   const navigatePrevious = () => {

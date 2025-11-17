@@ -86,10 +86,6 @@ export default function AgendaPage() {
 
       if (error) throw error
       
-      console.log('Período buscado:', format(startDate, 'yyyy-MM-dd'), 'até', format(endDate, 'yyyy-MM-dd'))
-      console.log('Total de visitas encontradas:', data?.length || 0)
-      console.log('Visitas:', data)
-      
       setVisits(data || [])
     } catch (error) {
       console.error('Erro ao buscar visitas:', error)

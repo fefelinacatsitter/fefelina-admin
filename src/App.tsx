@@ -9,6 +9,7 @@ import ClientsPage from './pages/ClientsPage'
 import PetsPage from './pages/PetsPage'
 import ServicesPage from './pages/ServicesPage'
 import VisitsPage from './pages/VisitsPage'
+import AgendaPage from './pages/AgendaPage'
 import FinancesPage from './pages/FinancesPage'
 import RelatoriosPage from './pages/RelatoriosPage'
 import FinanceiroPage from './pages/FinanceiroPage'
@@ -54,6 +55,7 @@ function App() {
           <Route path="/pets" element={<PetsPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/visits" element={<VisitsPage />} />
+          <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/finances" element={<FinancesPage />} />
           <Route path="/reports" element={<RelatoriosPage />} />
           <Route path="/financial" element={<FinanceiroPage />} />

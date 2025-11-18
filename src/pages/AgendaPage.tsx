@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { format, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface Visit {
   id: string
@@ -31,12 +32,17 @@ export default function AgendaPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('week')
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [draggingVisit, setDraggingVisit] = useState<Visit | null>(null)
+  const [scrollPosition, setScrollPosition] = useState(0)
 
-  // Gerar array de horários (6h às 22h)
+  // Gerar array de horários com meias horas (6h às 22h)
   const timeSlots = Array.from({ length: 17 }, (_, i) => {
     const hour = i + 6
-    return `${hour.toString().padStart(2, '0')}:00`
-  })
+    return [
+      { time: `${hour.toString().padStart(2, '0')}:00`, isHalf: false },
+      { time: `${hour.toString().padStart(2, '0')}:30`, isHalf: true }
+    ]
+  }).flat()
 
   // Forçar modo dia no mobile
   useEffect(() => {
@@ -55,6 +61,17 @@ export default function AgendaPage() {
   useEffect(() => {
     fetchVisits()
   }, [currentDate, viewMode])
+
+  // Restaurar scroll após carregar visitas
+  useEffect(() => {
+    if (!loading && scrollPosition > 0) {
+      const scrollContainer = document.querySelector('.overflow-auto')
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollPosition
+        setScrollPosition(0) // Resetar após restaurar
+      }
+    }
+  }, [loading, scrollPosition])
 
   const fetchVisits = async () => {
     try {
@@ -102,12 +119,11 @@ export default function AgendaPage() {
   const getVisitsForDayAndTime = (day: Date, timeSlot: string) => {
     const filtered = visits.filter(visit => {
       const visitDate = parseISO(visit.data)
-      const visitHour = visit.horario.substring(0, 2) // Pega apenas a hora (HH)
-      const slotHour = timeSlot.substring(0, 2) // Pega apenas a hora do slot
+      const visitTime = visit.horario.substring(0, 5) // Pega HH:MM
       const matchesDay = isSameDay(visitDate, day)
-      const matchesHour = visitHour === slotHour
+      const matchesTime = visitTime === timeSlot
       
-      return matchesDay && matchesHour
+      return matchesDay && matchesTime
     })
     return filtered
   }
@@ -153,6 +169,124 @@ export default function AgendaPage() {
     setShowModal(true)
   }
 
+  const handleDragStart = (e: React.DragEvent, visit: Visit) => {
+    setDraggingVisit(visit)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  // Suporte para touch (mobile)
+  const handleTouchStart = (e: React.TouchEvent, visit: Visit) => {
+    setDraggingVisit(visit)
+    const target = e.currentTarget as HTMLElement
+    target.style.opacity = '0.5'
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault()
+  }
+
+  const handleTouchEnd = async (e: React.TouchEvent) => {
+    if (!draggingVisit) return
+
+    const touch = e.changedTouches[0]
+    const element = document.elementFromPoint(touch.clientX, touch.clientY)
+    
+    // Encontrar o elemento drop zone mais próximo
+    const dropZone = element?.closest('[data-drop-zone]') as HTMLElement
+    
+    if (dropZone) {
+      const day = dropZone.getAttribute('data-day')
+      const time = dropZone.getAttribute('data-time')
+      
+      if (day && time) {
+        const newDate = day
+        const newTime = time
+
+        // Não fazer nada se soltar no mesmo lugar
+        if (draggingVisit.data === newDate && draggingVisit.horario.substring(0, 5) === newTime) {
+          setDraggingVisit(null)
+          const target = e.currentTarget as HTMLElement
+          target.style.opacity = '1'
+          return
+        }
+
+        // Salvar posição do scroll
+        const scrollContainer = document.querySelector('.overflow-auto')
+        if (scrollContainer) {
+          setScrollPosition(scrollContainer.scrollTop)
+        }
+
+        try {
+          const { error } = await supabase
+            .from('visits')
+            .update({
+              data: newDate,
+              horario: newTime + ':00'
+            })
+            .eq('id', draggingVisit.id)
+
+          if (error) throw error
+
+          toast.success('Visita reagendada com sucesso!')
+          await fetchVisits()
+        } catch (error) {
+          console.error('Erro ao reagendar visita:', error)
+          toast.error('Erro ao reagendar visita')
+        }
+      }
+    }
+    
+    setDraggingVisit(null)
+    const target = e.currentTarget as HTMLElement
+    target.style.opacity = '1'
+  }
+
+  const handleDrop = async (e: React.DragEvent, day: Date, timeSlot: string) => {
+    e.preventDefault()
+    
+    if (!draggingVisit) return
+
+    const newDate = format(day, 'yyyy-MM-dd')
+    const newTime = timeSlot
+
+    // Não fazer nada se soltar no mesmo lugar
+    if (draggingVisit.data === newDate && draggingVisit.horario.substring(0, 5) === newTime) {
+      setDraggingVisit(null)
+      return
+    }
+
+    // Salvar posição do scroll antes de atualizar
+    const scrollContainer = document.querySelector('.overflow-auto')
+    if (scrollContainer) {
+      setScrollPosition(scrollContainer.scrollTop)
+    }
+
+    try {
+      const { error } = await supabase
+        .from('visits')
+        .update({
+          data: newDate,
+          horario: newTime + ':00'
+        })
+        .eq('id', draggingVisit.id)
+
+      if (error) throw error
+
+      toast.success('Visita reagendada com sucesso!')
+      await fetchVisits() // Recarregar visitas
+    } catch (error) {
+      console.error('Erro ao reagendar visita:', error)
+      toast.error('Erro ao reagendar visita')
+    } finally {
+      setDraggingVisit(null)
+    }
+  }
+
   const renderDayView = () => {
     return (
       <div className="flex-1 overflow-auto">
@@ -174,23 +308,50 @@ export default function AgendaPage() {
 
           {/* Grid de horários */}
           <div className="relative">
-            {timeSlots.map((timeSlot) => {
-              const visitsAtTime = getVisitsForDayAndTime(currentDate, timeSlot)
+            {timeSlots.map((slot) => {
+              const visitsAtTime = getVisitsForDayAndTime(currentDate, slot.time)
+              const hasVisits = visitsAtTime.length > 0
               
               return (
-                <div key={timeSlot} className="grid grid-cols-[80px_1fr] border-b border-gray-200 min-h-[80px]">
+                <div 
+                  key={slot.time} 
+                  className={`grid grid-cols-[80px_1fr] ${
+                    slot.isHalf ? 'border-b border-dashed border-gray-300' : 'border-b border-gray-200'
+                  } ${hasVisits ? 'min-h-[80px]' : 'min-h-[40px]'}`}
+                >
                   {/* Coluna de horário */}
                   <div className="border-r border-gray-200 p-2 text-sm text-gray-600 font-medium">
-                    {timeSlot}
+                    {slot.isHalf ? (
+                      <span className="text-xs text-gray-400">{slot.time}</span>
+                    ) : (
+                      <span>{slot.time}</span>
+                    )}
                   </div>
 
-                  {/* Coluna do dia */}
-                  <div className="p-2 space-y-1">
+                  {/* Coluna do dia - Drop zone */}
+                  <div 
+                    className="p-2 space-y-1"
+                    data-drop-zone="true"
+                    data-day={format(currentDate, 'yyyy-MM-dd')}
+                    data-time={slot.time}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, currentDate, slot.time)}
+                  >
                     {visitsAtTime.map(visit => (
                       <div
                         key={visit.id}
-                        onClick={() => handleVisitClick(visit)}
-                        className={`p-2 rounded border text-xs cursor-pointer hover:shadow-md transition-shadow ${getVisitColor(visit)}`}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, visit)}
+                        onTouchStart={(e) => handleTouchStart(e, visit)}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        onClick={() => {
+                          // Só abre modal se não estiver arrastando
+                          if (!draggingVisit) {
+                            handleVisitClick(visit)
+                          }
+                        }}
+                        className={`p-2 rounded border text-xs cursor-move hover:shadow-md transition-shadow ${getVisitColor(visit)}`}
                       >
                         <div className="font-semibold truncate">
                           {visit.clients?.nome || 'Cliente não identificado'}
@@ -249,16 +410,25 @@ export default function AgendaPage() {
 
           {/* Grid de horários */}
           <div className="relative">
-            {timeSlots.map((timeSlot) => (
-              <div key={timeSlot} className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-gray-200 min-h-[80px]">
+            {timeSlots.map((slot) => (
+              <div 
+                key={slot.time} 
+                className={`grid grid-cols-[80px_repeat(7,1fr)] ${
+                  slot.isHalf ? 'border-b border-dashed border-gray-300' : 'border-b border-gray-200'
+                } min-h-[40px]`}
+              >
                 {/* Coluna de horário */}
                 <div className="border-r border-gray-200 p-2 text-sm text-gray-600 font-medium">
-                  {timeSlot}
+                  {slot.isHalf ? (
+                    <span className="text-xs text-gray-400">{slot.time}</span>
+                  ) : (
+                    <span>{slot.time}</span>
+                  )}
                 </div>
 
                 {/* Colunas dos dias */}
                 {weekDays.map(day => {
-                  const visitsAtTime = getVisitsForDayAndTime(day, timeSlot)
+                  const visitsAtTime = getVisitsForDayAndTime(day, slot.time)
                   const isToday = isSameDay(day, new Date())
 
                   return (
@@ -267,12 +437,26 @@ export default function AgendaPage() {
                       className={`border-r border-gray-200 p-1 space-y-1 ${
                         isToday ? 'bg-blue-50/30' : ''
                       }`}
+                      data-drop-zone="true"
+                      data-day={format(day, 'yyyy-MM-dd')}
+                      data-time={slot.time}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, day, slot.time)}
                     >
                       {visitsAtTime.map(visit => (
                         <div
                           key={visit.id}
-                          onClick={() => handleVisitClick(visit)}
-                          className={`p-1.5 rounded border text-xs cursor-pointer hover:shadow-md transition-shadow ${getVisitColor(visit)}`}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, visit)}
+                          onTouchStart={(e) => handleTouchStart(e, visit)}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
+                          onClick={() => {
+                            if (!draggingVisit) {
+                              handleVisitClick(visit)
+                            }
+                          }}
+                          className={`p-1.5 rounded border text-xs cursor-move hover:shadow-md transition-shadow ${getVisitColor(visit)}`}
                         >
                           <div className="font-semibold truncate text-[10px] leading-tight">
                             {visit.clients?.nome || 'Cliente não identificado'}

@@ -256,10 +256,12 @@ export default function AgendaPage() {
       setLongPressTimer(null)
     }
 
+    const targetElement = e.currentTarget as HTMLElement
+
     // Se não estava arrastando, não fazer nada (foi apenas um toque/scroll)
     if (!isDraggingTouch || !draggingVisit) {
-      const target = e.currentTarget as HTMLElement
-      target.style.opacity = '1'
+      targetElement.style.opacity = '1'
+      targetElement.style.visibility = 'visible'
       setDraggingVisit(null)
       setIsDraggingTouch(false)
       return
@@ -271,14 +273,21 @@ export default function AgendaPage() {
       console.log('Touch não encontrado')
       setDraggingVisit(null)
       setIsDraggingTouch(false)
-      const target = e.currentTarget as HTMLElement
-      target.style.opacity = '1'
+      targetElement.style.opacity = '1'
+      targetElement.style.visibility = 'visible'
       return
     }
+
+    // IMPORTANTE: Esconder temporariamente o elemento que está sendo arrastado
+    // para que elementFromPoint consiga detectar o que está embaixo
+    targetElement.style.visibility = 'hidden'
 
     // Pegar o elemento na posição onde o dedo foi levantado
     const element = document.elementFromPoint(touch.clientX, touch.clientY)
     console.log('Elemento encontrado:', element)
+    
+    // Restaurar visibilidade
+    targetElement.style.visibility = 'visible'
     
     // Encontrar o elemento drop zone mais próximo
     const dropZone = element?.closest('[data-drop-zone]') as HTMLElement
@@ -299,8 +308,7 @@ export default function AgendaPage() {
           console.log('Mesma posição, não reagendar')
           setDraggingVisit(null)
           setIsDraggingTouch(false)
-          const target = e.currentTarget as HTMLElement
-          target.style.opacity = '1'
+          targetElement.style.opacity = '1'
           return
         }
 
@@ -341,8 +349,7 @@ export default function AgendaPage() {
     
     setDraggingVisit(null)
     setIsDraggingTouch(false)
-    const target = e.currentTarget as HTMLElement
-    target.style.opacity = '1'
+    targetElement.style.opacity = '1'
   }
 
   const handleDrop = async (e: React.DragEvent, day: Date, timeSlot: string) => {

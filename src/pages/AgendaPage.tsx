@@ -265,15 +265,30 @@ export default function AgendaPage() {
       return
     }
 
+    // Importante: usar changedTouches[0] para pegar a última posição do dedo
     const touch = e.changedTouches[0]
+    if (!touch) {
+      console.log('Touch não encontrado')
+      setDraggingVisit(null)
+      setIsDraggingTouch(false)
+      const target = e.currentTarget as HTMLElement
+      target.style.opacity = '1'
+      return
+    }
+
+    // Pegar o elemento na posição onde o dedo foi levantado
     const element = document.elementFromPoint(touch.clientX, touch.clientY)
+    console.log('Elemento encontrado:', element)
     
     // Encontrar o elemento drop zone mais próximo
     const dropZone = element?.closest('[data-drop-zone]') as HTMLElement
+    console.log('Drop zone:', dropZone)
     
     if (dropZone) {
       const day = dropZone.getAttribute('data-day')
       const time = dropZone.getAttribute('data-time')
+      
+      console.log('Day:', day, 'Time:', time)
       
       if (day && time) {
         const newDate = day
@@ -281,6 +296,7 @@ export default function AgendaPage() {
 
         // Não fazer nada se soltar no mesmo lugar
         if (draggingVisit.data === newDate && draggingVisit.horario.substring(0, 5) === newTime) {
+          console.log('Mesma posição, não reagendar')
           setDraggingVisit(null)
           setIsDraggingTouch(false)
           const target = e.currentTarget as HTMLElement
@@ -294,6 +310,8 @@ export default function AgendaPage() {
           setScrollPosition(scrollContainer.scrollTop)
         }
 
+        console.log('Reagendando de', draggingVisit.data, draggingVisit.horario, 'para', newDate, newTime)
+
         try {
           const { error } = await supabase
             .from('visits')
@@ -303,7 +321,10 @@ export default function AgendaPage() {
             })
             .eq('id', draggingVisit.id)
 
-          if (error) throw error
+          if (error) {
+            console.error('Erro Supabase:', error)
+            throw error
+          }
 
           toast.success('Visita reagendada com sucesso!')
           await fetchVisits()
@@ -311,7 +332,11 @@ export default function AgendaPage() {
           console.error('Erro ao reagendar visita:', error)
           toast.error('Erro ao reagendar visita')
         }
+      } else {
+        console.log('Day ou time não encontrados')
       }
+    } else {
+      console.log('Drop zone não encontrado - touch fora da área válida')
     }
     
     setDraggingVisit(null)

@@ -17,6 +17,7 @@ interface Visit {
   observacoes?: string
   clients: {
     nome: string
+    endereco_completo?: string
   } | null
   services: {
     nome_servico?: string
@@ -92,7 +93,7 @@ export default function AgendaPage() {
         .from('visits')
         .select(`
           *,
-          clients (nome),
+          clients (nome, endereco_completo),
           services (nome_servico)
         `)
         .gte('data', format(startDate, 'yyyy-MM-dd'))
@@ -114,18 +115,6 @@ export default function AgendaPage() {
   const getWeekDays = () => {
     const start = startOfWeek(currentDate, { locale: ptBR })
     return Array.from({ length: 7 }, (_, i) => addDays(start, i))
-  }
-
-  const getVisitsForDayAndTime = (day: Date, timeSlot: string) => {
-    const filtered = visits.filter(visit => {
-      const visitDate = parseISO(visit.data)
-      const visitTime = visit.horario.substring(0, 5) // Pega HH:MM
-      const matchesDay = isSameDay(visitDate, day)
-      const matchesTime = visitTime === timeSlot
-      
-      return matchesDay && matchesTime
-    })
-    return filtered
   }
 
   const navigatePrevious = () => {
@@ -163,6 +152,35 @@ export default function AgendaPage() {
     
     return baseColor
   }
+
+  // Função para verificar se uma visita tem conflitos de horário
+  const getVisitConflicts = (date: Date, time: string) => {
+    const visitsAtTime = visits.filter(visit => {
+      const visitDate = parseISO(visit.data);
+      const visitTime = visit.horario.substring(0, 5);
+      
+      if (!isSameDay(visitDate, date)) return false;
+      
+      // Verificar se a visita ocupa este slot
+      if (visitTime === time) return true;
+      
+      // Se for visita inteira que começou no slot anterior (:30), ela ocupa este slot
+      if (visit.tipo_visita === 'inteira') {
+        const [hour, minute] = visitTime.split(':').map(Number);
+        if (minute === 30) {
+          const nextHour = `${String(hour + 1).padStart(2, '0')}:00`;
+          if (nextHour === time) return true;
+        } else {
+          const nextSlot = `${String(hour).padStart(2, '0')}:30`;
+          if (nextSlot === time) return true;
+        }
+      }
+      
+      return false;
+    });
+    
+    return visitsAtTime;
+  };
 
   const handleVisitClick = (visit: Visit) => {
     setSelectedVisit(visit)
@@ -309,8 +327,9 @@ export default function AgendaPage() {
           {/* Grid de horários */}
           <div className="relative">
             {timeSlots.map((slot) => {
-              const visitsAtTime = getVisitsForDayAndTime(currentDate, slot.time)
+              const visitsAtTime = getVisitConflicts(currentDate, slot.time)
               const hasVisits = visitsAtTime.length > 0
+              const hasConflict = visitsAtTime.length > 1
               
               return (
                 <div 
@@ -330,40 +349,64 @@ export default function AgendaPage() {
 
                   {/* Coluna do dia - Drop zone */}
                   <div 
-                    className="p-2 space-y-1"
+                    className="p-2 relative"
                     data-drop-zone="true"
                     data-day={format(currentDate, 'yyyy-MM-dd')}
                     data-time={slot.time}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, currentDate, slot.time)}
                   >
-                    {visitsAtTime.map(visit => (
-                      <div
-                        key={visit.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, visit)}
-                        onTouchStart={(e) => handleTouchStart(e, visit)}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={handleTouchEnd}
-                        onClick={() => {
-                          // Só abre modal se não estiver arrastando
-                          if (!draggingVisit) {
-                            handleVisitClick(visit)
-                          }
-                        }}
-                        className={`p-2 rounded border text-xs cursor-move hover:shadow-md transition-shadow ${getVisitColor(visit)}`}
-                      >
-                        <div className="font-semibold truncate">
-                          {visit.clients?.nome || 'Cliente não identificado'}
-                        </div>
-                        <div className="truncate text-xs opacity-90">
-                          {visit.services?.nome_servico || 'Serviço não identificado'}
-                        </div>
-                        <div className="text-xs opacity-75 mt-1">
-                          {visit.horario.substring(0, 5)} • {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
-                        </div>
+                    {hasConflict && (
+                      <div className="absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded-bl z-20">
+                        ⚠️ Conflito
                       </div>
-                    ))}
+                    )}
+                    <div className={hasConflict ? 'grid grid-cols-2 gap-1 auto-rows-min' : ''}>
+                      {visitsAtTime.map((visit) => {
+                        // Só renderizar visitas que começam neste horário exato
+                        if (visit.horario.substring(0, 5) !== slot.time) return null;
+                        
+                        return (
+                          <div
+                            key={visit.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, visit)}
+                            onTouchStart={(e) => handleTouchStart(e, visit)}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                            onClick={() => {
+                              // Só abre modal se não estiver arrastando
+                              if (!draggingVisit) {
+                                handleVisitClick(visit)
+                              }
+                            }}
+                            className={`p-1.5 rounded border cursor-move hover:shadow-md transition-shadow ${
+                              visit.tipo_visita === 'inteira' 
+                                ? hasConflict ? 'text-[10px]' : 'absolute left-2 right-2 top-0 z-10 text-xs'
+                                : hasConflict ? 'text-[10px]' : 'text-xs'
+                            } ${getVisitColor(visit)} ${
+                              hasConflict ? 'border-2 border-red-500' : ''
+                            }`}
+                            style={visit.tipo_visita === 'inteira' && !hasConflict ? {
+                              height: `${hasVisits ? 160 : 80}px`, // 2 slots de altura
+                              maxHeight: '160px'
+                            } : undefined}
+                          >
+                            <div className="font-semibold truncate leading-tight">
+                              {visit.clients?.nome || 'Cliente não identificado'}
+                            </div>
+                            {!hasConflict && (
+                              <div className="truncate opacity-90 leading-tight mt-0.5">
+                                {visit.services?.nome_servico || 'Serviço não identificado'}
+                              </div>
+                            )}
+                            <div className="opacity-75 mt-0.5 leading-tight">
+                              {visit.horario.substring(0, 5)} • {visit.tipo_visita === 'inteira' ? '1h' : '30min'}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
               )
@@ -428,13 +471,14 @@ export default function AgendaPage() {
 
                 {/* Colunas dos dias */}
                 {weekDays.map(day => {
-                  const visitsAtTime = getVisitsForDayAndTime(day, slot.time)
+                  const visitsAtTime = getVisitConflicts(day, slot.time)
                   const isToday = isSameDay(day, new Date())
+                  const hasConflict = visitsAtTime.length > 1
 
                   return (
                     <div
                       key={day.toISOString()}
-                      className={`border-r border-gray-200 p-1 space-y-1 ${
+                      className={`border-r border-gray-200 p-1 relative ${
                         isToday ? 'bg-blue-50/30' : ''
                       }`}
                       data-drop-zone="true"
@@ -443,29 +487,53 @@ export default function AgendaPage() {
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, day, slot.time)}
                     >
-                      {visitsAtTime.map(visit => (
-                        <div
-                          key={visit.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, visit)}
-                          onTouchStart={(e) => handleTouchStart(e, visit)}
-                          onTouchMove={handleTouchMove}
-                          onTouchEnd={handleTouchEnd}
-                          onClick={() => {
-                            if (!draggingVisit) {
-                              handleVisitClick(visit)
-                            }
-                          }}
-                          className={`p-1.5 rounded border text-xs cursor-move hover:shadow-md transition-shadow ${getVisitColor(visit)}`}
-                        >
-                          <div className="font-semibold truncate text-[10px] leading-tight">
-                            {visit.clients?.nome || 'Cliente não identificado'}
-                          </div>
-                          <div className="truncate text-[9px] opacity-75 leading-tight">
-                            {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
-                          </div>
+                      {hasConflict && (
+                        <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] px-1 rounded-bl z-20">
+                          ⚠️
                         </div>
-                      ))}
+                      )}
+                      <div className={hasConflict ? 'grid grid-cols-2 gap-0.5 auto-rows-min' : ''}>
+                        {visitsAtTime.map(visit => {
+                          // Só renderizar visitas que começam neste horário exato
+                          if (visit.horario.substring(0, 5) !== slot.time) return null;
+                          
+                          return (
+                            <div
+                              key={visit.id}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, visit)}
+                              onTouchStart={(e) => handleTouchStart(e, visit)}
+                              onTouchMove={handleTouchMove}
+                              onTouchEnd={handleTouchEnd}
+                              onClick={() => {
+                                if (!draggingVisit) {
+                                  handleVisitClick(visit)
+                                }
+                              }}
+                              className={`p-1 rounded border cursor-move hover:shadow-md transition-shadow ${
+                                visit.tipo_visita === 'inteira' 
+                                  ? hasConflict ? 'text-[8px]' : 'absolute left-1 right-1 top-0 z-10 text-xs'
+                                  : hasConflict ? 'text-[8px]' : 'text-xs'
+                              } ${getVisitColor(visit)} ${
+                                hasConflict ? 'border-2 border-red-500' : ''
+                              }`}
+                              style={visit.tipo_visita === 'inteira' && !hasConflict ? {
+                                height: '80px', // 2 slots de altura
+                                maxHeight: '80px'
+                              } : undefined}
+                            >
+                              <div className="font-semibold truncate leading-tight">
+                                {visit.clients?.nome || 'Cliente não identificado'}
+                              </div>
+                              {!hasConflict && (
+                                <div className="truncate text-[9px] opacity-75 leading-tight mt-0.5">
+                                  {visit.tipo_visita === 'inteira' ? '1h' : '30min'}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   )
                 })}
@@ -661,11 +729,11 @@ export default function AgendaPage() {
                 </p>
               </div>
 
-              {selectedVisit.services && (
+              {selectedVisit.clients?.endereco_completo && (
                 <div className="border-t border-gray-200 pt-4">
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Nome do Serviço</label>
+                  <label className="text-xs font-semibold text-gray-500 uppercase">Endereço do Cliente</label>
                   <p className="text-base font-medium text-gray-900 mt-1">
-                    {selectedVisit.services.nome_servico || 'Não identificado'}
+                    {selectedVisit.clients.endereco_completo}
                   </p>
                 </div>
               )}

@@ -35,6 +35,8 @@ export default function AgendaPage() {
   const [showModal, setShowModal] = useState(false)
   const [draggingVisit, setDraggingVisit] = useState<Visit | null>(null)
   const [scrollPosition, setScrollPosition] = useState(0)
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
+  const [isDraggingTouch, setIsDraggingTouch] = useState(false)
 
   // Gerar array de horários com meias horas (6h às 22h)
   const timeSlots = Array.from({ length: 17 }, (_, i) => {
@@ -58,6 +60,15 @@ export default function AgendaPage() {
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [viewMode])
+
+  // Cleanup do timer de long press ao desmontar
+  useEffect(() => {
+    return () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer)
+      }
+    }
+  }, [longPressTimer])
 
   useEffect(() => {
     fetchVisits()
@@ -197,19 +208,62 @@ export default function AgendaPage() {
     e.dataTransfer.dropEffect = 'move'
   }
 
-  // Suporte para touch (mobile)
+  // Suporte para touch (mobile) com long press
   const handleTouchStart = (e: React.TouchEvent, visit: Visit) => {
-    setDraggingVisit(visit)
-    const target = e.currentTarget as HTMLElement
-    target.style.opacity = '0.5'
+    // Iniciar timer de long press (500ms)
+    const timer = setTimeout(() => {
+      setDraggingVisit(visit)
+      setIsDraggingTouch(true)
+      const target = e.currentTarget as HTMLElement
+      target.style.opacity = '0.5'
+      // Vibrar no celular para feedback tátil
+      if (navigator.vibrate) {
+        navigator.vibrate(50)
+      }
+    }, 500) // 500ms = meio segundo de pressão
+    
+    setLongPressTimer(timer)
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault()
+    // Se ainda não iniciou o drag (timer não completou), cancelar o timer
+    if (!isDraggingTouch && longPressTimer) {
+      clearTimeout(longPressTimer)
+      setLongPressTimer(null)
+      return
+    }
+    
+    // Se está arrastando, prevenir scroll
+    if (isDraggingTouch) {
+      e.preventDefault()
+    }
+  }
+
+  const handleTouchCancel = () => {
+    // Cancelar qualquer operação de drag em andamento
+    if (longPressTimer) {
+      clearTimeout(longPressTimer)
+      setLongPressTimer(null)
+    }
+    setDraggingVisit(null)
+    setIsDraggingTouch(false)
   }
 
   const handleTouchEnd = async (e: React.TouchEvent) => {
-    if (!draggingVisit) return
+    // Limpar timer se existir (usuário soltou antes de 500ms)
+    if (longPressTimer) {
+      clearTimeout(longPressTimer)
+      setLongPressTimer(null)
+    }
+
+    // Se não estava arrastando, não fazer nada (foi apenas um toque/scroll)
+    if (!isDraggingTouch || !draggingVisit) {
+      const target = e.currentTarget as HTMLElement
+      target.style.opacity = '1'
+      setDraggingVisit(null)
+      setIsDraggingTouch(false)
+      return
+    }
 
     const touch = e.changedTouches[0]
     const element = document.elementFromPoint(touch.clientX, touch.clientY)
@@ -228,6 +282,7 @@ export default function AgendaPage() {
         // Não fazer nada se soltar no mesmo lugar
         if (draggingVisit.data === newDate && draggingVisit.horario.substring(0, 5) === newTime) {
           setDraggingVisit(null)
+          setIsDraggingTouch(false)
           const target = e.currentTarget as HTMLElement
           target.style.opacity = '1'
           return
@@ -260,6 +315,7 @@ export default function AgendaPage() {
     }
     
     setDraggingVisit(null)
+    setIsDraggingTouch(false)
     const target = e.currentTarget as HTMLElement
     target.style.opacity = '1'
   }
@@ -374,9 +430,10 @@ export default function AgendaPage() {
                             onTouchStart={(e) => handleTouchStart(e, visit)}
                             onTouchMove={handleTouchMove}
                             onTouchEnd={handleTouchEnd}
+                            onTouchCancel={handleTouchCancel}
                             onClick={() => {
                               // Só abre modal se não estiver arrastando
-                              if (!draggingVisit) {
+                              if (!draggingVisit && !isDraggingTouch) {
                                 handleVisitClick(visit)
                               }
                             }}
@@ -505,8 +562,9 @@ export default function AgendaPage() {
                               onTouchStart={(e) => handleTouchStart(e, visit)}
                               onTouchMove={handleTouchMove}
                               onTouchEnd={handleTouchEnd}
+                              onTouchCancel={handleTouchCancel}
                               onClick={() => {
-                                if (!draggingVisit) {
+                                if (!draggingVisit && !isDraggingTouch) {
                                   handleVisitClick(visit)
                                 }
                               }}

@@ -45,7 +45,7 @@ async function fetchTodayVisits() {
     .from('visits')
     .select(`
       *,
-      clients (nome, endereco_completo, telefone),
+      clients (nome, endereco_completo),
       services (nome_servico)
     `)
     .eq('data', today)
@@ -82,7 +82,6 @@ function generateEmailHTML(visits, date) {
       <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
         <strong>${visit.clients?.nome || 'Cliente não identificado'}</strong><br>
         <small style="color: #6b7280;">${visit.clients?.endereco_completo || 'Endereço não cadastrado'}</small>
-        ${visit.clients?.telefone ? `<br><small style="color: #6b7280;">📞 ${visit.clients.telefone}</small>` : ''}
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">
         <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; ${
@@ -201,9 +200,6 @@ function generateEmailText(visits, date) {
   visits.forEach((visit, index) => {
     text += `${index + 1}. ${formatTime(visit.horario)} - ${visit.clients?.nome || 'Cliente não identificado'}\n`
     text += `   Endereço: ${visit.clients?.endereco_completo || 'Não cadastrado'}\n`
-    if (visit.clients?.telefone) {
-      text += `   Telefone: ${visit.clients.telefone}\n`
-    }
     text += `   Tipo: ${visit.tipo_visita === 'inteira' ? 'Visita Inteira (1h)' : 'Meia Visita (30min)'}\n`
     text += `   Status: ${visit.status === 'agendada' ? 'Agendada' : 'Realizada'}\n`
     text += `   Valor: ${formatCurrency(visit.valor - visit.desconto_plataforma)}\n\n`

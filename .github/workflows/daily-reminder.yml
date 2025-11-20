@@ -1,0 +1,40 @@
+# Workflow para enviar lembrete diário de visitas
+name: Daily Visits Reminder
+
+on:
+  schedule:
+    # Executa todos os dias às 6h (horário de São Paulo - UTC-3)
+    # 6h São Paulo = 9h UTC
+    - cron: '0 9 * * *'
+  
+  # Permite execução manual para testes
+  workflow_dispatch:
+
+jobs:
+  send-reminder:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          cd .github/scripts
+          npm install
+
+      - name: Send daily reminder
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
+        run: |
+          cd .github/scripts
+          node send-daily-reminder.js

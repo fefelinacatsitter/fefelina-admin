@@ -394,6 +394,8 @@ export default function AgendaPage() {
   }
 
   const renderDayView = () => {
+    const hasVisitsOnDay = visits.some(visit => isSameDay(parseISO(visit.data), currentDate))
+    
     return (
       <div className="flex-1 overflow-auto">
         <div className="min-w-full">
@@ -401,13 +403,17 @@ export default function AgendaPage() {
           <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
             <div className="grid grid-cols-[80px_1fr]">
               <div className="border-r border-gray-200 p-2"></div>
-              <div className="p-3 text-center font-semibold bg-gray-50">
+              <div className="p-3 text-center font-semibold bg-gray-50 relative">
                 <div className="text-sm text-gray-600">
                   {format(currentDate, 'EEEE', { locale: ptBR })}
                 </div>
                 <div className="text-lg">
                   {format(currentDate, 'dd/MM/yyyy')}
                 </div>
+                {/* Indicador de visitas no dia */}
+                {hasVisitsOnDay && (
+                  <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#7f50c6' }}></div>
+                )}
               </div>
             </div>
           </div>
@@ -518,10 +524,12 @@ export default function AgendaPage() {
               <div className="border-r border-gray-200 p-2"></div>
               {weekDays.map(day => {
                 const isToday = isSameDay(day, new Date())
+                const hasVisitsOnDay = visits.some(visit => isSameDay(parseISO(visit.data), day))
+                
                 return (
                   <div
                     key={day.toISOString()}
-                    className={`p-2 text-center border-r border-gray-200 ${
+                    className={`p-2 text-center border-r border-gray-200 relative ${
                       isToday ? 'bg-blue-50' : 'bg-gray-50'
                     }`}
                   >
@@ -534,6 +542,10 @@ export default function AgendaPage() {
                     <div className="text-xs text-gray-500">
                       {format(day, 'MMM', { locale: ptBR })}
                     </div>
+                    {/* Indicador de visitas no dia */}
+                    {hasVisitsOnDay && (
+                      <div className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: '#7f50c6' }}></div>
+                    )}
                   </div>
                 )
               })}

@@ -53,6 +53,21 @@ async function fetchTodayVisits() {
   
   console.log(`🔍 Buscando visitas para a data: ${today}`)
   
+  // Primeiro, vamos ver TODAS as visitas para debug
+  const { data: allVisits, error: debugError } = await supabase
+    .from('visits')
+    .select('data, horario, status, clients(nome)')
+    .order('data', { ascending: false })
+    .limit(10)
+  
+  if (!debugError && allVisits) {
+    console.log('🔎 DEBUG - Últimas 10 visitas no banco:')
+    allVisits.forEach(v => {
+      console.log(`   📅 Data: "${v.data}" | Horário: ${v.horario} | Status: ${v.status} | Cliente: ${v.clients?.nome}`)
+    })
+  }
+  
+  // Agora buscar as visitas do dia
   const { data, error } = await supabase
     .from('visits')
     .select(`
@@ -69,7 +84,7 @@ async function fetchTodayVisits() {
     throw error
   }
 
-  console.log(`📊 Total de visitas encontradas: ${data?.length || 0}`)
+  console.log(`📊 Total de visitas encontradas para ${today}: ${data?.length || 0}`)
   if (data && data.length > 0) {
     console.log('📋 Visitas encontradas:')
     data.forEach(v => {

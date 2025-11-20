@@ -40,7 +40,7 @@ Crie as seguintes secrets:
 | Nome | Valor | Descrição |
 |------|-------|-----------|
 | `SUPABASE_URL` | `https://seu-projeto.supabase.co` | URL do seu projeto Supabase |
-| `SUPABASE_KEY` | `sua-chave-anon` | Chave anônima do Supabase |
+| `SUPABASE_SERVICE_KEY` | `sua-service-role-key` | Chave de serviço do Supabase (service_role) |
 | `EMAIL_USER` | `seu-email@gmail.com` | Email do remetente (Gmail) |
 | `EMAIL_PASS` | `xxxx xxxx xxxx xxxx` | App Password criada no passo 1 |
 | `RECIPIENT_EMAILS` | `thiago.hass@gmail.com,fernandawartha22@gmail.com` | Emails dos destinatários (separados por vírgula) |
@@ -48,6 +48,11 @@ Crie as seguintes secrets:
 ### 3️⃣ Como encontrar as credenciais do Supabase:
 
 1. Acesse: https://supabase.com/dashboard
+2. Selecione seu projeto
+3. Vá em **Settings** → **API**
+4. Copie:
+   - **URL**: `Project URL`
+   - **Key**: `anon/public key`
 2. Selecione seu projeto
 3. Vá em **Settings** → **API**
 4. Copie:

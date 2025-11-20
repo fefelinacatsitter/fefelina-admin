@@ -38,10 +38,16 @@
 | # | Nome | Onde pegar o valor |
 |---|------|-------------------|
 | 1 | `SUPABASE_URL` | Supabase → Settings → API → Project URL |
-| 2 | `SUPABASE_KEY` | Supabase → Settings → API → anon public key |
+| 2 | `SUPABASE_SERVICE_KEY` | Supabase → Settings → API → **service_role key** ⚠️ |
 | 3 | `EMAIL_USER` | Seu email do Gmail (ex: seuemail@gmail.com) |
 | 4 | `EMAIL_PASS` | App Password criada no passo 1 (16 caracteres) |
 | 5 | `RECIPIENT_EMAILS` | `thiago.hass@gmail.com,fernandawartha22@gmail.com` |
+
+**⚠️ IMPORTANTE Secret #2:** 
+- Use a **service_role key** (NÃO a anon/public key)
+- Ela está na seção "Project API keys" com o ícone de 🔑
+- É uma chave longa que começa com `eyJ...`
+- Esta chave bypassa RLS e permite acesso completo (seguro no GitHub Secrets)
 
 **⚠️ ATENÇÃO:** 
 - Não coloque espaços nos valores

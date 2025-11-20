@@ -17,11 +17,21 @@ const SAO_PAULO_OFFSET = -3 // UTC-3
 // Função para obter data de hoje em São Paulo
 function getTodaySaoPaulo() {
   const now = new Date()
-  const saoPauloTime = new Date(now.getTime() + (SAO_PAULO_OFFSET * 60 * 60 * 1000))
+  
+  // Criar data em UTC e ajustar para São Paulo
+  const utcDate = new Date(now.toISOString())
+  const saoPauloTime = new Date(utcDate.getTime() + (SAO_PAULO_OFFSET * 60 * 60 * 1000))
+  
   const year = saoPauloTime.getUTCFullYear()
   const month = String(saoPauloTime.getUTCMonth() + 1).padStart(2, '0')
   const day = String(saoPauloTime.getUTCDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  const formattedDate = `${year}-${month}-${day}`
+  
+  // Log para debug
+  console.log('📅 Data UTC:', now.toISOString())
+  console.log('📅 Data São Paulo calculada:', formattedDate)
+  
+  return formattedDate
 }
 
 // Função para formatar horário
@@ -41,6 +51,8 @@ function formatCurrency(value) {
 async function fetchTodayVisits() {
   const today = getTodaySaoPaulo()
   
+  console.log(`🔍 Buscando visitas para a data: ${today}`)
+  
   const { data, error } = await supabase
     .from('visits')
     .select(`
@@ -53,8 +65,16 @@ async function fetchTodayVisits() {
     .order('horario', { ascending: true })
 
   if (error) {
-    console.error('Erro ao buscar visitas:', error)
+    console.error('❌ Erro ao buscar visitas:', error)
     throw error
+  }
+
+  console.log(`📊 Total de visitas encontradas: ${data?.length || 0}`)
+  if (data && data.length > 0) {
+    console.log('📋 Visitas encontradas:')
+    data.forEach(v => {
+      console.log(`   - ${v.horario} | ${v.clients?.nome} | ${v.status}`)
+    })
   }
 
   return data || []
@@ -214,12 +234,19 @@ function generateEmailText(visits, date) {
 // Função principal
 async function sendDailyReminder() {
   try {
-    console.log('🔍 Buscando visitas do dia...')
+    console.log('� Iniciando script de lembrete diário...')
+    console.log('�🔍 Buscando visitas do dia...')
     const today = getTodaySaoPaulo()
     const visits = await fetchTodayVisits()
 
     if (visits.length === 0) {
-      console.log('ℹ️ Nenhuma visita agendada para hoje. Email não será enviado.')
+      console.log('ℹ️  Nenhuma visita agendada para hoje.')
+      console.log(`ℹ️  Data consultada: ${today}`)
+      console.log('ℹ️  Verifique se:')
+      console.log('    1. Existem visitas cadastradas para esta data no Supabase')
+      console.log('    2. As visitas estão com status "agendada" ou "realizada"')
+      console.log('    3. O formato da data no banco é YYYY-MM-DD')
+      console.log('💡 Email não será enviado.')
       return
     }
 

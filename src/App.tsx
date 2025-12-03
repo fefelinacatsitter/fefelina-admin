@@ -10,6 +10,7 @@ import PetsPage from './pages/PetsPage'
 import ServicesPage from './pages/ServicesPage'
 import VisitsPage from './pages/VisitsPage'
 import AgendaPage from './pages/AgendaPage'
+import LeadsPage from './pages/LeadsPage'
 import FinancesPage from './pages/FinancesPage'
 import RelatoriosPage from './pages/RelatoriosPage'
 import FinanceiroPage from './pages/FinanceiroPage'
@@ -56,6 +57,7 @@ function App() {
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/visits" element={<VisitsPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
+          <Route path="/leads" element={<LeadsPage />} />
           <Route path="/finances" element={<FinancesPage />} />
           <Route path="/reports" element={<RelatoriosPage />} />
           <Route path="/financial" element={<FinanceiroPage />} />

@@ -49,7 +49,23 @@ export interface Visit {
   horario: string
   valor: number
   status: 'agendada' | 'realizada' | 'cancelada'
+  tipo_visita: 'inteira' | 'meia'
+  desconto_plataforma: number
   observacoes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Lead {
+  id: string
+  nome: string
+  telefone: string | null
+  endereco: string | null
+  periodo_inicio: string | null
+  periodo_fim: string | null
+  valor_orcamento: number | null
+  status: 'novo' | 'em_contato' | 'negociacao' | 'aguardando_resposta' | 'fechado_ganho' | 'fechado_perdido'
+  observacoes: string | null
   created_at: string
   updated_at: string
 }

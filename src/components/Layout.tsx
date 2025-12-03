@@ -9,6 +9,7 @@ interface LayoutProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/' },
+  { name: 'Leads', href: '/leads' },
   { name: 'Clientes', href: '/clients' },
   { name: 'Pets', href: '/pets' },
   { name: 'Serviços', href: '/services' },

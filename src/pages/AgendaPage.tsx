@@ -47,18 +47,19 @@ export default function AgendaPage() {
     ]
   }).flat()
 
-  // Forçar modo dia no mobile
+  // Forçar modo dia no mobile e iPad (tablet)
   useEffect(() => {
-    const checkMobile = () => {
-      const isMobile = window.innerWidth < 640 // sm breakpoint do Tailwind
-      if (isMobile && viewMode === 'week') {
+    const checkMobileOrTablet = () => {
+      // Incluir iPad e tablets (até 1024px - lg breakpoint)
+      const isMobileOrTablet = window.innerWidth < 1024
+      if (isMobileOrTablet && viewMode === 'week') {
         setViewMode('day')
       }
     }
 
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    checkMobileOrTablet()
+    window.addEventListener('resize', checkMobileOrTablet)
+    return () => window.removeEventListener('resize', checkMobileOrTablet)
   }, [viewMode])
 
   // Cleanup do timer de long press ao desmontar
@@ -693,8 +694,8 @@ export default function AgendaPage() {
             </div>
           </div>
 
-          {/* Controles de visualização - Esconder no mobile */}
-          <div className="hidden sm:flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+          {/* Controles de visualização - Esconder em mobile e iPad, mostrar apenas desktop */}
+          <div className="hidden lg:flex items-center gap-2 bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => setViewMode('day')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -729,11 +730,11 @@ export default function AgendaPage() {
         </div>
       ) : (
         <>
-          {/* Mobile: sempre dia, Desktop: conforme seleção */}
-          <div className="sm:hidden flex-1 overflow-hidden flex flex-col">
+          {/* Mobile e iPad (< 1024px): sempre dia, Desktop (>= 1024px): conforme seleção */}
+          <div className="lg:hidden flex-1 overflow-hidden flex flex-col">
             {renderDayView()}
           </div>
-          <div className="hidden sm:flex flex-1 overflow-hidden flex-col">
+          <div className="hidden lg:flex flex-1 overflow-hidden flex-col">
             {viewMode === 'day' ? renderDayView() : renderWeekView()}
           </div>
         </>

@@ -156,8 +156,7 @@ export default function ServicesPage() {
   })
 
   // States para múltiplas visitas
-  const [multiVisitStart, setMultiVisitStart] = useState("");
-  const [multiVisitDays, setMultiVisitDays] = useState(2);
+  const [multiVisitDays, setMultiVisitDays] = useState(1);
 
   useEffect(() => {
     fetchServices()
@@ -645,23 +644,58 @@ export default function ServicesPage() {
 
   // Função para gerar múltiplas visitas
   const handleGenerateMultipleVisits = () => {
-    if (!selectedClient || !multiVisitStart || multiVisitDays < 2) return;
+    if (!selectedClient || multiVisitDays < 1) return;
     if (visits.length === 0) {
       toast.error("Cadastre pelo menos uma visita para usar como base!")
       return;
     }
+    
     const base = visits[0];
     const newVisits = [];
-    for (let i = 0; i < multiVisitDays; i++) {
-      const date = new Date(multiVisitStart);
-      date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().slice(0, 10);
-      newVisits.push({
-        ...base,
-        data: dateStr
-      });
+    
+    // Se a visita base for do tipo "meia", gera 2 visitas por dia (09:00 e 18:00)
+    if (base.tipo_visita === 'meia') {
+      // Calcula quantos dias completos precisamos (cada dia tem 2 visitas)
+      const totalDays = Math.ceil(multiVisitDays / 2);
+      
+      for (let dayIndex = 0; dayIndex < totalDays; dayIndex++) {
+        const date = new Date(base.data + 'T00:00:00');
+        date.setDate(date.getDate() + dayIndex);
+        const dateStr = date.toISOString().slice(0, 10);
+        
+        // Primeira visita do dia (09:00)
+        if (newVisits.length < multiVisitDays) {
+          newVisits.push({
+            ...base,
+            data: dateStr,
+            horario: '09:00'
+          });
+        }
+        
+        // Segunda visita do dia (18:00)
+        if (newVisits.length < multiVisitDays) {
+          newVisits.push({
+            ...base,
+            data: dateStr,
+            horario: '18:00'
+          });
+        }
+      }
+    } else {
+      // Se for visita "inteira", gera 1 visita por dia
+      for (let i = 0; i < multiVisitDays; i++) {
+        const date = new Date(base.data + 'T00:00:00');
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().slice(0, 10);
+        newVisits.push({
+          ...base,
+          data: dateStr
+        });
+      }
     }
+    
     setVisits(newVisits);
+    toast.success(`${newVisits.length} visita(s) gerada(s) com sucesso!`);
   }
 
   const { totalVisitas, totalValor, totalAReceber } = calculateTotals()
@@ -1077,44 +1111,21 @@ export default function ServicesPage() {
                       {/* Botão e inputs para gerar múltiplas visitas */}
                       <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
                         <input
-                          type="date"
-                          id="multiVisitStart"
-                          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                          value={multiVisitStart}
-                          onChange={(e) => {
-                            const validatedDate = validateDateInput(e.target.value)
-                            if (!validatedDate || isValidDate(validatedDate)) {
-                              setMultiVisitStart(validatedDate)
-                            } else {
-                              toast.error('Data inválida. Use o formato AAAA-MM-DD com ano entre 1900 e 2100.')
-                            }
-                          }}
-                          onBlur={(e) => {
-                            if (e.target.value && !isValidDate(e.target.value)) {
-                              toast.error('Data inválida. Corrigindo automaticamente.')
-                              setMultiVisitStart('')
-                            }
-                          }}
-                          min="1900-01-01"
-                          max="2100-12-31"
-                          disabled={!selectedClient}
-                        />
-                        <input
                           type="number"
                           id="multiVisitDays"
-                          min="2"
-                          max="30"
-                          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 w-20"
+                          min="1"
+                          max="60"
+                          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 w-24"
                           value={multiVisitDays}
                           onChange={e => setMultiVisitDays(Number(e.target.value))}
-                          disabled={!selectedClient}
-                          placeholder="Dias"
+                          disabled={!selectedClient || visits.length === 0}
+                          placeholder="Quantidade"
                         />
                         <button
                           type="button"
                           onClick={handleGenerateMultipleVisits}
-                          disabled={!selectedClient || !multiVisitStart || multiVisitDays < 2}
-                          className="btn-fefelina-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={!selectedClient || visits.length === 0 || multiVisitDays < 1}
+                          className="btn-fefelina-secondary disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                         >
                           Gerar Múltiplas Visitas
                         </button>

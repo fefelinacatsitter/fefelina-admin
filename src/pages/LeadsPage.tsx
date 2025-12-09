@@ -204,7 +204,34 @@ export default function LeadsPage() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setLeads(data || [])
+      
+      // Verificar se há leads com status inválido e corrigi-los
+      const invalidLeads = (data || []).filter(lead => 
+        !['novo', 'em_contato', 'negociacao', 'aguardando_resposta', 'fechado_ganho', 'fechado_perdido'].includes(lead.status)
+      )
+      
+      if (invalidLeads.length > 0) {
+        console.warn('Leads com status inválido encontrados:', invalidLeads)
+        toast.error(`${invalidLeads.length} lead(s) com status inválido. Corrigindo para "novo"...`)
+        
+        // Corrigir status inválidos
+        for (const lead of invalidLeads) {
+          await supabase
+            .from('leads')
+            .update({ status: 'novo' })
+            .eq('id', lead.id)
+        }
+        
+        // Recarregar dados
+        const { data: refreshedData } = await supabase
+          .from('leads')
+          .select('*')
+          .order('created_at', { ascending: false })
+        
+        setLeads(refreshedData || [])
+      } else {
+        setLeads(data || [])
+      }
     } catch (error) {
       console.error('Erro ao buscar leads:', error)
       toast.error('Erro ao carregar leads')
@@ -227,7 +254,22 @@ export default function LeadsPage() {
     if (!over) return
 
     const leadId = active.id as string
-    const newStatus = over.id as LeadStatus
+    
+    // O over.id pode ser tanto o ID de uma coluna (status) quanto o ID de outro lead
+    // Precisamos verificar se é um status válido ou buscar o status do lead de destino
+    let newStatus: LeadStatus
+    
+    const validStatuses: LeadStatus[] = ['novo', 'em_contato', 'negociacao', 'aguardando_resposta', 'fechado_ganho', 'fechado_perdido']
+    
+    if (validStatuses.includes(over.id as LeadStatus)) {
+      // over.id é um status válido (coluna)
+      newStatus = over.id as LeadStatus
+    } else {
+      // over.id é o ID de outro lead, precisamos pegar o status dele
+      const targetLead = leads.find(l => l.id === over.id)
+      if (!targetLead) return
+      newStatus = targetLead.status
+    }
 
     // Verificar se o status mudou
     const lead = leads.find(l => l.id === leadId)
@@ -251,6 +293,8 @@ export default function LeadsPage() {
     } catch (error) {
       console.error('Erro ao atualizar status:', error)
       toast.error('Erro ao mover lead')
+      // Recarregar para garantir consistência
+      fetchLeads()
     }
   }
 

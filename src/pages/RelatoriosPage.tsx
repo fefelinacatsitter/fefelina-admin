@@ -36,7 +36,7 @@ export default function RelatoriosPage() {
   const [visitasPorMes, setVisitasPorMes] = useState<VisitasPorMes[]>([])
   const [tiposVisita, setTiposVisita] = useState({ inteira: 0, meia: 0 })
   const [loading, setLoading] = useState(true)
-  const [selectedPeriod, setSelectedPeriod] = useState('6meses')
+  const [selectedPeriod, setSelectedPeriod] = useState('3meses')
 
   useEffect(() => {
     fetchRelatorios()
@@ -62,8 +62,11 @@ export default function RelatoriosPage() {
         const data = new Date()
         data.setMonth(data.getMonth() - 6)
         dataInicio = data.toISOString().split('T')[0]
-      } else {
+      } else if (selectedPeriod === 'ano') {
         dataInicio = `${anoAtual}-01-01`
+      } else {
+        // selectedPeriod === 'tudo'
+        dataInicio = '2000-01-01' // Data muito antiga para pegar tudo
       }
 
       // Buscar estatísticas básicas
@@ -226,6 +229,7 @@ export default function RelatoriosPage() {
           <option value="3meses">Últimos 3 meses</option>
           <option value="6meses">Últimos 6 meses</option>
           <option value="ano">Este ano</option>
+          <option value="tudo">Tudo</option>
         </select>
       </div>
 

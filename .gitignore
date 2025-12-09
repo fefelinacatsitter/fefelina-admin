@@ -44,6 +44,18 @@ Thumbs.db
 test-*.js
 test-*.ts
 
+# Documentação sensível (não expor no repositório público)
+*.md
+!README.md
+!LICENSE.md
+SECURITY-*.md
+*-GUIDE.md
+*-CHECKLIST.md
+*-INSTRUCTIONS.md
+*-PLAN.md
+*-UPDATES.md
+copilot-instructions.md
+
 # Arquivos de backup
 *.bak
 *.backup

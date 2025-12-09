@@ -1,26 +1,48 @@
 import { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Pegar URL de onde veio (se houver)
+  const from = (location.state as any)?.from?.pathname || '/'
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
-      setError(error.message)
+      if (error) {
+        setError(error.message)
+        toast.error('Erro ao fazer login: ' + error.message)
+        return
+      }
+
+      if (data.session) {
+        toast.success('Login realizado com sucesso!')
+        // Redirecionar para a página que tentou acessar ou para home
+        navigate(from, { replace: true })
+      }
+    } catch (err) {
+      console.error('Erro ao fazer login:', err)
+      setError('Erro inesperado ao fazer login')
+      toast.error('Erro inesperado ao fazer login')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (

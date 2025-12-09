@@ -1,7 +1,4 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import { supabase } from './lib/supabase'
-import { Session } from '@supabase/supabase-js'
 import { Toaster } from 'react-hot-toast'
 import LoginPage from './pages/LoginPage'
 import Dashboard from './pages/Dashboard'
@@ -15,54 +12,38 @@ import FinancesPage from './pages/FinancesPage'
 import RelatoriosPage from './pages/RelatoriosPage'
 import FinanceiroPage from './pages/FinanceiroPage'
 import Layout from './components/Layout'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setLoading(false)
-    })
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
-      </div>
-    )
-  }
-
-  if (!session) {
-    return <LoginPage />
-  }
-
   return (
     <Router basename="/fefelina-admin">
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/clients" element={<ClientsPage />} />
-          <Route path="/pets" element={<PetsPage />} />
-          <Route path="/services" element={<ServicesPage />} />
-          <Route path="/visits" element={<VisitsPage />} />
-          <Route path="/agenda" element={<AgendaPage />} />
-          <Route path="/leads" element={<LeadsPage />} />
-          <Route path="/finances" element={<FinancesPage />} />
-          <Route path="/reports" element={<RelatoriosPage />} />
-          <Route path="/financial" element={<FinanceiroPage />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        {/* Rota pública - Login */}
+        <Route path="/login" element={<LoginPage />} />
+        
+        {/* Rotas protegidas - Requerem autenticação */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/clients" element={<ClientsPage />} />
+                  <Route path="/pets" element={<PetsPage />} />
+                  <Route path="/services" element={<ServicesPage />} />
+                  <Route path="/visits" element={<VisitsPage />} />
+                  <Route path="/agenda" element={<AgendaPage />} />
+                  <Route path="/leads" element={<LeadsPage />} />
+                  <Route path="/finances" element={<FinancesPage />} />
+                  <Route path="/reports" element={<RelatoriosPage />} />
+                  <Route path="/financial" element={<FinanceiroPage />} />
+                </Routes>
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
       <Toaster 
         position="top-right"
         toastOptions={{

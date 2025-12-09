@@ -26,8 +26,15 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    navigate('/login')
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      console.error('Erro ao fazer logout:', error)
+    }
+    // Limpar qualquer cache local
+    window.localStorage.clear()
+    window.sessionStorage.clear()
+    // Navegar para login
+    navigate('/login', { replace: true })
   }
 
   return (

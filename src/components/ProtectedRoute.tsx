@@ -13,22 +13,34 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation()
 
   useEffect(() => {
-    // Verificar sessão atual
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
+    // Verificar sessão atual sempre que a localização mudar
+    const checkSession = async () => {
+      setLoading(true)
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (error) {
+        console.error('Erro ao verificar sessão:', error)
+        setSession(null)
+      } else {
+        setSession(session)
+      }
       setLoading(false)
-    })
+    }
+
+    checkSession()
 
     // Escutar mudanças de autenticação
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setLoading(false)
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setSession(null)
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setSession(session)
+      }
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [location.pathname]) // Reverificar quando a rota mudar
 
   // Mostrar loading enquanto verifica autenticação
   if (loading) {

@@ -139,10 +139,11 @@ function DraggableLeadCard({ lead, config, onOpen, onWhatsApp, formatCurrency, f
 interface DroppableColumnProps {
   status: LeadStatus
   children: React.ReactNode
+  isActive: boolean
 }
 
-function DroppableColumn({ status, children }: DroppableColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({
+function DroppableColumn({ status, children, isActive }: DroppableColumnProps) {
+  const { setNodeRef } = useDroppable({
     id: status,
   })
 
@@ -150,7 +151,7 @@ function DroppableColumn({ status, children }: DroppableColumnProps) {
     <div
       ref={setNodeRef}
       className={`space-y-3 flex-1 min-h-[200px] p-2 rounded-lg transition-all ${
-        isOver ? 'bg-purple-100 ring-2 ring-purple-400' : ''
+        isActive ? 'bg-purple-100 ring-2 ring-purple-400 ring-offset-2' : ''
       }`}
     >
       {children}
@@ -167,6 +168,7 @@ export default function LeadsPage() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
+  const [activeColumn, setActiveColumn] = useState<LeadStatus | null>(null)
 
   // Configuração dos sensores para drag and drop
   const sensors = useSensors(
@@ -247,9 +249,36 @@ export default function LeadsPage() {
     setActiveLead(lead || null)
   }
 
+  const handleDragOver = (event: any) => {
+    const { over } = event
+    if (!over) {
+      setActiveColumn(null)
+      return
+    }
+
+    const validStatuses: LeadStatus[] = ['novo', 'em_contato', 'negociacao', 'aguardando_resposta', 'fechado_ganho', 'fechado_perdido']
+    
+    // Verificar se estamos sobre uma coluna ou sobre um card
+    if (validStatuses.includes(over.id as LeadStatus)) {
+      setActiveColumn(over.id as LeadStatus)
+    } else {
+      // Estamos sobre um card, encontrar a qual coluna ele pertence
+      const targetLead = leads.find(l => l.id === over.id)
+      if (targetLead) {
+        setActiveColumn(targetLead.status)
+      }
+    }
+  }
+
+  const handleDragCancel = () => {
+    setActiveLead(null)
+    setActiveColumn(null)
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     setActiveLead(null)
+    setActiveColumn(null)
 
     if (!over) return
 
@@ -563,7 +592,9 @@ export default function LeadsPage() {
             sensors={sensors}
             collisionDetection={closestCorners}
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
               {(Object.keys(STATUS_CONFIG) as LeadStatus[]).map(status => {
@@ -584,7 +615,7 @@ export default function LeadsPage() {
                           <span className="text-sm font-normal">({statusLeads.length})</span>
                         </h3>
                       </div>
-                      <DroppableColumn status={status}>
+                      <DroppableColumn status={status} isActive={activeColumn === status}>
                         {statusLeads.map(lead => (
                           <DraggableLeadCard
                             key={lead.id}

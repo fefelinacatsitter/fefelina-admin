@@ -90,7 +90,7 @@ function DraggableLeadCard({ lead, config, onOpen, onWhatsApp, formatCurrency, f
       style={style}
       {...attributes}
       {...listeners}
-      className={`${config.bgColor} border ${config.borderColor} rounded-lg p-4 cursor-move hover:shadow-lg transition-all ${
+      className={`${config.bgColor} border ${config.borderColor} rounded-lg p-4 cursor-move hover:shadow-lg transition-all overflow-hidden ${
         isDragging ? 'shadow-2xl ring-2 ring-purple-400' : ''
       }`}
     >
@@ -98,19 +98,19 @@ function DraggableLeadCard({ lead, config, onOpen, onWhatsApp, formatCurrency, f
         e.stopPropagation()
         onOpen(lead)
       }}>
-        <h4 className="font-semibold text-gray-900 mb-2">{lead.nome}</h4>
+        <h4 className="font-semibold text-gray-900 mb-2 truncate" title={lead.nome}>{lead.nome}</h4>
         {lead.telefone && (
-          <div className="flex items-center gap-2 mb-1">
-            <p className="text-sm text-gray-600 flex items-center gap-1">
-              <Phone className="w-3 h-3" />
-              {lead.telefone}
+          <div className="flex items-center gap-2 mb-1 min-w-0">
+            <p className="text-sm text-gray-600 flex items-center gap-1 truncate flex-shrink">
+              <Phone className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{lead.telefone}</span>
             </p>
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 onWhatsApp(lead.telefone)
               }}
-              className="text-green-600 hover:text-green-700 transition-colors"
+              className="text-green-600 hover:text-green-700 transition-colors flex-shrink-0"
               title="Abrir WhatsApp"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -120,14 +120,14 @@ function DraggableLeadCard({ lead, config, onOpen, onWhatsApp, formatCurrency, f
           </div>
         )}
         {lead.valor_orcamento && (
-          <p className={`text-lg font-bold ${config.color} mt-2`}>
+          <p className={`text-lg font-bold ${config.color} mt-2 truncate`}>
             {formatCurrency(lead.valor_orcamento)}
           </p>
         )}
         {(lead.periodo_inicio || lead.periodo_fim) && (
-          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            {formatPeriodo(lead.periodo_inicio, lead.periodo_fim)}
+          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1 truncate">
+            <Calendar className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{formatPeriodo(lead.periodo_inicio, lead.periodo_fim)}</span>
           </p>
         )}
       </div>
@@ -606,16 +606,16 @@ export default function LeadsPage() {
             {/* Overlay de drag */}
             <DragOverlay>
               {activeLead ? (
-                <div className={`${STATUS_CONFIG[activeLead.status].bgColor} border-2 ${STATUS_CONFIG[activeLead.status].borderColor} rounded-lg p-4 shadow-2xl opacity-90 cursor-grabbing`}>
-                  <h4 className="font-semibold text-gray-900 mb-2">{activeLead.nome}</h4>
+                <div className={`${STATUS_CONFIG[activeLead.status].bgColor} border-2 ${STATUS_CONFIG[activeLead.status].borderColor} rounded-lg p-4 shadow-2xl opacity-90 cursor-grabbing overflow-hidden max-w-xs`}>
+                  <h4 className="font-semibold text-gray-900 mb-2 truncate" title={activeLead.nome}>{activeLead.nome}</h4>
                   {activeLead.telefone && (
-                    <p className="text-sm text-gray-600 flex items-center gap-1 mb-1">
-                      <Phone className="w-3 h-3" />
-                      {activeLead.telefone}
+                    <p className="text-sm text-gray-600 flex items-center gap-1 mb-1 truncate">
+                      <Phone className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{activeLead.telefone}</span>
                     </p>
                   )}
                   {activeLead.valor_orcamento && (
-                    <p className={`text-lg font-bold ${STATUS_CONFIG[activeLead.status].color} mt-2`}>
+                    <p className={`text-lg font-bold ${STATUS_CONFIG[activeLead.status].color} mt-2 truncate`}>
                       {formatCurrency(activeLead.valor_orcamento)}
                     </p>
                   )}

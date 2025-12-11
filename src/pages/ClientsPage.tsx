@@ -11,11 +11,21 @@ export default function ClientsPage() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
-  const [existingPets, setExistingPets] = useState<Pet[]>([])
+  const [clientPets, setClientPets] = useState<Pet[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<Client | null>(null)
   const [sortBy, setSortBy] = useState<'recent_services' | 'alphabetical'>('recent_services')
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredClients, setFilteredClients] = useState<Client[]>([])
+  
+  // Estados para modal de Pet
+  const [showPetModal, setShowPetModal] = useState(false)
+  const [editingPet, setEditingPet] = useState<Pet | null>(null)
+  const [petFormData, setPetFormData] = useState({
+    nome: '',
+    caracteristica: '',
+    observacoes: ''
+  })
+  
   const [formData, setFormData] = useState({
     nome: '',
     valor_diaria: '',
@@ -238,6 +248,102 @@ export default function ClientsPage() {
     setPets([{ nome: '', caracteristica: '', observacoes: '' }, ...pets])
   }
 
+  // Funções para gerenciar pets individuais
+  const handleAddPet = () => {
+    if (!editingClient) return
+    setPetFormData({ nome: '', caracteristica: '', observacoes: '' })
+    setEditingPet(null)
+    setShowPetModal(true)
+  }
+
+  const handleEditPet = (pet: Pet) => {
+    setPetFormData({
+      nome: pet.nome,
+      caracteristica: pet.caracteristica || '',
+      observacoes: pet.observacoes || ''
+    })
+    setEditingPet(pet)
+    setShowPetModal(true)
+  }
+
+  const handleDeletePet = async (petId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este pet?')) return
+
+    try {
+      const { error } = await supabase
+        .from('pets')
+        .delete()
+        .eq('id', petId)
+
+      if (error) throw error
+
+      toast.success('Pet excluído com sucesso!')
+      
+      // Atualizar lista de pets
+      setClientPets(clientPets.filter(p => p.id !== petId))
+    } catch (error: any) {
+      console.error('Erro ao excluir pet:', error)
+      toast.error('Erro ao excluir pet')
+    }
+  }
+
+  const handlePetModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!editingClient) return
+
+    try {
+      if (editingPet) {
+        // Atualizar pet existente
+        const { error } = await supabase
+          .from('pets')
+          .update({
+            nome: petFormData.nome,
+            caracteristica: petFormData.caracteristica || null,
+            observacoes: petFormData.observacoes || null
+          })
+          .eq('id', editingPet.id)
+
+        if (error) throw error
+
+        toast.success('Pet atualizado com sucesso!')
+        
+        // Atualizar lista
+        setClientPets(clientPets.map(p => 
+          p.id === editingPet.id 
+            ? { ...p, ...petFormData } 
+            : p
+        ))
+      } else {
+        // Criar novo pet
+        const { data, error } = await supabase
+          .from('pets')
+          .insert({
+            client_id: editingClient.id,
+            nome: petFormData.nome,
+            caracteristica: petFormData.caracteristica || null,
+            observacoes: petFormData.observacoes || null
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        toast.success('Pet adicionado com sucesso!')
+        
+        // Adicionar à lista
+        setClientPets([...clientPets, data])
+      }
+
+      setShowPetModal(false)
+      setPetFormData({ nome: '', caracteristica: '', observacoes: '' })
+      setEditingPet(null)
+    } catch (error: any) {
+      console.error('Erro ao salvar pet:', error)
+      toast.error('Erro ao salvar pet')
+    }
+  }
+
   const removePetField = (index: number) => {
     if (pets.length > 1) {
       const updatedPets = pets.filter((_, i) => i !== index)
@@ -263,13 +369,11 @@ export default function ClientsPage() {
     
     if (error) {
       console.error('Erro ao buscar pets:', error)
-      setExistingPets([])
+      setClientPets([])
     } else {
-      setExistingPets(petsData || [])
+      setClientPets(petsData || [])
     }
     
-    // Limpar formulário de novos pets
-    setPets([{ nome: '', caracteristica: '', observacoes: '' }])
     setShowEditForm(true)
   }
 
@@ -345,7 +449,7 @@ export default function ClientsPage() {
   const closeEditForm = () => {
     setShowEditForm(false)
     setEditingClient(null)
-    setExistingPets([])
+    setClientPets([])
     setFormData({
       nome: '',
       valor_diaria: '',
@@ -652,162 +756,152 @@ export default function ClientsPage() {
             
             <div className="p-6">
               <form onSubmit={handleEditSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Dados do Cliente */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide border-b pb-2">Dados do Cliente</h4>
-                    
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Nome</label>
-                      <input
-                        type="text"
-                        name="nome"
-                        value={formData.nome}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor Diária (R$)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        name="valor_diaria"
-                        value={formData.valor_diaria}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Valor 2 Visitas (R$)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        name="valor_duas_visitas"
-                        value={formData.valor_duas_visitas}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Endereço Completo</label>
-                      <textarea
-                        name="endereco_completo"
-                        value={formData.endereco_completo}
-                        onChange={handleInputChange}
-                        required
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Veterinário de Confiança</label>
-                      <input
-                        type="text"
-                        name="veterinario_confianca"
-                        value={formData.veterinario_confianca}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </div>
+                {/* Informações do Cliente em 2 colunas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Nome</label>
+                    <input
+                      type="text"
+                      name="nome"
+                      value={formData.nome}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor Diária (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="valor_diaria"
+                      value={formData.valor_diaria}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor 2 Visitas (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="valor_duas_visitas"
+                      value={formData.valor_duas_visitas}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Veterinário de Confiança</label>
+                    <input
+                      type="text"
+                      name="veterinario_confianca"
+                      value={formData.veterinario_confianca}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Endereço Completo</label>
+                    <textarea
+                      name="endereco_completo"
+                      value={formData.endereco_completo}
+                      onChange={handleInputChange}
+                      required
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Related List - Pets */}
+                <div className="border-t border-gray-200 pt-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Pets ({clientPets.length})</h4>
+                    <button
+                      type="button"
+                      onClick={handleAddPet}
+                      className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-md hover:bg-purple-700 transition-colors flex items-center gap-1.5"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Adicionar Pet
+                    </button>
                   </div>
 
-                  {/* Pets do Cliente */}
-                  <div className="space-y-4">
-                    <div className="border-b pb-2">
-                      <h4 className="text-md font-medium text-gray-800">Pets do Cliente</h4>
+                  {clientPets.length === 0 ? (
+                    <div className="bg-gray-50 border border-gray-200 rounded-md p-4 text-center">
+                      <p className="text-sm text-gray-600">Nenhum pet cadastrado ainda</p>
                     </div>
-                    
-                    {/* Pets Existentes */}
-                    {existingPets.length > 0 && (
-                      <div className="space-y-3">
-                        <h5 className="text-sm font-medium text-gray-700">Pets já cadastrados:</h5>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {existingPets.map((pet) => (
-                            <div key={pet.id} className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <p className="font-medium text-blue-900">{pet.nome}</p>
-                                  <p className="text-sm text-blue-700">{pet.caracteristica}</p>
-                                  {pet.observacoes && (
-                                    <p className="text-xs text-blue-600 mt-1">{pet.observacoes}</p>
-                                  )}
+                  ) : (
+                    <div className="border border-gray-200 rounded-md overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                              Nome
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                              Características
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                              Observações
+                            </th>
+                            <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                              Ações
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {clientPets.map((pet) => (
+                            <tr key={pet.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-3 py-2.5 text-sm font-medium text-gray-900">
+                                {pet.nome}
+                              </td>
+                              <td className="px-3 py-2.5 text-sm text-gray-600">
+                                {pet.caracteristica || '-'}
+                              </td>
+                              <td className="px-3 py-2.5 text-sm text-gray-600 max-w-xs truncate">
+                                {pet.observacoes || '-'}
+                              </td>
+                              <td className="px-3 py-2.5 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditPet(pet)}
+                                    className="text-purple-600 hover:text-purple-800 hover:bg-purple-50 p-1.5 rounded transition-colors"
+                                    title="Editar pet"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeletePet(pet.id)}
+                                    className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded transition-colors"
+                                    title="Excluir pet"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
                                 </div>
-                                <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                                  Para editar, use o menu Pets
-                                </span>
-                              </div>
-                            </div>
+                              </td>
+                            </tr>
                           ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Adicionar Novos Pets */}
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <h5 className="text-sm font-medium text-gray-700">Adicionar novos pets:</h5>
-                        <button
-                          type="button"
-                          onClick={addPetField}
-                          className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                        >
-                          + Adicionar Pet
-                        </button>
-                      </div>
-                      
-                      <div className="max-h-64 overflow-y-auto space-y-3">
-                        {pets.map((pet, index) => (
-                          <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm font-medium text-gray-700">Novo Pet {index + 1}</span>
-                              {pets.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removePetField(index)}
-                                  className="text-red-600 hover:text-red-700 text-sm"
-                                >
-                                  Remover
-                                </button>
-                              )}
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <input
-                                type="text"
-                                value={pet.nome}
-                                onChange={(e) => handlePetChange(index, 'nome', e.target.value)}
-                                placeholder="Nome do pet"
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                              />
-                              <input
-                                type="text"
-                                value={pet.caracteristica}
-                                onChange={(e) => handlePetChange(index, 'caracteristica', e.target.value)}
-                                placeholder="Características"
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                              />
-                              <textarea
-                                value={pet.observacoes}
-                                onChange={(e) => handlePetChange(index, 'observacoes', e.target.value)}
-                                placeholder="Observações"
-                                rows={1}
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                        </tbody>
+                      </table>
                     </div>
-                  </div>
+                  )}
                 </div>
                 
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
@@ -1095,6 +1189,96 @@ export default function ClientsPage() {
                   Confirmar Exclusão
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Adicionar/Editar Pet */}
+      {showPetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-[60] flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
+            {/* Header com gradiente */}
+            <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {editingPet ? 'Editar Pet' : 'Adicionar Pet'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowPetModal(false)
+                  setPetFormData({ nome: '', caracteristica: '', observacoes: '' })
+                  setEditingPet(null)
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <form onSubmit={handlePetModalSubmit} className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                    Nome do Pet *
+                  </label>
+                  <input
+                    type="text"
+                    value={petFormData.nome}
+                    onChange={(e) => setPetFormData({ ...petFormData, nome: e.target.value })}
+                    required
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Ex: Miau, Rex, Bidu..."
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                    Características
+                  </label>
+                  <input
+                    type="text"
+                    value={petFormData.caracteristica}
+                    onChange={(e) => setPetFormData({ ...petFormData, caracteristica: e.target.value })}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Ex: Gato persa branco, Cachorro SRD..."
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                    Observações
+                  </label>
+                  <textarea
+                    value={petFormData.observacoes}
+                    onChange={(e) => setPetFormData({ ...petFormData, observacoes: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Ex: É assustado, gosta de brincar, alérgico a..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPetModal(false)
+                      setPetFormData({ nome: '', caracteristica: '', observacoes: '' })
+                      setEditingPet(null)
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
+                  >
+                    {editingPet ? 'Salvar' : 'Adicionar'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

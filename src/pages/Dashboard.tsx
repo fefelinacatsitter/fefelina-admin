@@ -14,10 +14,14 @@ interface UpcomingVisit {
   id: string
   data: string
   horario: string
-  tipo_visita: 'inteira' | 'meia'
+  tipo_visita: 'inteira' | 'meia' | 'pre_encontro'
+  tipo_encontro?: 'pre_encontro' | null
   valor: number
   status: string
   clients: {
+    nome: string
+  } | null
+  leads: {
     nome: string
   } | null
   services: {
@@ -68,8 +72,9 @@ export default function Dashboard() {
       const upcomingResult = await supabase
         .from('visits')
         .select(`
-          id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, observacoes, client_id, created_at,
+          id, service_id, data, horario, tipo_visita, tipo_encontro, valor, status, desconto_plataforma, observacoes, client_id, lead_id, created_at,
           clients(nome),
+          leads(nome),
           services(nome_servico)
         `)
         .gte('data', todayString)
@@ -99,11 +104,25 @@ export default function Dashboard() {
         monthlyVisits: Math.max(monthlyVisitsResult.data?.length || 0, paidServicesResult.data?.length || 0)
       })
 
-      setUpcomingVisits((upcomingResult.data || []).map(visit => ({
+      const mappedVisits = (upcomingResult.data || []).map(visit => ({
         ...visit,
         clients: Array.isArray(visit.clients) ? visit.clients[0] : visit.clients,
+        leads: Array.isArray(visit.leads) ? visit.leads[0] : visit.leads,
         services: Array.isArray(visit.services) ? visit.services[0] : visit.services
+      }))
+      
+      // Debug: verificar dados das visitas
+      console.log('Upcoming visits:', mappedVisits.map(v => ({
+        id: v.id,
+        tipo_visita: v.tipo_visita,
+        tipo_encontro: v.tipo_encontro,
+        client_id: v.client_id,
+        lead_id: v.lead_id,
+        client_nome: v.clients?.nome,
+        lead_nome: v.leads?.nome
       })))
+      
+      setUpcomingVisits(mappedVisits)
     } catch (error) {
       console.error('Erro ao buscar dados do dashboard:', error)
     } finally {
@@ -257,34 +276,57 @@ export default function Dashboard() {
         {/* Próximas Visitas */}
         <div className="bg-white p-4 md:p-6 rounded-lg shadow">
           <h3 className="text-base font-medium text-gray-900 mb-4">Próximas Visitas</h3>
-          <div className="space-y-3 max-h-80 overflow-y-auto">
+          <div className="space-y-2 max-h-80 overflow-y-auto">
             {upcomingVisits.length === 0 ? (
               <p className="text-gray-500 text-center py-4">Nenhuma visita agendada</p>
             ) : (
-              upcomingVisits.slice(0, 5).map((visit) => (
-                <div key={visit.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-gray-900 truncate">
-                          {visit.clients?.nome || 'Cliente não encontrado'}
+              upcomingVisits.slice(0, 5).map((visit) => {
+                // Determinar se é pré-encontro (pelo campo tipo_encontro)
+                const isPreEncontro = visit.tipo_encontro === 'pre_encontro'
+                
+                // Determinar nome: Lead (pré-encontro) ou Cliente
+                const displayName = isPreEncontro
+                  ? (visit.leads?.nome || 'Lead não identificado')
+                  : (visit.clients?.nome || 'Cliente não encontrado')
+                
+                return (
+                  <div key={visit.id} className="border rounded-lg p-2.5 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between gap-3">
+                      {/* Nome e badges */}
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="font-medium text-sm text-gray-900 truncate">
+                          {displayName}
                         </span>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(visit.status)}`}>
-                          {getStatusLabel(visit.status)}
-                        </span>
+                        {isPreEncontro && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 whitespace-nowrap">
+                            Pré-Encontro
+                          </span>
+                        )}
                       </div>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div>{formatDate(visit.data)} às {visit.horario}</div>
-                        <div className="flex items-center gap-2">
-                          <span className="capitalize">{visit.tipo_visita}</span>
-                          <span>•</span>
-                          <span className="font-medium text-green-600">{formatCurrency(visit.valor)}</span>
-                        </div>
+                      
+                      {/* Data e hora compactos */}
+                      <div className="flex items-center gap-2 text-xs text-gray-600 whitespace-nowrap">
+                        <span className="font-medium">{formatDate(visit.data)}</span>
+                        <span>•</span>
+                        <span>{visit.horario}</span>
                       </div>
                     </div>
+                    
+                    {/* Linha inferior: tipo e valor */}
+                    <div className="flex items-center justify-between mt-1.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(visit.status)}`}>
+                          {getStatusLabel(visit.status)}
+                        </span>
+                        {!isPreEncontro && (
+                          <span className="text-gray-500 capitalize">{visit.tipo_visita}</span>
+                        )}
+                      </div>
+                      <span className="font-semibold text-green-600">{formatCurrency(visit.valor)}</span>
+                    </div>
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>

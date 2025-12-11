@@ -630,9 +630,9 @@ export default function LeadsPage() {
           <div>
             <button
               onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+              className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 transition-colors flex items-center gap-2"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               Novo Lead
             </button>
           </div>
@@ -903,7 +903,7 @@ export default function LeadsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 transition-colors"
                 >
                   {editingLead ? 'Atualizar' : 'Cadastrar'}
                 </button>
@@ -1004,7 +1004,7 @@ export default function LeadsPage() {
                     {detailStatus !== selectedLead.status && (
                       <button
                         onClick={handleStatusUpdate}
-                        className="mt-2 w-full px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-md hover:bg-purple-700 transition-colors"
+                        className="mt-2 w-full px-3 py-1.5 bg-primary-500 text-white text-xs font-medium rounded-md hover:bg-primary-600 transition-colors"
                       >
                         Salvar Alteração
                       </button>
@@ -1032,7 +1032,7 @@ export default function LeadsPage() {
                   </label>
                   <button
                     onClick={() => setShowPreEncontroModal(true)}
-                    className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-md hover:bg-purple-700 transition-colors flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-primary-500 text-white text-xs font-medium rounded-md hover:bg-primary-600 transition-colors flex items-center gap-1.5"
                   >
                     <Plus className="w-4 h-4" />
                     Agendar Pré-Encontro
@@ -1127,13 +1127,13 @@ export default function LeadsPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowDetailModal(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 text-sm font-medium rounded-md hover:bg-gray-200 transition-colors"
+                    className="px-3 py-1.5 text-gray-700 bg-gray-100 text-sm font-medium rounded-md hover:bg-gray-200 transition-colors"
                   >
                     Fechar
                   </button>
                   <button
                     onClick={() => handleEdit(selectedLead)}
-                    className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors flex items-center gap-2"
+                    className="px-3 py-1.5 bg-primary-500 text-white text-sm font-medium rounded-md hover:bg-primary-600 transition-colors flex items-center gap-2"
                   >
                     <Edit2 className="w-4 h-4" />
                     Editar

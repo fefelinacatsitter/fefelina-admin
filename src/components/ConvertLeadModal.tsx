@@ -129,10 +129,10 @@ export default function ConvertLeadModal({ lead, onClose, onConvert }: ConvertLe
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-3 py-1.5 bg-primary-500 text-white text-sm font-medium rounded-md hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             >
-              {loading ? 'Convertendo...' : 'Converter'}
+              {loading ? 'Convertendo...' : 'Converter em Cliente'}
             </button>
           </div>
         </form>

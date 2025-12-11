@@ -121,35 +121,33 @@ export default function PreEncontroAgendaModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white p-6 rounded-t-2xl flex-shrink-0">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-2xl font-bold">Agendar Pré-Encontro</h2>
-              <p className="text-cyan-100 text-sm mt-1">A partir da agenda</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header com gradiente */}
+        <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Agendar Pré-Encontro</h2>
+            <p className="text-xs text-gray-600 mt-0.5">A partir da agenda</p>
           </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
           {/* Selecionar Lead */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <User className="w-4 h-4 text-cyan-600" />
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
+              <User className="w-3.5 h-3.5" />
               Selecionar Lead
             </label>
             {loadingLeads ? (
-              <div className="text-center py-4 text-gray-500">Carregando leads...</div>
+              <div className="text-center py-4 text-sm text-gray-500">Carregando leads...</div>
             ) : leads.length === 0 ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-xs text-yellow-800">
                 Nenhum lead disponível. Crie um lead primeiro na página de Leads.
               </div>
             ) : (
@@ -158,7 +156,7 @@ export default function PreEncontroAgendaModal({
                 <button
                   type="button"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
                 >
                   <span className={formData.leadId ? 'text-gray-900' : 'text-gray-500'}>
                     {formData.leadId
@@ -170,7 +168,7 @@ export default function PreEncontroAgendaModal({
 
                 {/* Lista de opções */}
                 {dropdownOpen && (
-                  <div className="absolute z-[100] w-full mt-1 bg-white border-2 border-cyan-300 rounded-xl shadow-2xl max-h-60 overflow-auto">
+                  <div className="absolute z-[100] w-full mt-1 bg-white border-2 border-purple-300 rounded-md shadow-xl max-h-60 overflow-auto">
                     {leads.map((lead) => (
                       <button
                         key={lead.id}
@@ -179,11 +177,11 @@ export default function PreEncontroAgendaModal({
                           setFormData({ ...formData, leadId: lead.id })
                           setDropdownOpen(false)
                         }}
-                        className={`w-full px-4 py-2.5 text-left hover:bg-cyan-50 transition-colors flex flex-col gap-0.5 border-b border-gray-100 last:border-b-0 first:rounded-t-xl last:rounded-b-xl ${
-                          formData.leadId === lead.id ? 'bg-cyan-50 text-cyan-900' : 'text-gray-900'
+                        className={`w-full px-3 py-2 text-left hover:bg-purple-50 transition-colors flex flex-col gap-0.5 border-b border-gray-100 last:border-b-0 first:rounded-t-md last:rounded-b-md ${
+                          formData.leadId === lead.id ? 'bg-purple-50 text-purple-900' : 'text-gray-900'
                         }`}
                       >
-                        <span className="font-medium">{lead.nome}</span>
+                        <span className="text-sm font-medium">{lead.nome}</span>
                         <span className="text-xs text-gray-500">
                           {lead.telefone || 'Sem telefone'}
                         </span>
@@ -197,74 +195,74 @@ export default function PreEncontroAgendaModal({
 
           {/* Data */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-cyan-600" />
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
+              <Calendar className="w-3.5 h-3.5" />
               Data do Encontro
             </label>
             <input
               type="date"
               value={formData.data}
               onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               required
             />
           </div>
 
           {/* Horário */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-cyan-600" />
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
+              <Clock className="w-3.5 h-3.5" />
               Horário de Início
             </label>
             <input
               type="time"
               value={formData.horario}
               onChange={(e) => setFormData({ ...formData, horario: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">
-              ⏱️ Duração: 30 minutos
+            <p className="text-xs text-gray-500 mt-1.5">
+              Duração: 30 minutos
             </p>
           </div>
 
           {/* Observações */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
               Observações
             </label>
             <textarea
               value={formData.observacoes}
               onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 resize-none"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
               rows={3}
               placeholder="Ex: Primeiro contato, conhecer os gatinhos, ver a casa..."
             />
           </div>
 
           {/* Info */}
-          <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-3">
-            <p className="text-sm text-cyan-800">
-              <strong>💡 Dica:</strong> Este pré-encontro aparecerá na agenda com cor azul claro para fácil identificação.
+          <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+            <p className="text-xs text-gray-600">
+              <strong>Dica:</strong> Este pré-encontro aparecerá na agenda com cor azul claro para fácil identificação.
             </p>
           </div>
 
           {/* Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 text-sm font-medium rounded-md hover:bg-gray-200 transition-colors"
               disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading || leads.length === 0}
             >
-              {loading ? 'Agendando...' : 'Agendar Pré-Encontro'}
+              {loading ? 'Agendando...' : 'Agendar'}
             </button>
           </div>
         </form>

@@ -57,26 +57,24 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white px-6 py-6 flex-shrink-0">
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                🤝 Pré-Encontro com Lead
-              </h2>
-              <p className="text-cyan-100 mt-2 flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                {format(parseISO(visit.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-white hover:bg-cyan-400 rounded-lg p-2 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header com gradiente */}
+        <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              Pré-Encontro com Lead
+            </h2>
+            <p className="text-xs text-gray-600 mt-0.5 flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" />
+              {format(parseISO(visit.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </p>
           </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Conteúdo */}

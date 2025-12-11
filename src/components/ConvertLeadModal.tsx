@@ -42,13 +42,13 @@ export default function ConvertLeadModal({ lead, onClose, onConvert }: ConvertLe
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        {/* Header com gradiente */}
+        <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900">
               Converter Lead em Cliente
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-xs text-gray-600 mt-0.5">
               {lead.nome}
             </p>
           </div>
@@ -65,11 +65,11 @@ export default function ConvertLeadModal({ lead, onClose, onConvert }: ConvertLe
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-4">
             {/* Informações que serão copiadas */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-              <p className="text-sm font-semibold text-blue-900">
-                📋 Informações que serão copiadas:
+            <div className="bg-gray-50 border border-gray-200 rounded-md p-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-700">
+                Informações que serão copiadas:
               </p>
-              <ul className="text-sm text-blue-800 space-y-1 ml-4">
+              <ul className="text-xs text-gray-600 space-y-1 ml-4">
                 <li>• Nome: {lead.nome}</li>
                 <li>• Endereço: {lead.endereco || 'Não informado'}</li>
                 <li>• Veterinário: Não informado</li>
@@ -82,7 +82,7 @@ export default function ConvertLeadModal({ lead, onClose, onConvert }: ConvertLe
             {/* Campos obrigatórios */}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
                   Valor Diária (R$) *
                 </label>
                 <input
@@ -91,7 +91,7 @@ export default function ConvertLeadModal({ lead, onClose, onConvert }: ConvertLe
                   min="0"
                   value={valorDiaria}
                   onChange={(e) => setValorDiaria(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="Ex: 100.00"
                   required
                   disabled={loading}
@@ -99,7 +99,7 @@ export default function ConvertLeadModal({ lead, onClose, onConvert }: ConvertLe
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
                   Valor 2 Visitas (R$) *
                 </label>
                 <input
@@ -108,7 +108,7 @@ export default function ConvertLeadModal({ lead, onClose, onConvert }: ConvertLe
                   min="0"
                   value={valorDuasVisitas}
                   onChange={(e) => setValorDuasVisitas(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="Ex: 180.00"
                   required
                   disabled={loading}
@@ -118,21 +118,21 @@ export default function ConvertLeadModal({ lead, onClose, onConvert }: ConvertLe
           </div>
 
           {/* Footer */}
-          <div className="flex gap-3 p-6 bg-gray-50 border-t border-gray-200">
+          <div className="flex gap-2 p-6 bg-gray-50 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 text-sm font-medium rounded-md hover:bg-gray-200 transition-colors"
               disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             >
-              {loading ? 'Convertendo...' : 'Converter em Cliente'}
+              {loading ? 'Convertendo...' : 'Converter'}
             </button>
           </div>
         </form>

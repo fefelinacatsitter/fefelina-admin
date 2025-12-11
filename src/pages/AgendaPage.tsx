@@ -875,13 +875,13 @@ export default function AgendaPage() {
         ) : (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Header da modal */}
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-start">
+              {/* Header da modal com gradiente */}
+              <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-start">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">
+                  <h2 className="text-lg font-semibold text-gray-900">
                     Detalhes da Visita
                   </h2>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-xs text-gray-600 mt-0.5">
                     {format(parseISO(selectedVisit.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </p>
                 </div>
@@ -889,7 +889,7 @@ export default function AgendaPage() {
                   onClick={() => setShowModal(false)}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>

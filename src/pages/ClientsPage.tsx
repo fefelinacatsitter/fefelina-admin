@@ -526,7 +526,7 @@ export default function ClientsPage() {
     <div>
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-secondary-700">Clientes</h1>
+          <h1 className="text-lg font-semibold text-secondary-700">Clientes</h1>
           <p className="mt-2 text-sm text-secondary-500">
             Lista de todos os clientes registrados no sistema.
           </p>
@@ -548,7 +548,7 @@ export default function ClientsPage() {
           <div className="relative top-10 w-full max-w-4xl bg-white rounded-lg shadow-xl">
             {/* Header com gradiente */}
             <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900">Adicionar Novo Cliente</h3>
+              <h3 className="text-base font-semibold text-gray-900">Adicionar Novo Cliente</h3>
               <button
                 onClick={() => setShowAddForm(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -743,7 +743,7 @@ export default function ClientsPage() {
           <div className="relative top-10 w-full max-w-4xl bg-white rounded-lg shadow-xl">
             {/* Header com gradiente */}
             <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900">Editar Cliente: {editingClient.nome}</h3>
+              <h3 className="text-base font-semibold text-gray-900">Editar Cliente: {editingClient.nome}</h3>
               <button
                 onClick={() => setShowEditForm(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -1004,7 +1004,7 @@ export default function ClientsPage() {
           filteredClients.map((client) => (
             <div key={client.id} className="bg-white rounded-lg shadow-sm border p-4">
               <div className="flex justify-between items-start mb-3">
-                <h3 className="font-medium text-gray-900 text-lg">{client.nome}</h3>
+                <h3 className="font-medium text-gray-900 text-base">{client.nome}</h3>
                 <div className="flex gap-2">
                   <button 
                     onClick={() => openEditForm(client)}
@@ -1139,7 +1139,7 @@ export default function ClientsPage() {
           <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
             {/* Header com gradiente */}
             <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900">Confirmar Exclusão</h3>
+              <h3 className="text-base font-semibold text-gray-900">Confirmar Exclusão</h3>
               <button
                 onClick={() => setShowDeleteConfirm(null)}
                 className="text-gray-400 hover:text-gray-600"
@@ -1200,7 +1200,7 @@ export default function ClientsPage() {
           <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
             {/* Header com gradiente */}
             <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-base font-semibold text-gray-900">
                 {editingPet ? 'Editar Pet' : 'Adicionar Pet'}
               </h3>
               <button

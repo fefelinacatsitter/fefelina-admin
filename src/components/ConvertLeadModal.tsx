@@ -45,8 +45,8 @@ export default function ConvertLeadModal({ lead, onClose, onConvert }: ConvertLe
         {/* Header com gradiente */}
         <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Converter Lead em Cliente
+            <h2 className="text-base font-semibold text-gray-900">
+              🎉 Converter Lead em Cliente
             </h2>
             <p className="text-xs text-gray-600 mt-0.5">
               {lead.nome}

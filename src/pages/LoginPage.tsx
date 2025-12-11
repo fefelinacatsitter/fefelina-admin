@@ -55,7 +55,7 @@ export default function LoginPage() {
             alt="Fefelina Logo" 
             className="mx-auto w-20 h-20 mb-6 drop-shadow-lg"
           />
-          <h2 className="mt-6 text-3xl font-extrabold text-secondary-700">
+          <h2 className="mt-6 text-2xl font-extrabold text-secondary-700">
             Fefelina - Sistema de Gestão
           </h2>
           <p className="mt-2 text-sm text-secondary-500">

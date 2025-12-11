@@ -182,7 +182,7 @@ export default function Dashboard() {
             <div className="ml-4 w-0 flex-1">
               <dl>
                 <dt className="text-sm font-medium text-gray-500 truncate">Total de Clientes</dt>
-                <dd className="text-lg font-semibold text-gray-900">{stats.totalClients}</dd>
+                <dd className="text-base font-semibold text-gray-900">{stats.totalClients}</dd>
               </dl>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function Dashboard() {
             <div className="ml-4 w-0 flex-1">
               <dl>
                 <dt className="text-sm font-medium text-gray-500 truncate">Total de Pets</dt>
-                <dd className="text-lg font-semibold text-gray-900">{stats.totalPets}</dd>
+                <dd className="text-base font-semibold text-gray-900">{stats.totalPets}</dd>
               </dl>
             </div>
           </div>
@@ -214,7 +214,7 @@ export default function Dashboard() {
             <div className="ml-4 w-0 flex-1">
               <dl>
                 <dt className="text-sm font-medium text-gray-500 truncate">Serviços Ativos</dt>
-                <dd className="text-lg font-semibold text-gray-900">{stats.activeServices}</dd>
+                <dd className="text-base font-semibold text-gray-900">{stats.activeServices}</dd>
               </dl>
             </div>
           </div>
@@ -230,7 +230,7 @@ export default function Dashboard() {
             <div className="ml-4 w-0 flex-1">
               <dl>
                 <dt className="text-sm font-medium text-gray-500 truncate">Visitas Hoje</dt>
-                <dd className="text-lg font-semibold text-gray-900">{stats.visitsToday}</dd>
+                <dd className="text-base font-semibold text-gray-900">{stats.visitsToday}</dd>
               </dl>
             </div>
           </div>
@@ -241,7 +241,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Gráfico de Receita */}
         <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Receita Mensal</h3>
+          <h3 className="text-base font-medium text-gray-900 mb-4">Receita Mensal</h3>
           <div className="space-y-3">
             <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
               <span className="text-sm md:text-base text-gray-600">Este Mês</span>
@@ -256,7 +256,7 @@ export default function Dashboard() {
 
         {/* Próximas Visitas */}
         <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Próximas Visitas</h3>
+          <h3 className="text-base font-medium text-gray-900 mb-4">Próximas Visitas</h3>
           <div className="space-y-3 max-h-80 overflow-y-auto">
             {upcomingVisits.length === 0 ? (
               <p className="text-gray-500 text-center py-4">Nenhuma visita agendada</p>

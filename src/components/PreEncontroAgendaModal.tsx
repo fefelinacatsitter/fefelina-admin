@@ -125,7 +125,7 @@ export default function PreEncontroAgendaModal({
         {/* Header com gradiente */}
         <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Agendar Pré-Encontro</h2>
+            <h2 className="text-base font-semibold text-gray-900">Agendar Pré-Encontro</h2>
             <p className="text-xs text-gray-600 mt-0.5">A partir da agenda</p>
           </div>
           <button

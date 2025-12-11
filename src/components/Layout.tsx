@@ -59,7 +59,7 @@ export default function Layout({ children }: LayoutProps) {
                   alt="Fefelina Logo" 
                   className="w-8 h-8 mr-2 rounded-lg shadow-sm"
                 />
-                <h1 className="text-lg font-bold text-secondary-700">Fefelina Admin</h1>
+                <h1 className="text-base font-bold text-secondary-700">Fefelina Admin</h1>
               </div>
               <nav className="mt-5 px-2 space-y-1">
                 {navigation.map((item) => {
@@ -107,7 +107,7 @@ export default function Layout({ children }: LayoutProps) {
                   alt="Fefelina Logo" 
                   className="w-10 h-10 mr-3 rounded-lg shadow-sm"
                 />
-                <h1 className="text-xl font-bold text-secondary-700">Fefelina Admin</h1>
+                <h1 className="text-lg font-bold text-secondary-700">Fefelina Admin</h1>
               </div>
               <nav className="mt-5 flex-1 px-2 bg-white space-y-1">
                 {navigation.map((item) => {
@@ -160,7 +160,7 @@ export default function Layout({ children }: LayoutProps) {
                   alt="Fefelina Logo" 
                   className="w-8 h-8 mr-2 rounded-lg shadow-sm"
                 />
-                <h1 className="text-lg font-bold text-secondary-700">Fefelina Admin</h1>
+                <h1 className="text-base font-bold text-secondary-700">Fefelina Admin</h1>
               </div>
               <button
                 onClick={handleLogout}

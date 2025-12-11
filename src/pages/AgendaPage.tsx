@@ -778,7 +778,7 @@ export default function AgendaPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           {/* Título e navegação */}
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
+            <h1 className="text-lg font-bold text-gray-900">Agenda</h1>
             
             <div className="flex items-center gap-2">
               <button
@@ -878,7 +878,7 @@ export default function AgendaPage() {
               {/* Header da modal com gradiente */}
               <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-start">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2 className="text-base font-semibold text-gray-900">
                     Detalhes da Visita
                   </h2>
                   <p className="text-xs text-gray-600 mt-0.5">
@@ -958,7 +958,7 @@ export default function AgendaPage() {
 
                 <div className="border-t border-gray-200 pt-4">
                   <label className="text-xs font-semibold text-gray-500 uppercase">Valor a Receber</label>
-                  <p className="text-2xl font-bold text-green-600 mt-1">
+                  <p className="text-xl font-bold text-green-600 mt-1">
                     R$ {(selectedVisit.valor - selectedVisit.desconto_plataforma).toFixed(2)}
                   </p>
                 </div>

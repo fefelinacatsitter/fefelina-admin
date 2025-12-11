@@ -621,8 +621,8 @@ export default function LeadsPage() {
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Users className="w-7 h-7 text-purple-600" />
+            <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Users className="w-5 h-5 text-purple-600" />
               Leads (CRM)
             </h1>
             <p className="text-sm text-gray-600 mt-1">Gerencie potenciais clientes</p>
@@ -645,7 +645,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium text-gray-600">Total de Leads</div>
-                <div className="text-3xl font-bold text-gray-900 mt-1">{stats.total}</div>
+                <div className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</div>
               </div>
               <div className="bg-purple-100 p-3 rounded-full">
                 <Users className="w-6 h-6 text-purple-600" />
@@ -658,7 +658,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium text-purple-700">Valor em Aberto</div>
-                <div className="text-3xl font-bold text-purple-900 mt-1">{formatCurrency(stats.valor_potencial)}</div>
+                <div className="text-2xl font-bold text-purple-900 mt-1">{formatCurrency(stats.valor_potencial)}</div>
                 <div className="text-xs text-purple-600 mt-1">Pipeline ativa</div>
               </div>
               <div className="bg-purple-200 p-3 rounded-full">
@@ -672,7 +672,7 @@ export default function LeadsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium text-gray-600">Taxa de Conversão</div>
-                <div className="text-3xl font-bold text-green-600 mt-1">
+                <div className="text-2xl font-bold text-green-600 mt-1">
                   {stats.total > 0 ? Math.round((stats.fechado_ganho / stats.total) * 100) : 0}%
                 </div>
                 <div className="text-xs text-gray-500 mt-1">{stats.fechado_ganho} ganhos / {stats.total} total</div>
@@ -777,7 +777,7 @@ export default function LeadsPage() {
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Header com gradiente */}
             <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-base font-semibold text-gray-900">
                 {editingLead ? 'Editar Lead' : 'Novo Lead'}
               </h2>
               <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
@@ -919,7 +919,7 @@ export default function LeadsPage() {
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             {/* Header compacto com gradiente */}
             <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">{selectedLead.nome}</h2>
+              <h2 className="text-base font-semibold text-gray-900">{selectedLead.nome}</h2>
               <button
                 onClick={() => setShowDetailModal(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -981,7 +981,7 @@ export default function LeadsPage() {
                       <DollarSign className="w-3.5 h-3.5" />
                       Valor do Orçamento
                     </label>
-                    <p className="text-xl font-bold text-purple-600 mt-1.5">
+                    <p className="text-lg font-bold text-purple-600 mt-1.5">
                       {formatCurrency(selectedLead.valor_orcamento)}
                     </p>
                   </div>

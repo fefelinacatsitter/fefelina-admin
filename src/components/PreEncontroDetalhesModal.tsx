@@ -61,7 +61,7 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
         {/* Header com gradiente */}
         <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
           <div className="flex-1">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
               Pré-Encontro com Lead
             </h2>
             <p className="text-xs text-gray-600 mt-0.5 flex items-center gap-1.5">
@@ -90,7 +90,7 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
                 <label className="text-xs font-medium text-cyan-700 uppercase block mb-1">
                   Nome
                 </label>
-                <p className="text-lg font-semibold text-cyan-900">
+                <p className="text-base font-semibold text-cyan-900">
                   {visit.leads?.nome || 'Lead não identificado'}
                 </p>
               </div>

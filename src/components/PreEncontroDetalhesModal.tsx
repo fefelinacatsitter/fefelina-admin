@@ -80,24 +80,24 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {/* Informações do Lead - 2 colunas */}
-          <div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-cyan-900 uppercase mb-3 flex items-center gap-2">
+          <div className="bg-primary-50 border border-primary-200 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-primary-900 uppercase mb-3 flex items-center gap-2">
               <User className="w-4 h-4" />
               Lead
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="text-xs font-medium text-cyan-700 uppercase block mb-1">
+                <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
                   Nome
                 </label>
-                <p className="text-base font-semibold text-cyan-900">
+                <p className="text-base font-semibold text-primary-900">
                   {visit.leads?.nome || 'Lead não identificado'}
                 </p>
               </div>
               
               {visit.leads?.telefone && (
                 <div>
-                  <label className="text-xs font-medium text-cyan-700 uppercase block mb-1">
+                  <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
                     <Phone className="w-3 h-3 inline mr-1" />
                     Telefone
                   </label>
@@ -105,7 +105,7 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
                     href={`https://wa.me/${visit.leads.telefone.replace(/\D/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm font-medium text-cyan-600 hover:text-cyan-700 hover:underline"
+                    className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
                   >
                     {visit.leads.telefone}
                   </a>
@@ -113,7 +113,7 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
               )}
 
               <div>
-                <label className="text-xs font-medium text-cyan-700 uppercase block mb-1">
+                <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
                   Status do Lead
                 </label>
                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${

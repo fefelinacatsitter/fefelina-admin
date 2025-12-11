@@ -69,11 +69,11 @@ export default function PreEncontroModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        {/* Header compacto */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
+        {/* Header compacto com gradiente */}
+        <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Agendar Pré-Encontro</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Lead: {leadNome}</p>
+            <p className="text-xs text-gray-600 mt-0.5">Lead: {leadNome}</p>
           </div>
           <button
             onClick={onClose}

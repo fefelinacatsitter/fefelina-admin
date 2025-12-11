@@ -3,6 +3,7 @@ import { supabase, Lead, Visit } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import { Users, Phone, MapPin, Calendar, DollarSign, Plus, X, Edit2, Eye, Clock } from 'lucide-react'
 import PreEncontroModal from '../components/PreEncontroModal'
+import ConvertLeadModal from '../components/ConvertLeadModal'
 import {
   DndContext,
   DragEndEvent,
@@ -199,6 +200,10 @@ export default function LeadsPage() {
   const [preEncontros, setPreEncontros] = useState<Visit[]>([])
   const [loadingPreEncontros, setLoadingPreEncontros] = useState(false)
 
+  // Estados para conversão de lead em cliente
+  const [showConvertModal, setShowConvertModal] = useState(false)
+  const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null)
+
   useEffect(() => {
     fetchLeads()
   }, [])
@@ -352,6 +357,33 @@ export default function LeadsPage() {
     const lead = leads.find(l => l.id === leadId)
     if (!lead || lead.status === newStatus) return
 
+    // Se moveu para "Fechado Ganho", perguntar se quer converter em cliente
+    if (newStatus === 'fechado_ganho') {
+      setLeadToConvert(lead)
+      setShowConvertModal(true)
+      
+      // Atualizar o status da lead mesmo sem converter (usuário pode cancelar a conversão)
+      try {
+        const { error } = await supabase
+          .from('leads')
+          .update({ status: newStatus })
+          .eq('id', leadId)
+
+        if (error) throw error
+
+        setLeads(leads.map(l => 
+          l.id === leadId ? { ...l, status: newStatus } : l
+        ))
+
+        toast.success(`Lead movido para "Fechado Ganho"`)
+      } catch (error) {
+        console.error('Erro ao atualizar status:', error)
+        toast.error('Erro ao mover lead')
+        fetchLeads()
+      }
+      return
+    }
+
     try {
       // Atualizar no banco de dados
       const { error } = await supabase
@@ -372,6 +404,45 @@ export default function LeadsPage() {
       toast.error('Erro ao mover lead')
       // Recarregar para garantir consistência
       fetchLeads()
+    }
+  }
+
+  const handleConvertToClient = async (valorDiaria: number, valorDuasVisitas: number) => {
+    if (!leadToConvert) return
+
+    try {
+      // Criar novo cliente com os dados da lead
+      const { error: clientError } = await supabase
+        .from('clients')
+        .insert({
+          nome: leadToConvert.nome,
+          endereco_completo: leadToConvert.endereco || '',
+          veterinario_confianca: 'Não informado',
+          valor_diaria: valorDiaria,
+          valor_duas_visitas: valorDuasVisitas,
+          observacoes: leadToConvert.observacoes || null
+        })
+        .select()
+        .single()
+
+      if (clientError) throw clientError
+
+      toast.success(`Lead "${leadToConvert.nome}" convertido em cliente com sucesso! 🎉`)
+      
+      // Fechar modal e limpar estados
+      setShowConvertModal(false)
+      setLeadToConvert(null)
+
+      // Opcional: Mostrar mensagem sobre navegação
+      setTimeout(() => {
+        toast.success('Cliente criado! Você pode encontrá-lo na página de Clientes.', {
+          duration: 4000
+        })
+      }, 1000)
+
+    } catch (error) {
+      console.error('Erro ao converter lead em cliente:', error)
+      toast.error('Erro ao converter lead em cliente. Tente novamente.')
     }
   }
 
@@ -1139,6 +1210,18 @@ export default function LeadsPage() {
               fetchPreEncontros(selectedLead.id)
             }
           }}
+        />
+      )}
+
+      {/* Modal de Conversão para Cliente */}
+      {showConvertModal && leadToConvert && (
+        <ConvertLeadModal
+          lead={leadToConvert}
+          onClose={() => {
+            setShowConvertModal(false)
+            setLeadToConvert(null)
+          }}
+          onConvert={handleConvertToClient}
         />
       )}
     </div>

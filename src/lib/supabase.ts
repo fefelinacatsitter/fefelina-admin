@@ -13,6 +13,7 @@ export interface Client {
   valor_duas_visitas: number
   endereco_completo: string
   veterinario_confianca: string
+  observacoes?: string
   created_at: string
   updated_at: string
 }

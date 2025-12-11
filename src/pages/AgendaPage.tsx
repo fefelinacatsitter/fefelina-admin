@@ -561,13 +561,13 @@ export default function AgendaPage() {
                               }
                             }}
                             className={`p-1.5 rounded border cursor-move hover:shadow-md transition-shadow ${
-                              visit.tipo_visita === 'inteira' 
+                              (visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro')
                                 ? hasConflict ? 'text-[10px]' : 'absolute left-2 right-2 top-0 z-10 text-xs'
                                 : hasConflict ? 'text-[10px]' : 'text-xs'
                             } ${getVisitColor(visit)} ${
                               hasConflict ? 'border-2 border-red-500' : ''
                             }`}
-                            style={visit.tipo_visita === 'inteira' && !hasConflict ? {
+                            style={(visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro') && !hasConflict ? {
                               height: `${hasVisits ? 160 : 80}px`, // 2 slots de altura
                               maxHeight: '160px'
                             } : undefined}
@@ -705,13 +705,13 @@ export default function AgendaPage() {
                                 }
                               }}
                               className={`p-1 rounded border cursor-move hover:shadow-md transition-shadow ${
-                                visit.tipo_visita === 'inteira' 
+                                (visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro')
                                   ? hasConflict ? 'text-[8px]' : 'absolute left-1 right-1 top-0 z-10 text-xs'
                                   : hasConflict ? 'text-[8px]' : 'text-xs'
                               } ${getVisitColor(visit)} ${
                                 hasConflict ? 'border-2 border-red-500' : ''
                               }`}
-                              style={visit.tipo_visita === 'inteira' && !hasConflict ? {
+                              style={(visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro') && !hasConflict ? {
                                 height: '80px', // 2 slots de altura
                                 maxHeight: '80px'
                               } : undefined}

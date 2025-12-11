@@ -53,6 +53,7 @@ export interface Visit {
   status: 'agendada' | 'realizada' | 'cancelada'
   tipo_visita: 'inteira' | 'meia'
   tipo_encontro: 'pre_encontro' | 'visita_servico' // Novo campo
+  responsavel?: 'fernanda' | 'andre' | null // Responsável pela visita (fernanda=roxo, andre=laranja)
   desconto_plataforma: number
   observacoes?: string
   created_at: string

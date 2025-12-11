@@ -160,23 +160,36 @@ export default function AgendaPage() {
   }
 
   const getVisitColor = (visit: Visit) => {
-    // Pré-encontros em azul claro
+    // Cores por responsável (prioridade máxima)
+    if (visit.responsavel === 'fernanda') {
+      return visit.status === 'realizada'
+        ? 'bg-purple-50 border-purple-300 text-purple-700 opacity-75'
+        : 'bg-purple-100 border-purple-400 text-purple-900'
+    }
+    
+    if (visit.responsavel === 'andre') {
+      return visit.status === 'realizada'
+        ? 'bg-orange-50 border-orange-300 text-orange-700 opacity-75'
+        : 'bg-orange-100 border-orange-400 text-orange-900'
+    }
+    
+    // Pré-encontros em azul claro (sem responsável atribuído)
     if (visit.tipo_encontro === 'pre_encontro') {
       return visit.status === 'realizada'
         ? 'bg-cyan-50 border-cyan-300 text-cyan-700 opacity-75'
         : 'bg-cyan-100 border-cyan-400 text-cyan-900'
     }
     
-    // Cor base por tipo de visita (serviços normais)
+    // Cor base por tipo de visita (serviços normais sem responsável)
     const baseColor = visit.tipo_visita === 'inteira' 
       ? 'bg-blue-100 border-blue-400 text-blue-900'
-      : 'bg-orange-100 border-orange-400 text-orange-900'
+      : 'bg-amber-100 border-amber-400 text-amber-900'
     
     // Adicionar opacidade se for realizada
     if (visit.status === 'realizada') {
       return visit.tipo_visita === 'inteira'
         ? 'bg-blue-50 border-blue-300 text-blue-700 opacity-75'
-        : 'bg-orange-50 border-orange-300 text-orange-700 opacity-75'
+        : 'bg-amber-50 border-amber-300 text-amber-700 opacity-75'
     }
     
     return baseColor
@@ -433,9 +446,6 @@ export default function AgendaPage() {
   }
 
   const handleCardContextMenu = (e: React.MouseEvent, visit: Visit) => {
-    // Só mostrar menu para pré-encontros
-    if (visit.tipo_encontro !== 'pre_encontro') return
-    
     e.preventDefault()
     e.stopPropagation() // Evitar que abra o menu do slot
     
@@ -472,6 +482,26 @@ export default function AgendaPage() {
     } catch (error) {
       console.error('Erro ao cancelar pré-encontro:', error)
       toast.error('Erro ao cancelar pré-encontro')
+    }
+  }
+
+  // Handler para atribuir responsável à visita
+  const handleAssignResponsavel = async (visitId: string, responsavel: 'fernanda' | 'andre' | null) => {
+    try {
+      const { error } = await supabase
+        .from('visits')
+        .update({ responsavel })
+        .eq('id', visitId)
+
+      if (error) throw error
+
+      const nome = responsavel === 'fernanda' ? 'Fernanda' : responsavel === 'andre' ? 'André' : 'sem atribuição'
+      toast.success(`Visita atribuída a ${nome}!`)
+      await fetchVisits()
+      setCardContextMenu(null)
+    } catch (error) {
+      console.error('Erro ao atribuir responsável:', error)
+      toast.error('Erro ao atribuir responsável')
     }
   }
 
@@ -1012,18 +1042,38 @@ export default function AgendaPage() {
         />
       )}
 
-      {/* Menu de contexto do card (pré-encontros) */}
+      {/* Menu de contexto do card (pré-encontros e atribuição) */}
       {cardContextMenu && (
         <ContextMenu
           x={cardContextMenu.x}
           y={cardContextMenu.y}
           items={[
+            // Opções de atribuição de responsável (para todas as visitas)
             {
+              label: 'Atribuir a Fernanda (Roxo)',
+              icon: '👤',
+              onClick: () => handleAssignResponsavel(cardContextMenu.visit.id, 'fernanda'),
+              color: 'text-purple-700'
+            },
+            {
+              label: 'Atribuir a André (Laranja)',
+              icon: '👤',
+              onClick: () => handleAssignResponsavel(cardContextMenu.visit.id, 'andre'),
+              color: 'text-orange-700'
+            },
+            {
+              label: 'Remover Atribuição',
+              icon: '❌',
+              onClick: () => handleAssignResponsavel(cardContextMenu.visit.id, null),
+              color: 'text-gray-700'
+            },
+            // Separador visual (apenas se for pré-encontro)
+            ...(cardContextMenu.visit.tipo_encontro === 'pre_encontro' ? [{
               label: 'Cancelar Pré-Encontro',
               icon: '🗑️',
               onClick: handleDeletePreEncontro,
               color: 'text-red-600'
-            }
+            }] : [])
           ]}
           onClose={() => setCardContextMenu(null)}
         />

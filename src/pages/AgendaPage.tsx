@@ -1,27 +1,27 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, Visit as VisitType } from '../lib/supabase'
 import { format, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
+import PreEncontroAgendaModal from '../components/PreEncontroAgendaModal'
+import PreEncontroDetalhesModal from '../components/PreEncontroDetalhesModal'
+import ContextMenu from '../components/ContextMenu'
 
-interface Visit {
-  id: string
-  service_id: string
-  data: string
-  horario: string
-  tipo_visita: 'inteira' | 'meia'
-  valor: number
-  status: 'agendada' | 'realizada' | 'cancelada'
-  desconto_plataforma: number
-  observacoes?: string
-  clients: {
+interface Visit extends VisitType {
+  clients?: {
     nome: string
     endereco_completo?: string
   } | null
-  services: {
+  services?: {
     nome_servico?: string
   } | null
+  leads?: {
+    id: string
+    nome: string
+    telefone: string | null
+    status: string
+  }
 }
 
 type ViewMode = 'day' | 'week'
@@ -37,6 +37,14 @@ export default function AgendaPage() {
   const [scrollPosition, setScrollPosition] = useState(0)
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
   const [isDraggingTouch, setIsDraggingTouch] = useState(false)
+  
+  // Estados para pré-encontros
+  const [showPreEncontroModal, setShowPreEncontroModal] = useState(false)
+  const [contextMenuData, setContextMenuData] = useState<{ date: string; time: string } | null>(null)
+  
+  // Estados para menu de contexto
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; date: string; time: string } | null>(null)
+  const [cardContextMenu, setCardContextMenu] = useState<{ x: number; y: number; visit: Visit } | null>(null)
 
   // Gerar array de horários com meias horas (6h às 22h)
   const timeSlots = Array.from({ length: 17 }, (_, i) => {
@@ -106,7 +114,8 @@ export default function AgendaPage() {
         .select(`
           *,
           clients (nome, endereco_completo),
-          services (nome_servico)
+          services (nome_servico),
+          leads (id, nome, telefone, status)
         `)
         .gte('data', format(startDate, 'yyyy-MM-dd'))
         .lte('data', format(endDate, 'yyyy-MM-dd'))
@@ -116,6 +125,7 @@ export default function AgendaPage() {
 
       if (error) throw error
       
+      // Mostrar todas as visitas (incluindo pré-encontros)
       setVisits(data || [])
     } catch (error) {
       console.error('Erro ao buscar visitas:', error)
@@ -150,7 +160,14 @@ export default function AgendaPage() {
   }
 
   const getVisitColor = (visit: Visit) => {
-    // Cor base por tipo de visita
+    // Pré-encontros em azul claro
+    if (visit.tipo_encontro === 'pre_encontro') {
+      return visit.status === 'realizada'
+        ? 'bg-cyan-50 border-cyan-300 text-cyan-700 opacity-75'
+        : 'bg-cyan-100 border-cyan-400 text-cyan-900'
+    }
+    
+    // Cor base por tipo de visita (serviços normais)
     const baseColor = visit.tipo_visita === 'inteira' 
       ? 'bg-blue-100 border-blue-400 text-blue-900'
       : 'bg-orange-100 border-orange-400 text-orange-900'
@@ -394,6 +411,70 @@ export default function AgendaPage() {
     }
   }
 
+  const handleContextMenu = (e: React.MouseEvent, date: Date, time: string) => {
+    e.preventDefault()
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      date: format(date, 'yyyy-MM-dd'),
+      time: time
+    })
+  }
+
+  const handleCreatePreEncontro = () => {
+    if (contextMenu) {
+      setContextMenuData({
+        date: contextMenu.date,
+        time: contextMenu.time
+      })
+      setShowPreEncontroModal(true)
+      setContextMenu(null)
+    }
+  }
+
+  const handleCardContextMenu = (e: React.MouseEvent, visit: Visit) => {
+    // Só mostrar menu para pré-encontros
+    if (visit.tipo_encontro !== 'pre_encontro') return
+    
+    e.preventDefault()
+    e.stopPropagation() // Evitar que abra o menu do slot
+    
+    setCardContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      visit: visit
+    })
+  }
+
+  const handleDeletePreEncontro = async () => {
+    if (!cardContextMenu) return
+
+    const confirmDelete = window.confirm(
+      `Deseja realmente cancelar o pré-encontro com ${cardContextMenu.visit.leads?.nome || 'este lead'}?`
+    )
+
+    if (!confirmDelete) {
+      setCardContextMenu(null)
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('visits')
+        .delete()
+        .eq('id', cardContextMenu.visit.id)
+
+      if (error) throw error
+
+      toast.success('Pré-encontro cancelado com sucesso!')
+      await fetchVisits()
+      setCardContextMenu(null)
+    } catch (error) {
+      console.error('Erro ao cancelar pré-encontro:', error)
+      toast.error('Erro ao cancelar pré-encontro')
+    }
+  }
+
   const renderDayView = () => {
     const hasVisitsOnDay = visits.some(visit => isSameDay(parseISO(visit.data), currentDate))
     
@@ -444,12 +525,14 @@ export default function AgendaPage() {
 
                   {/* Coluna do dia - Drop zone */}
                   <div 
-                    className="p-2 relative"
+                    className="p-2 relative cursor-context-menu"
                     data-drop-zone="true"
                     data-day={format(currentDate, 'yyyy-MM-dd')}
                     data-time={slot.time}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, currentDate, slot.time)}
+                    onContextMenu={(e) => handleContextMenu(e, currentDate, slot.time)}
+                    title="Clique com botão direito para ver opções"
                   >
                     {hasConflict && (
                       <div className="absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded-bl z-20">
@@ -470,6 +553,7 @@ export default function AgendaPage() {
                             onTouchMove={handleTouchMove}
                             onTouchEnd={handleTouchEnd}
                             onTouchCancel={handleTouchCancel}
+                            onContextMenu={(e) => handleCardContextMenu(e, visit)}
                             onClick={() => {
                               // Só abre modal se não estiver arrastando
                               if (!draggingVisit && !isDraggingTouch) {
@@ -489,15 +573,19 @@ export default function AgendaPage() {
                             } : undefined}
                           >
                             <div className="font-semibold truncate leading-tight">
-                              {visit.clients?.nome || 'Cliente não identificado'}
+                              {visit.tipo_encontro === 'pre_encontro' 
+                                ? `🤝 ${visit.leads?.nome || 'Lead não identificado'}` 
+                                : visit.clients?.nome || 'Cliente não identificado'}
                             </div>
                             {!hasConflict && (
                               <div className="truncate opacity-90 leading-tight mt-0.5">
-                                {visit.services?.nome_servico || 'Serviço não identificado'}
+                                {visit.tipo_encontro === 'pre_encontro'
+                                  ? 'Pré-Encontro'
+                                  : visit.services?.nome_servico || 'Serviço não identificado'}
                               </div>
                             )}
                             <div className="opacity-75 mt-0.5 leading-tight">
-                              {visit.horario.substring(0, 5)} • {visit.tipo_visita === 'inteira' ? '1h' : '30min'}
+                              {visit.horario.substring(0, 5)} • {visit.tipo_encontro === 'pre_encontro' ? '30min' : visit.tipo_visita === 'inteira' ? '1h' : '30min'}
                             </div>
                           </div>
                         )
@@ -580,7 +668,7 @@ export default function AgendaPage() {
                   return (
                     <div
                       key={day.toISOString()}
-                      className={`border-r border-gray-200 p-1 relative ${
+                      className={`border-r border-gray-200 p-1 relative cursor-context-menu ${
                         isToday ? 'bg-blue-50/30' : ''
                       }`}
                       data-drop-zone="true"
@@ -588,6 +676,8 @@ export default function AgendaPage() {
                       data-time={slot.time}
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, day, slot.time)}
+                      onContextMenu={(e) => handleContextMenu(e, day, slot.time)}
+                      title="Clique com botão direito para ver opções"
                     >
                       {hasConflict && (
                         <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] px-1 rounded-bl z-20">
@@ -608,6 +698,7 @@ export default function AgendaPage() {
                               onTouchMove={handleTouchMove}
                               onTouchEnd={handleTouchEnd}
                               onTouchCancel={handleTouchCancel}
+                              onContextMenu={(e) => handleCardContextMenu(e, visit)}
                               onClick={() => {
                                 if (!draggingVisit && !isDraggingTouch) {
                                   handleVisitClick(visit)
@@ -626,11 +717,13 @@ export default function AgendaPage() {
                               } : undefined}
                             >
                               <div className="font-semibold truncate leading-tight">
-                                {visit.clients?.nome || 'Cliente não identificado'}
+                                {visit.tipo_encontro === 'pre_encontro' 
+                                  ? `🤝 ${visit.leads?.nome || 'Lead não identificado'}` 
+                                  : visit.clients?.nome || 'Cliente não identificado'}
                               </div>
                               {!hasConflict && (
                                 <div className="truncate text-[9px] opacity-75 leading-tight mt-0.5">
-                                  {visit.tipo_visita === 'inteira' ? '1h' : '30min'}
+                                  {visit.tipo_encontro === 'pre_encontro' ? '30min' : visit.tipo_visita === 'inteira' ? '1h' : '30min'}
                                 </div>
                               )}
                             </div>
@@ -695,27 +788,29 @@ export default function AgendaPage() {
           </div>
 
           {/* Controles de visualização - Esconder em mobile e iPad, mostrar apenas desktop */}
-          <div className="hidden lg:flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('day')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'day'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Dia
-            </button>
-            <button
-              onClick={() => setViewMode('week')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'week'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Semana
-            </button>
+          <div className="flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('day')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'day'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Dia
+              </button>
+              <button
+                onClick={() => setViewMode('week')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'week'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Semana
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -740,129 +835,198 @@ export default function AgendaPage() {
         </>
       )}
 
-      {/* Modal de detalhes da visita */}
+      {/* Modal de detalhes - Pré-Encontro ou Visita Normal */}
       {showModal && selectedVisit && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Header da modal */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-start">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  Detalhes da Visita
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  {format(parseISO(selectedVisit.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Conteúdo da modal */}
-            <div className="px-6 py-4 space-y-6">
-              {/* Informações da visita */}
-              <div className="grid grid-cols-2 gap-4">
+        selectedVisit.tipo_encontro === 'pre_encontro' ? (
+          <PreEncontroDetalhesModal
+            visit={selectedVisit}
+            onClose={() => setShowModal(false)}
+          />
+        ) : (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header da modal */}
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-start">
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Cliente</label>
-                  <p className="text-base font-medium text-gray-900 mt-1">
-                    {selectedVisit.clients?.nome || 'Não identificado'}
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Detalhes da Visita
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {format(parseISO(selectedVisit.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </p>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Status</label>
-                  <p className="mt-1">
-                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                      selectedVisit.status === 'agendada' ? 'bg-blue-100 text-blue-800' :
-                      selectedVisit.status === 'realizada' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {selectedVisit.status === 'agendada' ? 'Agendada' :
-                       selectedVisit.status === 'realizada' ? 'Realizada' : 'Cancelada'}
-                    </span>
-                  </p>
-                </div>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Horário</label>
-                  <p className="text-base font-medium text-gray-900 mt-1">
-                    {selectedVisit.horario.substring(0, 5)}
-                  </p>
+              {/* Conteúdo da modal */}
+              <div className="px-6 py-4 space-y-6">
+                {/* Informações da visita */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Cliente</label>
+                    <p className="text-base font-medium text-gray-900 mt-1">
+                      {selectedVisit.clients?.nome || 'Não identificado'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Status</label>
+                    <p className="mt-1">
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                        selectedVisit.status === 'agendada' ? 'bg-blue-100 text-blue-800' :
+                        selectedVisit.status === 'realizada' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedVisit.status === 'agendada' ? 'Agendada' :
+                         selectedVisit.status === 'realizada' ? 'Realizada' : 'Cancelada'}
+                      </span>
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Tipo de Visita</label>
-                  <p className="mt-1">
-                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                      selectedVisit.tipo_visita === 'inteira' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-orange-100 text-orange-800'
-                    }`}>
-                      {selectedVisit.tipo_visita === 'inteira' ? 'Visita Inteira' : 'Meia Visita'}
-                    </span>
-                  </p>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Valor da Visita</label>
-                  <p className="text-base font-medium text-gray-900 mt-1">
-                    R$ {selectedVisit.valor.toFixed(2)}
-                  </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Horário</label>
+                    <p className="text-base font-medium text-gray-900 mt-1">
+                      {selectedVisit.horario.substring(0, 5)}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Tipo de Visita</label>
+                    <p className="mt-1">
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                        selectedVisit.tipo_visita === 'inteira' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-orange-100 text-orange-800'
+                      }`}>
+                        {selectedVisit.tipo_visita === 'inteira' ? 'Visita Inteira' : 'Meia Visita'}
+                      </span>
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Desconto Plataforma</label>
-                  <p className="text-base font-medium text-gray-900 mt-1">
-                    R$ {selectedVisit.desconto_plataforma.toFixed(2)}
-                  </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Valor da Visita</label>
+                    <p className="text-base font-medium text-gray-900 mt-1">
+                      R$ {selectedVisit.valor.toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Desconto Plataforma</label>
+                    <p className="text-base font-medium text-gray-900 mt-1">
+                      R$ {selectedVisit.desconto_plataforma.toFixed(2)}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="border-t border-gray-200 pt-4">
-                <label className="text-xs font-semibold text-gray-500 uppercase">Valor a Receber</label>
-                <p className="text-2xl font-bold text-green-600 mt-1">
-                  R$ {(selectedVisit.valor - selectedVisit.desconto_plataforma).toFixed(2)}
-                </p>
-              </div>
-
-              {selectedVisit.clients?.endereco_completo && (
                 <div className="border-t border-gray-200 pt-4">
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Endereço do Cliente</label>
-                  <p className="text-base font-medium text-gray-900 mt-1">
-                    {selectedVisit.clients.endereco_completo}
+                  <label className="text-xs font-semibold text-gray-500 uppercase">Valor a Receber</label>
+                  <p className="text-2xl font-bold text-green-600 mt-1">
+                    R$ {(selectedVisit.valor - selectedVisit.desconto_plataforma).toFixed(2)}
                   </p>
                 </div>
-              )}
 
-              {/* Observações */}
-              {selectedVisit.observacoes && (
-                <div className="border-t border-gray-200 pt-4">
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Observações</label>
-                  <p className="text-base text-gray-700 mt-2 whitespace-pre-wrap">
-                    {selectedVisit.observacoes}
-                  </p>
-                </div>
-              )}
-            </div>
+                {selectedVisit.clients?.endereco_completo && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Endereço do Cliente</label>
+                    <p className="text-base font-medium text-gray-900 mt-1">
+                      {selectedVisit.clients.endereco_completo}
+                    </p>
+                  </div>
+                )}
 
-            {/* Footer da modal */}
-            <div className="sticky bottom-0 bg-gray-50 px-6 py-4 border-t border-gray-200">
-              <button
-                onClick={() => setShowModal(false)}
-                className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
-              >
-                Fechar
-              </button>
+                {/* Observações */}
+                {selectedVisit.observacoes && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Observações</label>
+                    <p className="text-base text-gray-700 mt-2 whitespace-pre-wrap">
+                      {selectedVisit.observacoes}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer da modal */}
+              <div className="sticky bottom-0 bg-gray-50 px-6 py-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )
+      )}
+
+      {/* Menu de Contexto */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              label: 'Criar Pré-Encontro',
+              icon: '🤝',
+              onClick: handleCreatePreEncontro,
+              color: 'text-cyan-700'
+            },
+            // Futuras opções podem ser adicionadas aqui:
+            // {
+            //   label: 'Criar Visita Rápida',
+            //   icon: '⚡',
+            //   onClick: handleCreateQuickVisit,
+            //   color: 'text-blue-700'
+            // },
+            // {
+            //   label: 'Ver Disponibilidade',
+            //   icon: '📅',
+            //   onClick: handleCheckAvailability,
+            //   color: 'text-gray-700'
+            // }
+          ]}
+        />
+      )}
+
+      {/* Modal de Pré-Encontro */}
+      {showPreEncontroModal && (
+        <PreEncontroAgendaModal
+          initialDate={contextMenuData?.date}
+          initialTime={contextMenuData?.time}
+          onClose={() => {
+            setShowPreEncontroModal(false)
+            setContextMenuData(null)
+          }}
+          onSuccess={() => {
+            fetchVisits()
+          }}
+        />
+      )}
+
+      {/* Menu de contexto do card (pré-encontros) */}
+      {cardContextMenu && (
+        <ContextMenu
+          x={cardContextMenu.x}
+          y={cardContextMenu.y}
+          items={[
+            {
+              label: 'Cancelar Pré-Encontro',
+              icon: '🗑️',
+              onClick: handleDeletePreEncontro,
+              color: 'text-red-600'
+            }
+          ]}
+          onClose={() => setCardContextMenu(null)}
+        />
       )}
     </div>
   )

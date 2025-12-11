@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { supabase, Lead } from '../lib/supabase'
+import { supabase, Lead, Visit } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Users, Phone, MapPin, Calendar, DollarSign, Plus, X, Edit2, Eye } from 'lucide-react'
+import { Users, Phone, MapPin, Calendar, DollarSign, Plus, X, Edit2, Eye, Clock } from 'lucide-react'
+import PreEncontroModal from '../components/PreEncontroModal'
 import {
   DndContext,
   DragEndEvent,
@@ -192,6 +193,11 @@ export default function LeadsPage() {
 
   // Estado separado para o modal de detalhes
   const [detailStatus, setDetailStatus] = useState<LeadStatus>('novo')
+  
+  // Estados para pré-encontros
+  const [showPreEncontroModal, setShowPreEncontroModal] = useState(false)
+  const [preEncontros, setPreEncontros] = useState<Visit[]>([])
+  const [loadingPreEncontros, setLoadingPreEncontros] = useState(false)
 
   useEffect(() => {
     fetchLeads()
@@ -239,6 +245,48 @@ export default function LeadsPage() {
       toast.error('Erro ao carregar leads')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPreEncontros = async (leadId: string) => {
+    try {
+      setLoadingPreEncontros(true)
+      const { data, error } = await supabase
+        .from('visits')
+        .select('*')
+        .eq('lead_id', leadId)
+        .eq('tipo_encontro', 'pre_encontro')
+        .order('data', { ascending: true })
+        .order('horario', { ascending: true })
+
+      if (error) throw error
+      setPreEncontros(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar pré-encontros:', error)
+      toast.error('Erro ao carregar pré-encontros')
+    } finally {
+      setLoadingPreEncontros(false)
+    }
+  }
+
+  const handleDeletePreEncontro = async (visitId: string) => {
+    if (!confirm('Deseja realmente cancelar este pré-encontro?')) return
+
+    try {
+      const { error } = await supabase
+        .from('visits')
+        .delete()
+        .eq('id', visitId)
+
+      if (error) throw error
+
+      toast.success('Pré-encontro cancelado')
+      if (selectedLead) {
+        fetchPreEncontros(selectedLead.id)
+      }
+    } catch (error: any) {
+      console.error('Erro ao cancelar pré-encontro:', error)
+      toast.error('Erro ao cancelar pré-encontro')
     }
   }
 
@@ -425,6 +473,7 @@ export default function LeadsPage() {
     setSelectedLead(lead)
     setDetailStatus(lead.status) // Inicializa com o status atual
     setShowDetailModal(true)
+    fetchPreEncontros(lead.id) // Buscar pré-encontros do lead
   }
 
   const resetForm = () => {
@@ -464,6 +513,14 @@ export default function LeadsPage() {
     if (inicio && !fim) return `A partir de ${formatDate(inicio)}`
     if (!inicio && fim) return `Até ${formatDate(fim)}`
     return `${formatDate(inicio)} - ${formatDate(fim)}`
+  }
+
+  const calcularHorarioFim = (horarioInicio: string, duracaoMinutos: number = 30) => {
+    const [horas, minutos] = horarioInicio.split(':').map(Number)
+    const totalMinutos = horas * 60 + minutos + duracaoMinutos
+    const horasFim = Math.floor(totalMinutos / 60)
+    const minutosFim = totalMinutos % 60
+    return `${String(horasFim).padStart(2, '0')}:${String(minutosFim).padStart(2, '0')}`
   }
 
   const formatWhatsAppNumber = (telefone: string | null) => {
@@ -977,6 +1034,72 @@ export default function LeadsPage() {
                 </div>
               )}
 
+              {/* Seção de Pré-Encontros */}
+              <div className="border-t border-gray-200 pt-6">
+                <div className="flex justify-between items-center mb-4">
+                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Pré-Encontros Agendados
+                  </label>
+                  <button
+                    onClick={() => setShowPreEncontroModal(true)}
+                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Agendar Pré-Encontro
+                  </button>
+                </div>
+
+                {loadingPreEncontros ? (
+                  <div className="text-center py-4 text-gray-500">Carregando...</div>
+                ) : preEncontros.length === 0 ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                    <p className="text-sm text-blue-700">
+                      Nenhum pré-encontro agendado ainda
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {preEncontros.map((encontro) => (
+                      <div
+                        key={encontro.id}
+                        className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex justify-between items-start"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(encontro.data + 'T00:00:00').toLocaleDateString('pt-BR')}
+                            <Clock className="w-4 h-4 ml-2" />
+                            {encontro.horario.substring(0, 5)} - {calcularHorarioFim(encontro.horario, encontro.duracao_minutos || 30)}
+                            <span className="text-xs text-blue-600">(30min)</span>
+                          </div>
+                          {encontro.observacoes && (
+                            <p className="text-xs text-blue-700 mt-1">{encontro.observacoes}</p>
+                          )}
+                          <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded-full ${
+                            encontro.status === 'realizada' 
+                              ? 'bg-green-100 text-green-700' 
+                              : encontro.status === 'cancelada'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {encontro.status === 'realizada' ? 'Realizado' : 
+                             encontro.status === 'cancelada' ? 'Cancelado' : 'Agendado'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleDeletePreEncontro(encontro.id!)}
+                          className="text-red-600 hover:text-red-800 p-1"
+                          title="Cancelar pré-encontro"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-between pt-4 border-t border-gray-200">
                 <button
                   onClick={() => handleDelete(selectedLead.id)}
@@ -1003,6 +1126,20 @@ export default function LeadsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Pré-Encontro */}
+      {showPreEncontroModal && selectedLead && (
+        <PreEncontroModal
+          leadId={selectedLead.id}
+          leadNome={selectedLead.nome}
+          onClose={() => setShowPreEncontroModal(false)}
+          onSuccess={() => {
+            if (selectedLead) {
+              fetchPreEncontros(selectedLead.id)
+            }
+          }}
+        />
       )}
     </div>
   )

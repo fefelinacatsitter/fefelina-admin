@@ -43,17 +43,27 @@ export interface Service {
 
 export interface Visit {
   id: string
-  service_id: string
-  client_id: string
+  service_id?: string | null // Nullable para pré-encontros
+  lead_id?: string | null // ID do lead para pré-encontros
+  client_id?: string // Opcional para pré-encontros
   data: string
   horario: string
+  duracao_minutos?: number // Duração em minutos (padrão 30 para pré-encontros)
   valor: number
   status: 'agendada' | 'realizada' | 'cancelada'
   tipo_visita: 'inteira' | 'meia'
+  tipo_encontro: 'pre_encontro' | 'visita_servico' // Novo campo
   desconto_plataforma: number
   observacoes?: string
   created_at: string
   updated_at: string
+  // Relações
+  leads?: {
+    id: string
+    nome: string
+    telefone: string | null
+    status: string
+  }
 }
 
 export interface Lead {

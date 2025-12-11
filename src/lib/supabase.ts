@@ -76,7 +76,7 @@ export interface Lead {
   periodo_inicio: string | null
   periodo_fim: string | null
   valor_orcamento: number | null
-  status: 'novo' | 'em_contato' | 'negociacao' | 'aguardando_resposta' | 'fechado_ganho' | 'fechado_perdido'
+  status: 'em_contato' | 'negociacao' | 'aguardando_resposta' | 'fechado_ganho' | 'fechado_perdido'
   observacoes: string | null
   created_at: string
   updated_at: string

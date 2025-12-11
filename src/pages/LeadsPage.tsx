@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase, Lead, Visit } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Users, Phone, MapPin, Calendar, DollarSign, Plus, X, Edit2, Eye, Clock } from 'lucide-react'
+import { Users, Phone, MapPin, Calendar, DollarSign, Plus, X, Edit2, Clock } from 'lucide-react'
 import PreEncontroModal from '../components/PreEncontroModal'
 import ConvertLeadModal from '../components/ConvertLeadModal'
 import {
@@ -19,15 +19,9 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-type LeadStatus = 'novo' | 'em_contato' | 'negociacao' | 'aguardando_resposta' | 'fechado_ganho' | 'fechado_perdido'
+type LeadStatus = 'em_contato' | 'negociacao' | 'aguardando_resposta' | 'fechado_ganho' | 'fechado_perdido'
 
 const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; bgColor: string; borderColor: string }> = {
-  novo: {
-    label: 'Novo',
-    color: 'text-gray-700',
-    bgColor: 'bg-gray-50',
-    borderColor: 'border-gray-300'
-  },
   em_contato: {
     label: 'Em Contato',
     color: 'text-blue-700',
@@ -92,7 +86,7 @@ function DraggableLeadCard({ lead, config, onOpen, onWhatsApp, formatCurrency, f
       style={style}
       {...attributes}
       {...listeners}
-      className={`${config.bgColor} border ${config.borderColor} rounded-lg p-4 cursor-move hover:shadow-lg transition-all overflow-hidden ${
+      className={`${config.bgColor} border ${config.borderColor} rounded-lg p-3 cursor-move hover:shadow-lg transition-all overflow-hidden ${
         isDragging ? 'shadow-2xl ring-2 ring-purple-400' : ''
       }`}
     >
@@ -100,10 +94,10 @@ function DraggableLeadCard({ lead, config, onOpen, onWhatsApp, formatCurrency, f
         e.stopPropagation()
         onOpen(lead)
       }}>
-        <h4 className="font-semibold text-gray-900 mb-2 truncate" title={lead.nome}>{lead.nome}</h4>
+        <h4 className="font-semibold text-sm text-gray-900 mb-1.5 truncate" title={lead.nome}>{lead.nome}</h4>
         {lead.telefone && (
-          <div className="flex items-center gap-2 mb-1 min-w-0">
-            <p className="text-sm text-gray-600 flex items-center gap-1 truncate flex-shrink">
+          <div className="flex items-center gap-1.5 mb-1 min-w-0">
+            <p className="text-xs text-gray-600 flex items-center gap-1 truncate flex-shrink">
               <Phone className="w-3 h-3 flex-shrink-0" />
               <span className="truncate">{lead.telefone}</span>
             </p>
@@ -115,19 +109,19 @@ function DraggableLeadCard({ lead, config, onOpen, onWhatsApp, formatCurrency, f
               className="text-green-600 hover:text-green-700 transition-colors flex-shrink-0"
               title="Abrir WhatsApp"
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
               </svg>
             </button>
           </div>
         )}
         {lead.valor_orcamento && (
-          <p className={`text-lg font-bold ${config.color} mt-2 truncate`}>
+          <p className={`text-sm font-bold ${config.color} mt-1.5 truncate`}>
             {formatCurrency(lead.valor_orcamento)}
           </p>
         )}
         {(lead.periodo_inicio || lead.periodo_fim) && (
-          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1 truncate">
+          <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1 truncate">
             <Calendar className="w-3 h-3 flex-shrink-0" />
             <span className="truncate">{formatPeriodo(lead.periodo_inicio, lead.periodo_fim)}</span>
           </p>
@@ -152,8 +146,8 @@ function DroppableColumn({ status, children, isActive }: DroppableColumnProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`space-y-3 flex-1 min-h-[200px] p-2 rounded-lg transition-all ${
-        isActive ? 'bg-purple-100 ring-2 ring-purple-400 ring-offset-2' : ''
+      className={`space-y-2 flex-1 min-h-[300px] rounded-md transition-all ${
+        isActive ? 'bg-blue-50/50 ring-1 ring-blue-300' : 'bg-gray-50/30'
       }`}
     >
       {children}
@@ -168,7 +162,6 @@ export default function LeadsPage() {
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
-  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
   const [activeColumn, setActiveColumn] = useState<LeadStatus | null>(null)
 
@@ -193,7 +186,7 @@ export default function LeadsPage() {
   })
 
   // Estado separado para o modal de detalhes
-  const [detailStatus, setDetailStatus] = useState<LeadStatus>('novo')
+  const [detailStatus, setDetailStatus] = useState<LeadStatus>('em_contato')
   
   // Estados para pré-encontros
   const [showPreEncontroModal, setShowPreEncontroModal] = useState(false)
@@ -309,7 +302,7 @@ export default function LeadsPage() {
       return
     }
 
-    const validStatuses: LeadStatus[] = ['novo', 'em_contato', 'negociacao', 'aguardando_resposta', 'fechado_ganho', 'fechado_perdido']
+    const validStatuses: LeadStatus[] = ['em_contato', 'negociacao', 'aguardando_resposta', 'fechado_ganho', 'fechado_perdido']
     
     // Verificar se estamos sobre uma coluna ou sobre um card
     if (validStatuses.includes(over.id as LeadStatus)) {
@@ -341,7 +334,7 @@ export default function LeadsPage() {
     // Precisamos verificar se é um status válido ou buscar o status do lead de destino
     let newStatus: LeadStatus
     
-    const validStatuses: LeadStatus[] = ['novo', 'em_contato', 'negociacao', 'aguardando_resposta', 'fechado_ganho', 'fechado_perdido']
+    const validStatuses: LeadStatus[] = ['em_contato', 'negociacao', 'aguardando_resposta', 'fechado_ganho', 'fechado_perdido']
     
     if (validStatuses.includes(over.id as LeadStatus)) {
       // over.id é um status válido (coluna)
@@ -555,7 +548,7 @@ export default function LeadsPage() {
       periodo_inicio: '',
       periodo_fim: '',
       valor_orcamento: '',
-      status: 'novo',
+      status: 'em_contato',
       observacoes: ''
     })
     setEditingLead(null)
@@ -612,7 +605,6 @@ export default function LeadsPage() {
   // Estatísticas do funil
   const stats = {
     total: leads.length,
-    novo: getLeadsByStatus('novo').length,
     em_contato: getLeadsByStatus('em_contato').length,
     negociacao: getLeadsByStatus('negociacao').length,
     aguardando_resposta: getLeadsByStatus('aguardando_resposta').length,
@@ -635,29 +627,7 @@ export default function LeadsPage() {
             </h1>
             <p className="text-sm text-gray-600 mt-1">Gerencie potenciais clientes</p>
           </div>
-          <div className="flex gap-2">
-            <div className="flex bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('kanban')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'kanban'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Kanban
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'list'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Lista
-              </button>
-            </div>
+          <div>
             <button
               onClick={() => setShowForm(true)}
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
@@ -668,39 +638,51 @@ export default function LeadsPage() {
           </div>
         </div>
 
-        {/* Estatísticas do Funil */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mt-4">
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-            <div className="text-xs text-gray-600">Total</div>
+        {/* Métricas principais */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          {/* Total de Leads */}
+          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-gray-600">Total de Leads</div>
+                <div className="text-3xl font-bold text-gray-900 mt-1">{stats.total}</div>
+              </div>
+              <div className="bg-purple-100 p-3 rounded-full">
+                <Users className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
           </div>
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-300">
-            <div className="text-2xl font-bold text-gray-700">{stats.novo}</div>
-            <div className="text-xs text-gray-600">Novos</div>
+
+          {/* Valor Potencial */}
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-purple-700">Valor em Aberto</div>
+                <div className="text-3xl font-bold text-purple-900 mt-1">{formatCurrency(stats.valor_potencial)}</div>
+                <div className="text-xs text-purple-600 mt-1">Pipeline ativa</div>
+              </div>
+              <div className="bg-purple-200 p-3 rounded-full">
+                <DollarSign className="w-6 h-6 text-purple-700" />
+              </div>
+            </div>
           </div>
-          <div className="bg-blue-50 p-3 rounded-lg border border-blue-300">
-            <div className="text-2xl font-bold text-blue-700">{stats.em_contato}</div>
-            <div className="text-xs text-blue-600">Em Contato</div>
-          </div>
-          <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-300">
-            <div className="text-2xl font-bold text-yellow-700">{stats.negociacao}</div>
-            <div className="text-xs text-yellow-600">Negociação</div>
-          </div>
-          <div className="bg-purple-50 p-3 rounded-lg border border-purple-300">
-            <div className="text-2xl font-bold text-purple-700">{stats.aguardando_resposta}</div>
-            <div className="text-xs text-purple-600">Aguardando</div>
-          </div>
-          <div className="bg-green-50 p-3 rounded-lg border border-green-300">
-            <div className="text-2xl font-bold text-green-700">{stats.fechado_ganho}</div>
-            <div className="text-xs text-green-600">Ganhos</div>
-          </div>
-          <div className="bg-red-50 p-3 rounded-lg border border-red-300">
-            <div className="text-2xl font-bold text-red-700">{stats.fechado_perdido}</div>
-            <div className="text-xs text-red-600">Perdidos</div>
-          </div>
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-lg border border-purple-300">
-            <div className="text-lg font-bold text-purple-700">{formatCurrency(stats.valor_potencial)}</div>
-            <div className="text-xs text-purple-600">Valor Potencial</div>
+
+          {/* Taxa de Conversão */}
+          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-gray-600">Taxa de Conversão</div>
+                <div className="text-3xl font-bold text-green-600 mt-1">
+                  {stats.total > 0 ? Math.round((stats.fechado_ganho / stats.total) * 100) : 0}%
+                </div>
+                <div className="text-xs text-gray-500 mt-1">{stats.fechado_ganho} ganhos / {stats.total} total</div>
+              </div>
+              <div className="bg-green-100 p-3 rounded-full">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -714,7 +696,7 @@ export default function LeadsPage() {
               <p className="text-gray-600">Carregando leads...</p>
             </div>
           </div>
-        ) : viewMode === 'kanban' ? (
+        ) : (
           // Visualização Kanban com Drag and Drop
           <DndContext
             sensors={sensors}
@@ -724,10 +706,11 @@ export default function LeadsPage() {
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-              {(Object.keys(STATUS_CONFIG) as LeadStatus[]).map(status => {
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+              {(Object.keys(STATUS_CONFIG) as LeadStatus[]).map((status, index) => {
                 const statusLeads = getLeadsByStatus(status)
                 const config = STATUS_CONFIG[status]
+                const isLastColumn = index === Object.keys(STATUS_CONFIG).length - 1
 
                 return (
                   <SortableContext
@@ -736,12 +719,15 @@ export default function LeadsPage() {
                     items={statusLeads.map(l => l.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="flex flex-col">
-                      <div className={`${config.bgColor} ${config.borderColor} border-2 rounded-lg p-3 mb-3`}>
-                        <h3 className={`font-semibold ${config.color} flex items-center justify-between`}>
+                    <div className={`flex flex-col ${!isLastColumn ? 'border-r border-gray-200 pr-3' : ''}`}>
+                      {/* Header da coluna estilo Jira - altura fixa */}
+                      <div className="mb-2 h-8 flex items-center justify-between">
+                        <h3 className={`text-xs font-semibold uppercase ${config.color} tracking-wide`}>
                           {config.label}
-                          <span className="text-sm font-normal">({statusLeads.length})</span>
                         </h3>
+                        <span className={`text-xs font-medium ${config.color} bg-white px-2 py-0.5 rounded-full border ${config.borderColor}`}>
+                          {statusLeads.length}
+                        </span>
                       </div>
                       <DroppableColumn status={status} isActive={activeColumn === status}>
                         {statusLeads.map(lead => (
@@ -765,16 +751,16 @@ export default function LeadsPage() {
             {/* Overlay de drag */}
             <DragOverlay>
               {activeLead ? (
-                <div className={`${STATUS_CONFIG[activeLead.status].bgColor} border-2 ${STATUS_CONFIG[activeLead.status].borderColor} rounded-lg p-4 shadow-2xl opacity-90 cursor-grabbing overflow-hidden max-w-xs`}>
-                  <h4 className="font-semibold text-gray-900 mb-2 truncate" title={activeLead.nome}>{activeLead.nome}</h4>
+                <div className={`${STATUS_CONFIG[activeLead.status].bgColor} border-2 ${STATUS_CONFIG[activeLead.status].borderColor} rounded-lg p-3 shadow-2xl opacity-90 cursor-grabbing overflow-hidden max-w-xs`}>
+                  <h4 className="font-semibold text-sm text-gray-900 mb-1.5 truncate" title={activeLead.nome}>{activeLead.nome}</h4>
                   {activeLead.telefone && (
-                    <p className="text-sm text-gray-600 flex items-center gap-1 mb-1 truncate">
+                    <p className="text-xs text-gray-600 flex items-center gap-1 mb-1 truncate">
                       <Phone className="w-3 h-3 flex-shrink-0" />
                       <span className="truncate">{activeLead.telefone}</span>
                     </p>
                   )}
                   {activeLead.valor_orcamento && (
-                    <p className={`text-lg font-bold ${STATUS_CONFIG[activeLead.status].color} mt-2 truncate`}>
+                    <p className={`text-sm font-bold ${STATUS_CONFIG[activeLead.status].color} mt-1.5 truncate`}>
                       {formatCurrency(activeLead.valor_orcamento)}
                     </p>
                   )}
@@ -782,79 +768,6 @@ export default function LeadsPage() {
               ) : null}
             </DragOverlay>
           </DndContext>
-        ) : (
-          // Visualização em Lista
-          <div className="bg-white rounded-lg shadow">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefone</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Endereço</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {leads.map(lead => {
-                  const config = STATUS_CONFIG[lead.status]
-                  return (
-                    <tr key={lead.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">{lead.nome}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {lead.telefone ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-600">{lead.telefone}</span>
-                            <button
-                              onClick={() => openWhatsApp(lead.telefone)}
-                              className="text-green-600 hover:text-green-700 transition-colors"
-                              title="Abrir WhatsApp"
-                            >
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                              </svg>
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
-                        {lead.endereco || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-semibold text-gray-900">
-                          {formatCurrency(lead.valor_orcamento)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${config.bgColor} ${config.color} border ${config.borderColor}`}>
-                          {config.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => handleOpenDetailModal(lead)}
-                          className="text-purple-600 hover:text-purple-900 mr-3"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(lead)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
         )}
       </div>
 

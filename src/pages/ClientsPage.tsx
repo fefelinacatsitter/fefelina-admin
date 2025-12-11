@@ -440,30 +440,42 @@ export default function ClientsPage() {
 
       {/* Modal de Adicionar Cliente */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-10 mx-auto p-6 border w-full max-w-4xl shadow-fefelina-hover rounded-2xl bg-white">
-            <div className="mt-3">
-              <h3 className="text-xl font-semibold text-primary-500 mb-6 text-center">Adicionar Novo Cliente</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-start justify-center p-4">
+          <div className="relative top-10 w-full max-w-4xl bg-white rounded-lg shadow-xl">
+            {/* Header com gradiente */}
+            <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900">Adicionar Novo Cliente</h3>
+              <button
+                onClick={() => setShowAddForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6">
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Dados do Cliente */}
                   <div className="space-y-4">
-                    <h4 className="text-md font-medium text-gray-800 border-b pb-2">Dados do Cliente</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide border-b pb-2">Dados do Cliente</h4>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Nome</label>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Nome</label>
                       <input
                         type="text"
                         name="nome"
                         value={formData.nome}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Valor Diária (R$)</label>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor Diária (R$)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -471,12 +483,12 @@ export default function ClientsPage() {
                         value={formData.valor_diaria}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Valor 2 Visitas (R$)</label>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor 2 Visitas (R$)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -484,19 +496,19 @@ export default function ClientsPage() {
                         value={formData.valor_duas_visitas}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Endereço Completo</label>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Endereço Completo</label>
                       <textarea
                         name="endereco_completo"
                         value={formData.endereco_completo}
                         onChange={handleInputChange}
                         required
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                     </div>
                     
@@ -582,7 +594,7 @@ export default function ClientsPage() {
                   </div>
                 </div>
                 
-                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={() => {
@@ -596,14 +608,14 @@ export default function ClientsPage() {
                       })
                       setPets([{ nome: '', caracteristica: '', observacoes: '' }])
                     }}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {submitting ? (
                       <>
@@ -623,30 +635,42 @@ export default function ClientsPage() {
 
       {/* Modal de Editar Cliente */}
       {showEditForm && editingClient && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Editar Cliente: {editingClient.nome}</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-start justify-center p-4">
+          <div className="relative top-10 w-full max-w-4xl bg-white rounded-lg shadow-xl">
+            {/* Header com gradiente */}
+            <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900">Editar Cliente: {editingClient.nome}</h3>
+              <button
+                onClick={() => setShowEditForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6">
               <form onSubmit={handleEditSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Dados do Cliente */}
                   <div className="space-y-4">
-                    <h4 className="text-md font-medium text-gray-800 border-b pb-2">Dados do Cliente</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide border-b pb-2">Dados do Cliente</h4>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Nome</label>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Nome</label>
                       <input
                         type="text"
                         name="nome"
                         value={formData.nome}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Valor Diária (R$)</label>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor Diária (R$)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -786,18 +810,18 @@ export default function ClientsPage() {
                   </div>
                 </div>
                 
-                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={closeEditForm}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={updating}
-                    className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {updating ? (
                       <>
@@ -1017,40 +1041,49 @@ export default function ClientsPage() {
 
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-          <div className="relative mx-auto p-6 border w-full max-w-md shadow-fefelina-hover rounded-2xl bg-white">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
+            {/* Header com gradiente */}
+            <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900">Confirmar Exclusão</h3>
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              </div>
-              
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Confirmar Exclusão
-              </h3>
-              
-              <div className="mb-6">
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="text-center mb-4">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-3">
+                  <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                
                 <p className="text-sm text-gray-600 mb-4">
                   Tem certeza que deseja excluir o cliente <strong>"{showDeleteConfirm?.nome}"</strong>?
                 </p>
                 
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-left">
-                  <p className="text-sm font-medium text-red-800 mb-2">⚠️ ATENÇÃO: Esta ação irá excluir também:</p>
-                  <ul className="text-sm text-red-700 space-y-1">
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 text-left">
+                  <p className="text-xs font-semibold text-red-800 mb-2">⚠️ ATENÇÃO: Esta ação irá excluir também:</p>
+                  <ul className="text-xs text-red-700 space-y-1">
                     <li>• Todos os pets do cliente</li>
                     <li>• Todos os serviços relacionados</li>
                     <li>• Todas as visitas agendadas</li>
                   </ul>
-                  <p className="text-sm font-medium text-red-800 mt-2">Esta ação não pode ser desfeita.</p>
+                  <p className="text-xs font-semibold text-red-800 mt-2">Esta ação não pode ser desfeita.</p>
                 </div>
               </div>
               
-              <div className="flex justify-center gap-3">
+              <div className="flex justify-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(null)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
                 >
                   Cancelar
                 </button>

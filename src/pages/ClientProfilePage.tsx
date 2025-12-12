@@ -270,6 +270,13 @@ export default function ClientProfilePage() {
     
     // Remove todos os caracteres não numéricos (incluindo +, parênteses, hífens)
     const phone = client.telefone.replace(/\D/g, '')
+    
+    // Valida se tem números suficientes (mínimo 10 dígitos: DDD + número)
+    if (phone.length < 10) {
+      toast.error('Telefone inválido ou incompleto')
+      return
+    }
+    
     const message = encodeURIComponent(`Olá ${client.nome}! Tudo bem? 😊`)
     
     // O phone já contém o código do país (55) se foi inserido com a máscara
@@ -407,6 +414,12 @@ export default function ClientProfilePage() {
   // Função para formatar telefone brasileiro
   const formatPhone = (value: string): string => {
     const numbers = value.replace(/\D/g, '')
+    
+    // Se não tem números, retorna vazio (não deixa o + sozinho)
+    if (numbers.length === 0) {
+      return ''
+    }
+    
     const limited = numbers.slice(0, 13)
     
     if (limited.length <= 2) {

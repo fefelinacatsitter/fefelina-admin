@@ -8,6 +8,11 @@ const formatPhone = (value: string): string => {
   // Remove tudo que não é número
   const numbers = value.replace(/\D/g, '')
   
+  // Se não tem números, retorna vazio (não deixa o + sozinho)
+  if (numbers.length === 0) {
+    return ''
+  }
+  
   // Limita a 13 dígitos (55 + 2 DDD + 9 número)
   const limited = numbers.slice(0, 13)
   

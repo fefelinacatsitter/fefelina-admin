@@ -78,6 +78,7 @@ export interface Lead {
   valor_orcamento: number | null
   status: 'em_contato' | 'negociacao' | 'aguardando_resposta' | 'fechado_ganho' | 'fechado_perdido'
   observacoes: string | null
+  motivo_perda: string | null
   created_at: string
   updated_at: string
 }

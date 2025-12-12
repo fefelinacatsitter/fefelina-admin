@@ -181,8 +181,9 @@ export default function LeadsPage() {
     periodo_inicio: '',
     periodo_fim: '',
     valor_orcamento: '',
-    status: 'novo' as LeadStatus,
-    observacoes: ''
+    status: 'em_contato' as LeadStatus,
+    observacoes: '',
+    motivo_perda: ''
   })
 
   // Estado separado para o modal de detalhes
@@ -196,6 +197,12 @@ export default function LeadsPage() {
   // Estados para conversão de lead em cliente
   const [showConvertModal, setShowConvertModal] = useState(false)
   const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null)
+
+  // Estados para motivo de perda
+  const [showMotivoPerda, setShowMotivoPerda] = useState(false)
+  const [leadParaPerder, setLeadParaPerder] = useState<Lead | null>(null)
+  const [motivoPerda, setMotivoPerda] = useState('')
+  const [salvandoPerda, setSalvandoPerda] = useState(false)
 
   useEffect(() => {
     fetchLeads()
@@ -218,13 +225,13 @@ export default function LeadsPage() {
       
       if (invalidLeads.length > 0) {
         console.warn('Leads com status inválido encontrados:', invalidLeads)
-        toast.error(`${invalidLeads.length} lead(s) com status inválido. Corrigindo para "novo"...`)
+        toast.error(`${invalidLeads.length} lead(s) com status inválido. Corrigindo para "em_contato"...`)
         
         // Corrigir status inválidos
         for (const lead of invalidLeads) {
           await supabase
             .from('leads')
-            .update({ status: 'novo' })
+            .update({ status: 'em_contato' })
             .eq('id', lead.id)
         }
         
@@ -350,6 +357,13 @@ export default function LeadsPage() {
     const lead = leads.find(l => l.id === leadId)
     if (!lead || lead.status === newStatus) return
 
+    // Se moveu para "Fechado Perdido", solicitar motivo da perda
+    if (newStatus === 'fechado_perdido') {
+      setLeadParaPerder(lead)
+      setShowMotivoPerda(true)
+      return
+    }
+
     // Se moveu para "Fechado Ganho", perguntar se quer converter em cliente
     if (newStatus === 'fechado_ganho') {
       setLeadToConvert(lead)
@@ -439,6 +453,46 @@ export default function LeadsPage() {
     }
   }
 
+  const handleConfirmarPerda = async () => {
+    if (!leadParaPerder || !motivoPerda.trim()) {
+      toast.error('Por favor, informe o motivo da perda da lead')
+      return
+    }
+
+    setSalvandoPerda(true)
+
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ 
+          status: 'fechado_perdido',
+          motivo_perda: motivoPerda.trim()
+        })
+        .eq('id', leadParaPerder.id)
+
+      if (error) throw error
+
+      // Atualizar estado local
+      setLeads(leads.map(l => 
+        l.id === leadParaPerder.id 
+          ? { ...l, status: 'fechado_perdido', motivo_perda: motivoPerda.trim() } 
+          : l
+      ))
+
+      toast.success('Lead marcada como "Fechado Perdido"')
+      
+      // Limpar estados
+      setShowMotivoPerda(false)
+      setLeadParaPerder(null)
+      setMotivoPerda('')
+    } catch (error) {
+      console.error('Erro ao marcar lead como perdida:', error)
+      toast.error('Erro ao atualizar status da lead')
+    } finally {
+      setSalvandoPerda(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -451,7 +505,8 @@ export default function LeadsPage() {
         periodo_fim: formData.periodo_fim || null,
         valor_orcamento: formData.valor_orcamento ? parseFloat(formData.valor_orcamento) : null,
         status: formData.status,
-        observacoes: formData.observacoes || null
+        observacoes: formData.observacoes || null,
+        motivo_perda: formData.motivo_perda || null
       }
 
       if (editingLead) {
@@ -508,7 +563,8 @@ export default function LeadsPage() {
       periodo_fim: lead.periodo_fim || '',
       valor_orcamento: lead.valor_orcamento?.toString() || '',
       status: lead.status,
-      observacoes: lead.observacoes || ''
+      observacoes: lead.observacoes || '',
+      motivo_perda: lead.motivo_perda || ''
     })
     setShowForm(true)
     setShowDetailModal(false)
@@ -516,6 +572,14 @@ export default function LeadsPage() {
 
   const handleStatusUpdate = async () => {
     if (!selectedLead) return
+
+    // Se mudou para "Fechado Perdido", solicitar motivo
+    if (detailStatus === 'fechado_perdido' && selectedLead.status !== 'fechado_perdido') {
+      setLeadParaPerder(selectedLead)
+      setShowMotivoPerda(true)
+      setShowDetailModal(false)
+      return
+    }
 
     try {
       const { error } = await supabase
@@ -549,7 +613,8 @@ export default function LeadsPage() {
       periodo_fim: '',
       valor_orcamento: '',
       status: 'em_contato',
-      observacoes: ''
+      observacoes: '',
+      motivo_perda: ''
     })
     setEditingLead(null)
     setShowForm(false)
@@ -785,9 +850,9 @@ export default function LeadsPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-4 space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
                   Nome do Cliente *
                 </label>
                 <input
@@ -795,34 +860,34 @@ export default function LeadsPage() {
                   required
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
                   Telefone
                 </label>
                 <input
                   type="text"
                   value={formData.telefone}
                   onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
                   Período do Serviço Desejado
                 </label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Data Início</label>
                     <input
                       type="date"
                       value={formData.periodo_inicio}
                       onChange={(e) => setFormData({ ...formData, periodo_inicio: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -831,27 +896,27 @@ export default function LeadsPage() {
                       type="date"
                       value={formData.periodo_fim}
                       onChange={(e) => setFormData({ ...formData, periodo_fim: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
                   Endereço
                 </label>
                 <input
                   type="text"
                   value={formData.endereco}
                   onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Valor do Orçamento
                   </label>
                   <input
@@ -859,18 +924,18 @@ export default function LeadsPage() {
                     step="0.01"
                     value={formData.valor_orcamento}
                     onChange={(e) => setFormData({ ...formData, valor_orcamento: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Status
                   </label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as LeadStatus })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     {(Object.keys(STATUS_CONFIG) as LeadStatus[]).map(status => (
                       <option key={status} value={status}>
@@ -881,23 +946,40 @@ export default function LeadsPage() {
                 </div>
               </div>
 
+              {/* Campo Motivo da Perda - aparece apenas se status for fechado_perdido */}
+              {formData.status === 'fechado_perdido' && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <label className="block text-xs font-medium text-red-700 mb-1">
+                    Motivo da Perda *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required={formData.status === 'fechado_perdido'}
+                    value={formData.motivo_perda || ''}
+                    onChange={(e) => setFormData({ ...formData, motivo_perda: e.target.value })}
+                    placeholder="Ex: Preço muito alto, Optou por concorrente, Desistiu do serviço..."
+                    className="w-full px-2 py-1.5 text-sm border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
                   Observações
                 </label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={formData.observacoes}
                   onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <div className="flex justify-end gap-2 pt-3 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   Cancelar
                 </button>
@@ -1116,6 +1198,31 @@ export default function LeadsPage() {
                 )}
               </div>
 
+              {/* Motivo da Perda - Sempre visível para leads Fechado Perdido */}
+              {selectedLead.status === 'fechado_perdido' && (
+                <div className="border-t border-gray-200 pt-5">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <label className="text-xs font-semibold text-red-700 uppercase tracking-wide flex items-center gap-1.5 mb-3">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Motivo da Perda
+                    </label>
+                    {selectedLead.motivo_perda ? (
+                      <p className="text-sm text-red-900 whitespace-pre-wrap bg-white p-3 rounded-md border border-red-200">
+                        {selectedLead.motivo_perda}
+                      </p>
+                    ) : (
+                      <div className="bg-white p-3 rounded-md border border-red-200">
+                        <p className="text-sm text-red-700 italic">
+                          Nenhum motivo registrado para esta lead perdida.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Rodapé com botões de ação */}
               <div className="flex justify-between items-center pt-4 border-t border-gray-200">
                 <button
@@ -1169,6 +1276,70 @@ export default function LeadsPage() {
           }}
           onConvert={handleConvertToClient}
         />
+      )}
+
+      {/* Modal de Motivo de Perda */}
+      {showMotivoPerda && leadParaPerder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            {/* Header com gradiente */}
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200 px-6 py-3">
+              <h3 className="text-base font-semibold text-gray-900">
+                Motivo da Perda
+              </h3>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Por que a lead "{leadParaPerder.nome}" foi perdida?
+              </p>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Motivo da Perda *
+                </label>
+                <textarea
+                  value={motivoPerda}
+                  onChange={(e) => setMotivoPerda(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+                  placeholder="Ex: Cliente encontrou cuidador mais barato, não respondeu mais os contatos, cancelou a viagem..."
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1.5">
+                  Esta informação é importante para análises futuras e melhoria do processo comercial.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowMotivoPerda(false)
+                    setLeadParaPerder(null)
+                    setMotivoPerda('')
+                  }}
+                  disabled={salvandoPerda}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmarPerda}
+                  disabled={salvandoPerda || !motivoPerda.trim()}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {salvandoPerda ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Salvando...
+                    </>
+                  ) : (
+                    'Confirmar Perda'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

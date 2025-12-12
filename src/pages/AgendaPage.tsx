@@ -951,7 +951,7 @@ export default function AgendaPage() {
                   <div>
                     <label className="text-xs font-semibold text-gray-500 uppercase">Desconto Plataforma</label>
                     <p className="text-base font-medium text-gray-900 mt-1">
-                      R$ {selectedVisit.desconto_plataforma.toFixed(2)}
+                      {selectedVisit.desconto_plataforma}%
                     </p>
                   </div>
                 </div>
@@ -959,7 +959,7 @@ export default function AgendaPage() {
                 <div className="border-t border-gray-200 pt-4">
                   <label className="text-xs font-semibold text-gray-500 uppercase">Valor a Receber</label>
                   <p className="text-xl font-bold text-green-600 mt-1">
-                    R$ {(selectedVisit.valor - selectedVisit.desconto_plataforma).toFixed(2)}
+                    R$ {(selectedVisit.valor * (1 - selectedVisit.desconto_plataforma / 100)).toFixed(2)}
                   </p>
                 </div>
 

@@ -14,6 +14,10 @@ export interface Client {
   endereco_completo: string
   veterinario_confianca: string
   observacoes?: string
+  telefone?: string
+  email?: string
+  tags?: string[] | null
+  notas?: string | null
   created_at: string
   updated_at: string
 }

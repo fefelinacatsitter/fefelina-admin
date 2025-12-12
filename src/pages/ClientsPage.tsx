@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase, Client, Pet } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 export default function ClientsPage() {
+  const navigate = useNavigate()
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingClient, setDeletingClient] = useState<string | null>(null)
@@ -1004,8 +1006,19 @@ export default function ClientsPage() {
           filteredClients.map((client) => (
             <div key={client.id} className="bg-white rounded-lg shadow-sm border p-4">
               <div className="flex justify-between items-start mb-3">
-                <h3 className="font-medium text-gray-900 text-base">{client.nome}</h3>
+                <button
+                  onClick={() => navigate(`/clients/${client.id}`)}
+                  className="font-medium text-gray-900 text-base hover:text-primary-600 transition-colors text-left"
+                >
+                  {client.nome}
+                </button>
                 <div className="flex gap-2">
+                  <button 
+                    onClick={() => navigate(`/clients/${client.id}`)}
+                    className="text-blue-600 hover:text-blue-900 text-sm"
+                  >
+                    Detalhes
+                  </button>
                   <button 
                     onClick={() => openEditForm(client)}
                     className="text-primary-600 hover:text-primary-900 text-sm"
@@ -1091,9 +1104,14 @@ export default function ClientsPage() {
                     </tr>
                   ) : (
                     filteredClients.map((client) => (
-                      <tr key={client.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {client.nome}
+                      <tr key={client.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => navigate(`/clients/${client.id}`)}
+                            className="text-gray-900 hover:text-primary-600 transition-colors"
+                          >
+                            {client.nome}
+                          </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           R$ {client.valor_diaria.toFixed(2)}
@@ -1105,6 +1123,12 @@ export default function ClientsPage() {
                           {client.endereco_completo}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button 
+                            onClick={() => navigate(`/clients/${client.id}`)}
+                            className="text-blue-600 hover:text-blue-900 mr-3"
+                          >
+                            Detalhes
+                          </button>
                           <button 
                             onClick={() => openEditForm(client)}
                             className="text-primary-600 hover:text-primary-900 mr-3"

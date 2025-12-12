@@ -432,7 +432,20 @@ export default function ServicesPage() {
     }
 
     try {
-      const { totalVisitas, totalValor, totalAReceber } = calculateTotals()
+      // Atualizar desconto nas visitas antes de calcular os totais
+      const visitsWithUpdatedDiscount = visits.map(visit => ({
+        ...visit,
+        desconto_plataforma: formData.desconto_plataforma_default
+      }))
+      
+      // Calcular totais com o desconto atualizado
+      const totalVisitas = visitsWithUpdatedDiscount.filter(v => v.status !== 'cancelada').length
+      const totalValor = visitsWithUpdatedDiscount
+        .filter(v => v.status !== 'cancelada')
+        .reduce((sum, v) => sum + v.valor, 0)
+      const totalAReceber = visitsWithUpdatedDiscount
+        .filter(v => v.status !== 'cancelada')
+        .reduce((sum, v) => sum + (v.valor * (1 - v.desconto_plataforma / 100)), 0)
       
       // Calcular período baseado nas visitas
       const dates = visits.map(v => v.data).filter(d => d)
@@ -477,14 +490,16 @@ export default function ServicesPage() {
         savedService = data
       }
 
-      // Inserir visitas
+      // Inserir visitas com o desconto atualizado
       const visitsToInsert = visits.map(visit => {
         // Remove o ID para permitir que o banco gere novos IDs
         const { id, ...visitWithoutId } = visit
         return {
           ...visitWithoutId,
           service_id: savedService.id,
-          client_id: formData.client_id
+          client_id: formData.client_id,
+          // Atualiza o desconto da plataforma com o valor padrão do serviço
+          desconto_plataforma: formData.desconto_plataforma_default
         }
       })
       

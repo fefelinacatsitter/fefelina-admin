@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, Client, Pet } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import CatLoader from '../components/CatLoader'
 
 // Função para formatar telefone brasileiro
 const formatPhone = (value: string): string => {
@@ -1165,8 +1166,10 @@ export default function ClientsPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                        Carregando...
+                      <td colSpan={5} className="px-6 py-20">
+                        <div className="flex justify-center">
+                          <CatLoader size="md" variant="paws" text="Carregando clientes..." />
+                        </div>
                       </td>
                     </tr>
                   ) : filteredClients.length === 0 ? (

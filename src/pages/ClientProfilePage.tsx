@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import CatLoader from '../components/CatLoader'
 
 interface Client {
   id: string
@@ -562,8 +563,8 @@ export default function ClientProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="flex justify-center items-center h-screen bg-gradient-to-br from-primary-50 to-white">
+        <CatLoader size="lg" variant="walking" text="Buscando dados do cliente..." />
       </div>
     )
   }

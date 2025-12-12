@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 
 interface LayoutProps {
@@ -25,6 +25,20 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  // Detectar iPad (tablets entre 768px e 1024px) - útil para futuras customizações
+  useEffect(() => {
+    const checkIsIpad = () => {
+      const width = window.innerWidth
+      const isTablet = width >= 768 && width <= 1024
+      // Pode ser usado para ajustes específicos de iPad no futuro
+      console.log('iPad/Tablet mode:', isTablet)
+    }
+
+    checkIsIpad()
+    window.addEventListener('resize', checkIsIpad)
+    return () => window.removeEventListener('resize', checkIsIpad)
+  }, [])
+
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) {
@@ -39,14 +53,19 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">
-      {/* Mobile sidebar overlay */}
+      {/* Mobile & iPad sidebar overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 flex z-40 md:hidden">
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white">
+        <div className="fixed inset-0 flex z-50 md:z-50">
+          {/* Overlay com blur */}
+          <div 
+            className="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" 
+            onClick={() => setSidebarOpen(false)} 
+          />
+          {/* Sidebar */}
+          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white shadow-2xl transform transition-transform">
             <div className="absolute top-0 right-0 -mr-12 pt-2">
               <button
-                className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white bg-white bg-opacity-20 hover:bg-opacity-30 transition-all"
                 onClick={() => setSidebarOpen(false)}
               >
                 <XMarkIcon className="h-6 w-6 text-white" />
@@ -96,8 +115,8 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       )}
 
-      {/* Desktop sidebar */}
-      <div className="hidden md:flex md:flex-shrink-0">
+      {/* Desktop sidebar - escondido no iPad */}
+      <div className="hidden lg:flex lg:flex-shrink-0">
         <div className="flex flex-col w-64">
           <div className="flex flex-col h-0 flex-1 border-r border-gray-200 bg-white">
             <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
@@ -144,11 +163,11 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       <div className="flex flex-col w-0 flex-1 overflow-hidden">
-        {/* Mobile header */}
-        <div className="md:hidden">
+        {/* Mobile & iPad header */}
+        <div className="lg:hidden">
           <div className="relative z-10 flex-shrink-0 flex h-16 bg-white shadow">
             <button
-              className="px-4 border-r border-gray-200 text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 md:hidden"
+              className="px-4 border-r border-gray-200 text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 lg:hidden"
               onClick={() => setSidebarOpen(true)}
             >
               <Bars3Icon className="h-6 w-6" />

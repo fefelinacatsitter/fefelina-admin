@@ -142,6 +142,7 @@ export default function ServicesPage() {
   const [selectedFilter, setSelectedFilter] = useState<'ativos' | 'concluidos' | 'todos'>('ativos')
   const [filterStartDate, setFilterStartDate] = useState('')
   const [filterEndDate, setFilterEndDate] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   
   const [formData, setFormData] = useState<{
     nome_servico: string
@@ -257,6 +258,19 @@ export default function ServicesPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Função para filtrar serviços por busca de cliente
+  const getFilteredServices = () => {
+    if (!searchQuery.trim()) {
+      return services
+    }
+    
+    const query = searchQuery.toLowerCase().trim()
+    return services.filter(service => 
+      service.clients?.nome.toLowerCase().includes(query) ||
+      service.nome_servico?.toLowerCase().includes(query)
+    )
   }
 
   const fetchClients = async () => {
@@ -733,6 +747,39 @@ export default function ServicesPage() {
         </div>
       </div>
 
+      {/* Campo de Pesquisa */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="block w-full pl-10 pr-10 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            placeholder="Buscar por nome do cliente ou serviço..."
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <p className="mt-2 text-sm text-gray-600">
+            {getFilteredServices().length} serviço(s) encontrado(s)
+          </p>
+        )}
+      </div>
+
       {/* Filtros */}
       <div className="mt-6 mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -858,9 +905,29 @@ export default function ServicesPage() {
             </button>
           </div>
         </div>
+      ) : getFilteredServices().length === 0 ? (
+        <div className="mt-8 card-fefelina">
+          <div className="empty-state-fefelina">
+            <div className="mx-auto h-16 w-16 text-gray-400 mb-4">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum resultado encontrado</h3>
+            <p className="text-gray-500 mb-6">
+              Não encontramos serviços que correspondam à sua busca "{searchQuery}".
+            </p>
+            <button 
+              className="btn-fefelina-secondary" 
+              onClick={() => setSearchQuery('')}
+            >
+              Limpar Busca
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="mt-8 grid grid-cols-1 gap-3">
-          {services.map((service) => (
+          {getFilteredServices().map((service) => (
             <div key={service.id} className="card-fefelina">
               <div 
                 className="p-3 cursor-pointer md:cursor-default"

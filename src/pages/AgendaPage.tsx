@@ -571,13 +571,25 @@ export default function AgendaPage() {
                       </div>
                     )}
                     {/* Container para visitas - múltiplas visitas ficam lado a lado em posição absoluta */}
-                    {visitsAtTime.map((visit, index) => {
-                      // Só renderizar visitas que começam neste horário exato
-                      if (visit.horario.substring(0, 5) !== slot.time) return null;
-                      
-                      const isInteira = visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro'
-                      const cardHeight = isInteira ? 160 : undefined
-                      const hasMultiple = hasConflict || hasMultipleVisits
+                    {visitsAtTime
+                      .sort((a, b) => {
+                        // Ordenar apenas quando houver exatamente 2 visitas
+                        if (visitsAtTime.length === 2) {
+                          // Fernanda sempre à esquerda (retorna -1)
+                          if (a.responsavel === 'fernanda') return -1
+                          if (b.responsavel === 'fernanda') return 1
+                          // André e não atribuídos ficam à direita
+                          return 0
+                        }
+                        return 0 // Não ordenar quando for conflito (3+)
+                      })
+                      .map((visit, index) => {
+                        // Só renderizar visitas que começam neste horário exato
+                        if (visit.horario.substring(0, 5) !== slot.time) return null;
+                        
+                        const isInteira = visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro'
+                        const cardHeight = isInteira ? 160 : undefined
+                        const hasMultiple = hasConflict || hasMultipleVisits
                       
                       // Calcular posição quando há múltiplas visitas (lado a lado)
                       const leftPosition = hasMultiple && index === 0 ? '0.25rem' : hasMultiple && index === 1 ? 'calc(50% + 0.125rem)' : '0.5rem'
@@ -723,19 +735,31 @@ export default function AgendaPage() {
                         </div>
                       )}
                       {/* Container para visitas - múltiplas visitas ficam lado a lado em posição absoluta */}
-                      {visitsAtTime.map((visit, index) => {
-                        // Só renderizar visitas que começam neste horário exato
-                        if (visit.horario.substring(0, 5) !== slot.time) return null;
-                        
-                        const isInteira = visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro'
-                        const cardHeight = isInteira ? 80 : undefined
-                        const hasMultiple = hasConflict || hasMultipleVisits
-                        
-                        // Calcular posição quando há múltiplas visitas (lado a lado)
-                        const leftPosition = hasMultiple && index === 0 ? '0.25rem' : hasMultiple && index === 1 ? 'calc(50% + 0.125rem)' : '0.25rem'
-                        const rightPosition = hasMultiple && index === 0 ? 'calc(50% + 0.125rem)' : hasMultiple && index === 1 ? '0.25rem' : '0.25rem'
-                        
-                        return (
+                      {visitsAtTime
+                        .sort((a, b) => {
+                          // Ordenar apenas quando houver exatamente 2 visitas
+                          if (visitsAtTime.length === 2) {
+                            // Fernanda sempre à esquerda (retorna -1)
+                            if (a.responsavel === 'fernanda') return -1
+                            if (b.responsavel === 'fernanda') return 1
+                            // André e não atribuídos ficam à direita
+                            return 0
+                          }
+                          return 0 // Não ordenar quando for conflito (3+)
+                        })
+                        .map((visit, index) => {
+                          // Só renderizar visitas que começam neste horário exato
+                          if (visit.horario.substring(0, 5) !== slot.time) return null;
+                          
+                          const isInteira = visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro'
+                          const cardHeight = isInteira ? 80 : undefined
+                          const hasMultiple = hasConflict || hasMultipleVisits
+                          
+                          // Calcular posição quando há múltiplas visitas (lado a lado)
+                          const leftPosition = hasMultiple && index === 0 ? '0.25rem' : hasMultiple && index === 1 ? 'calc(50% + 0.125rem)' : '0.25rem'
+                          const rightPosition = hasMultiple && index === 0 ? 'calc(50% + 0.125rem)' : hasMultiple && index === 1 ? '0.25rem' : '0.25rem'
+                          
+                          return (
                           <div
                             key={visit.id}
                             draggable

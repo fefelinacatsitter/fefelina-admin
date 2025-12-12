@@ -25,18 +25,18 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Detectar iPad (tablets entre 768px e 1024px) - útil para futuras customizações
+  // Detectar iPad e tablets (até 1280px para incluir iPad landscape)
   useEffect(() => {
-    const checkIsIpad = () => {
+    const checkIsTablet = () => {
       const width = window.innerWidth
-      const isTablet = width >= 768 && width <= 1024
-      // Pode ser usado para ajustes específicos de iPad no futuro
-      console.log('iPad/Tablet mode:', isTablet)
+      const isTablet = width < 1280
+      // Útil para ajustes específicos de tablet/iPad no futuro
+      console.log('Tablet/iPad mode:', isTablet, 'Width:', width)
     }
 
-    checkIsIpad()
-    window.addEventListener('resize', checkIsIpad)
-    return () => window.removeEventListener('resize', checkIsIpad)
+    checkIsTablet()
+    window.addEventListener('resize', checkIsTablet)
+    return () => window.removeEventListener('resize', checkIsTablet)
   }, [])
 
   const handleLogout = async () => {
@@ -115,8 +115,8 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       )}
 
-      {/* Desktop sidebar - escondido no iPad */}
-      <div className="hidden lg:flex lg:flex-shrink-0">
+      {/* Desktop sidebar - escondido no iPad/Tablets (até 1280px) */}
+      <div className="hidden xl:flex xl:flex-shrink-0">
         <div className="flex flex-col w-64">
           <div className="flex flex-col h-0 flex-1 border-r border-gray-200 bg-white">
             <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
@@ -163,11 +163,11 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       <div className="flex flex-col w-0 flex-1 overflow-hidden">
-        {/* Mobile & iPad header */}
-        <div className="lg:hidden">
+        {/* Mobile & iPad header (até 1280px) */}
+        <div className="xl:hidden">
           <div className="relative z-10 flex-shrink-0 flex h-16 bg-white shadow">
             <button
-              className="px-4 border-r border-gray-200 text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 lg:hidden"
+              className="px-4 border-r border-gray-200 text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 xl:hidden"
               onClick={() => setSidebarOpen(true)}
             >
               <Bars3Icon className="h-6 w-6" />

@@ -79,9 +79,11 @@ const isValidDate = (dateString: string): boolean => {
 interface Visit {
   id: string
   service_id: string
+  lead_id?: string | null
   data: string
   horario: string
   tipo_visita: 'inteira' | 'meia'
+  tipo_encontro?: 'pre_encontro' | 'visita_servico'
   valor: number
   status: 'agendada' | 'realizada' | 'cancelada'
   desconto_plataforma: number
@@ -91,6 +93,9 @@ interface Visit {
   } | null
   services: {
     nome_servico?: string
+  } | null
+  leads?: {
+    nome: string
   } | null
 }
 
@@ -138,9 +143,10 @@ export default function VisitsPage() {
       let query = supabase
         .from('visits')
         .select(`
-          id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, observacoes, client_id, created_at,
+          id, service_id, lead_id, data, horario, tipo_visita, tipo_encontro, valor, status, desconto_plataforma, observacoes, client_id, created_at,
           clients (nome),
-          services (nome_servico)
+          services (nome_servico),
+          leads (nome)
         `)
         .order('data', { ascending: true })
         .order('horario', { ascending: true })
@@ -196,7 +202,8 @@ export default function VisitsPage() {
       setVisits((data || []).map(visit => ({
         ...visit,
         clients: Array.isArray(visit.clients) ? visit.clients[0] : visit.clients,
-        services: Array.isArray(visit.services) ? visit.services[0] : visit.services
+        services: Array.isArray(visit.services) ? visit.services[0] : visit.services,
+        leads: Array.isArray(visit.leads) ? visit.leads[0] : visit.leads
       })))
     } catch (error) {
       console.error('Erro ao buscar visitas:', error)
@@ -458,13 +465,27 @@ export default function VisitsPage() {
           {/* Mobile: Cards */}
           <div className="block md:hidden space-y-4">
             {getSortedVisits().map((visit) => (
-              <div key={visit.id} className="border rounded-lg p-4 shadow-sm bg-white">
+              <div key={visit.id} className={`border rounded-lg p-4 shadow-sm ${visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50 border-purple-200' : 'bg-white'}`}>
                 <div className="flex justify-between items-center mb-2">
                   <div>
                     <div className="font-semibold text-primary-700 text-base">{formatDate(visit.data)} <span className="text-xs text-gray-500">{visit.horario}</span></div>
-                    <div className="text-sm text-gray-700">{visit.clients?.nome}</div>
-                    {visit.services?.nome_servico && (
-                      <div className="text-xs text-gray-500">{visit.services.nome_servico}</div>
+                    {visit.tipo_encontro === 'pre_encontro' ? (
+                      <>
+                        <div className="text-sm font-medium text-purple-700 flex items-center gap-1.5">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Lead: {visit.leads?.nome || 'Sem nome'}
+                        </div>
+                        <div className="text-xs text-purple-600 mt-0.5">Pré-Encontro</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm text-gray-700">{visit.clients?.nome}</div>
+                        {visit.services?.nome_servico && (
+                          <div className="text-xs text-gray-500">{visit.services.nome_servico}</div>
+                        )}
+                      </>
                     )}
                   </div>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${visit.tipo_visita === 'inteira' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>{visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}</span>
@@ -531,7 +552,7 @@ export default function VisitsPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {getSortedVisits().map((visit) => (
-                    <tr key={visit.id} className="hover:bg-gray-50">
+                    <tr key={visit.id} className={`${visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50' : 'hover:bg-gray-50'}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
                           {formatDate(visit.data)}
@@ -541,12 +562,30 @@ export default function VisitsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {visit.clients?.nome}
-                        </div>
-                        {visit.services?.nome_servico && (
-                          <div className="text-sm text-gray-500">
-                            {visit.services.nome_servico}
+                        {visit.tipo_encontro === 'pre_encontro' ? (
+                          <div>
+                            <div className="text-sm font-medium text-purple-700 flex items-center gap-1.5">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              Lead: {visit.leads?.nome || 'Sem nome'}
+                            </div>
+                            <div className="text-xs text-purple-600 mt-0.5 flex items-center gap-1">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-200 text-purple-800">
+                                Pré-Encontro
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {visit.clients?.nome}
+                            </div>
+                            {visit.services?.nome_servico && (
+                              <div className="text-sm text-gray-500">
+                                {visit.services.nome_servico}
+                              </div>
+                            )}
                           </div>
                         )}
                       </td>

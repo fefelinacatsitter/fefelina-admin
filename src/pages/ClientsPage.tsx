@@ -3,6 +3,33 @@ import { useNavigate } from 'react-router-dom'
 import { supabase, Client, Pet } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
+// Função para formatar telefone brasileiro
+const formatPhone = (value: string): string => {
+  // Remove tudo que não é número
+  const numbers = value.replace(/\D/g, '')
+  
+  // Limita a 13 dígitos (55 + 2 DDD + 9 número)
+  const limited = numbers.slice(0, 13)
+  
+  // Aplica a máscara +55(XX)XXXXX-XXXX ou +55(XX)XXXX-XXXX
+  if (limited.length <= 2) {
+    return `+${limited}`
+  } else if (limited.length <= 4) {
+    return `+${limited.slice(0, 2)}(${limited.slice(2)}`
+  } else if (limited.length <= 9) {
+    return `+${limited.slice(0, 2)}(${limited.slice(2, 4)})${limited.slice(4)}`
+  } else {
+    const phone = limited.slice(4)
+    if (phone.length <= 4) {
+      return `+${limited.slice(0, 2)}(${limited.slice(2, 4)})${phone}`
+    } else {
+      // Se tem 9 dígitos (celular) ou 8 (fixo)
+      const separator = phone.length === 9 ? 5 : 4
+      return `+${limited.slice(0, 2)}(${limited.slice(2, 4)})${phone.slice(0, separator)}-${phone.slice(separator)}`
+    }
+  }
+}
+
 export default function ClientsPage() {
   const navigate = useNavigate()
   const [clients, setClients] = useState<Client[]>([])
@@ -30,6 +57,7 @@ export default function ClientsPage() {
   
   const [formData, setFormData] = useState({
     nome: '',
+    telefone: '',
     valor_diaria: '',
     valor_duas_visitas: '',
     endereco_completo: '',
@@ -175,6 +203,7 @@ export default function ClientsPage() {
         .from('clients')
         .insert([{
           nome: formData.nome,
+          telefone: formData.telefone || null,
           valor_diaria: parseFloat(formData.valor_diaria),
           valor_duas_visitas: parseFloat(formData.valor_duas_visitas),
           endereco_completo: formData.endereco_completo,
@@ -216,6 +245,7 @@ export default function ClientsPage() {
       
       setFormData({
         nome: '',
+        telefone: '',
         valor_diaria: '',
         valor_duas_visitas: '',
         endereco_completo: '',
@@ -234,10 +264,20 @@ export default function ClientsPage() {
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
+    const { name, value } = e.target
+    
+    // Aplica máscara de telefone
+    if (name === 'telefone') {
+      setFormData({
+        ...formData,
+        [name]: formatPhone(value)
+      })
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      })
+    }
   }
 
   const handlePetChange = (index: number, field: string, value: string) => {
@@ -357,6 +397,7 @@ export default function ClientsPage() {
     setEditingClient(client)
     setFormData({
       nome: client.nome,
+      telefone: client.telefone || '',
       valor_diaria: client.valor_diaria.toString(),
       valor_duas_visitas: client.valor_duas_visitas.toString(),
       endereco_completo: client.endereco_completo,
@@ -398,6 +439,7 @@ export default function ClientsPage() {
         .from('clients')
         .update({
           nome: formData.nome,
+          telefone: formData.telefone || null,
           valor_diaria: parseFloat(formData.valor_diaria),
           valor_duas_visitas: parseFloat(formData.valor_duas_visitas),
           endereco_completo: formData.endereco_completo,
@@ -454,6 +496,7 @@ export default function ClientsPage() {
     setClientPets([])
     setFormData({
       nome: '',
+      telefone: '',
       valor_diaria: '',
       valor_duas_visitas: '',
       endereco_completo: '',
@@ -576,6 +619,18 @@ export default function ClientsPage() {
                         value={formData.nome}
                         onChange={handleInputChange}
                         required
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Telefone</label>
+                      <input
+                        type="text"
+                        name="telefone"
+                        value={formData.telefone}
+                        onChange={handleInputChange}
+                        placeholder="+55(47)99999-9999"
                         className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                     </div>
@@ -707,6 +762,7 @@ export default function ClientsPage() {
                       setShowAddForm(false)
                       setFormData({
                         nome: '',
+                        telefone: '',
                         valor_diaria: '',
                         valor_duas_visitas: '',
                         endereco_completo: '',
@@ -768,6 +824,18 @@ export default function ClientsPage() {
                       value={formData.nome}
                       onChange={handleInputChange}
                       required
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Telefone</label>
+                    <input
+                      type="text"
+                      name="telefone"
+                      value={formData.telefone}
+                      onChange={handleInputChange}
+                      placeholder="+55(47)99999-9999"
                       className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>

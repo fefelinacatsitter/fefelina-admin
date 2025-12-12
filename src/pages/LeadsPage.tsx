@@ -423,6 +423,7 @@ export default function LeadsPage() {
         .from('clients')
         .insert({
           nome: leadToConvert.nome,
+          telefone: leadToConvert.telefone,
           endereco_completo: leadToConvert.endereco || '',
           veterinario_confianca: 'Não informado',
           valor_diaria: valorDiaria,

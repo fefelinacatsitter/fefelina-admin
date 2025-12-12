@@ -79,6 +79,18 @@ export default function ClientProfilePage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [savingTags, setSavingTags] = useState(false)
   
+  // Estados para edição de cliente
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [formData, setFormData] = useState({
+    nome: '',
+    telefone: '',
+    valor_diaria: '',
+    valor_duas_visitas: '',
+    endereco_completo: '',
+    veterinario_confianca: ''
+  })
+  const [updating, setUpdating] = useState(false)
+  
   // Métricas globais para comparação
   const [globalAverageRevenue, setGlobalAverageRevenue] = useState(0)
   const [globalAverageServices, setGlobalAverageServices] = useState(0)
@@ -256,9 +268,13 @@ export default function ClientProfilePage() {
       return
     }
     
+    // Remove todos os caracteres não numéricos (incluindo +, parênteses, hífens)
     const phone = client.telefone.replace(/\D/g, '')
     const message = encodeURIComponent(`Olá ${client.nome}! Tudo bem? 😊`)
-    window.open(`https://wa.me/55${phone}?text=${message}`, '_blank')
+    
+    // O phone já contém o código do país (55) se foi inserido com a máscara
+    // wa.me espera apenas números: https://wa.me/5547999887766
+    window.open(`https://wa.me/${phone}?text=${message}`, '_blank')
   }
 
   const sendEmail = () => {
@@ -386,6 +402,99 @@ export default function ClientProfilePage() {
       style: 'currency',
       currency: 'BRL'
     }).format(value)
+  }
+
+  // Função para formatar telefone brasileiro
+  const formatPhone = (value: string): string => {
+    const numbers = value.replace(/\D/g, '')
+    const limited = numbers.slice(0, 13)
+    
+    if (limited.length <= 2) {
+      return `+${limited}`
+    } else if (limited.length <= 4) {
+      return `+${limited.slice(0, 2)}(${limited.slice(2)}`
+    } else if (limited.length <= 9) {
+      return `+${limited.slice(0, 2)}(${limited.slice(2, 4)})${limited.slice(4)}`
+    } else {
+      const phone = limited.slice(4)
+      if (phone.length <= 4) {
+        return `+${limited.slice(0, 2)}(${limited.slice(2, 4)})${phone}`
+      } else {
+        const separator = phone.length === 9 ? 5 : 4
+        return `+${limited.slice(0, 2)}(${limited.slice(2, 4)})${phone.slice(0, separator)}-${phone.slice(separator)}`
+      }
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    
+    if (name === 'telefone') {
+      setFormData({
+        ...formData,
+        [name]: formatPhone(value)
+      })
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      })
+    }
+  }
+
+  const openEditForm = () => {
+    if (!client) return
+    
+    setFormData({
+      nome: client.nome,
+      telefone: client.telefone || '',
+      valor_diaria: client.valor_diaria.toString(),
+      valor_duas_visitas: client.valor_duas_visitas.toString(),
+      endereco_completo: client.endereco_completo,
+      veterinario_confianca: client.veterinario_confianca
+    })
+    setShowEditForm(true)
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!client) return
+
+    if (updating) {
+      toast.error('Aguarde, as alterações estão sendo salvas...')
+      return
+    }
+
+    setUpdating(true)
+
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          nome: formData.nome,
+          telefone: formData.telefone || null,
+          valor_diaria: parseFloat(formData.valor_diaria),
+          valor_duas_visitas: parseFloat(formData.valor_duas_visitas),
+          endereco_completo: formData.endereco_completo,
+          veterinario_confianca: formData.veterinario_confianca,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', client.id)
+
+      if (error) throw error
+
+      toast.success(`Cliente "${formData.nome}" atualizado com sucesso!`)
+      setShowEditForm(false)
+      
+      // Recarregar dados do cliente
+      await fetchClientData()
+
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error)
+      toast.error('Erro ao atualizar cliente')
+    } finally {
+      setUpdating(false)
+    }
   }
 
   const getRelationshipLevel = (score: number) => {
@@ -551,7 +660,7 @@ export default function ClientProfilePage() {
             </button>
             
             <button
-              onClick={() => navigate(`/clients?edit=${client.id}`)}
+              onClick={openEditForm}
               className="btn-fefelina"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -640,24 +749,6 @@ export default function ClientProfilePage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Visitas Realizadas</p>
               <p className="text-2xl font-bold text-gray-900">{totalVisits}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Taxa de Conversão */}
-        <div className="card-fefelina p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 bg-indigo-100 rounded-lg">
-              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Taxa de Recebimento</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {totalRevenue > 0 ? ((totalPaid / totalRevenue) * 100).toFixed(0) : 0}%
-              </p>
-              <p className="text-xs text-gray-500 mt-1">Pagamentos concluídos</p>
             </div>
           </div>
         </div>
@@ -1445,6 +1536,131 @@ export default function ClientProfilePage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edição de Cliente */}
+      {showEditForm && client && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-start justify-center p-4">
+          <div className="relative top-10 w-full max-w-2xl bg-white rounded-lg shadow-xl">
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center rounded-t-lg">
+              <h3 className="text-base font-semibold text-gray-900">Editar Cliente: {client.nome}</h3>
+              <button
+                onClick={() => setShowEditForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              <form onSubmit={handleEditSubmit}>
+                {/* Grid 2 colunas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Nome</label>
+                    <input
+                      type="text"
+                      name="nome"
+                      value={formData.nome}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Telefone</label>
+                    <input
+                      type="text"
+                      name="telefone"
+                      value={formData.telefone}
+                      onChange={handleInputChange}
+                      placeholder="+55(47)99999-9999"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor Diária (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="valor_diaria"
+                      value={formData.valor_diaria}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor 2 Visitas (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="valor_duas_visitas"
+                      value={formData.valor_duas_visitas}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Veterinário de Confiança</label>
+                    <input
+                      type="text"
+                      name="veterinario_confianca"
+                      value={formData.veterinario_confianca}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Endereço Completo</label>
+                    <textarea
+                      name="endereco_completo"
+                      value={formData.endereco_completo}
+                      onChange={handleInputChange}
+                      required
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditForm(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updating}
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-primary-500 rounded-md hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {updating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Salvando...
+                      </>
+                    ) : (
+                      'Salvar Alterações'
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

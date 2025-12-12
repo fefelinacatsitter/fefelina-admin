@@ -535,7 +535,8 @@ export default function AgendaPage() {
             {timeSlots.map((slot) => {
               const visitsAtTime = getVisitConflicts(currentDate, slot.time)
               const hasVisits = visitsAtTime.length > 0
-              const hasConflict = visitsAtTime.length > 1
+              const hasMultipleVisits = visitsAtTime.length === 2
+              const hasConflict = visitsAtTime.length > 2 // Warning apenas para 3+ visitas
               
               return (
                 <div 
@@ -569,7 +570,7 @@ export default function AgendaPage() {
                         ⚠️ Conflito
                       </div>
                     )}
-                    <div className={hasConflict ? 'grid grid-cols-2 gap-1 auto-rows-min' : ''}>
+                    <div className={(hasConflict || hasMultipleVisits) ? 'grid grid-cols-2 gap-1 auto-rows-min' : ''}>
                       {visitsAtTime.map((visit) => {
                         // Só renderizar visitas que começam neste horário exato
                         if (visit.horario.substring(0, 5) !== slot.time) return null;
@@ -592,13 +593,13 @@ export default function AgendaPage() {
                             }}
                             className={`p-1.5 rounded border cursor-move hover:shadow-md transition-shadow ${
                               (visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro')
-                                ? hasConflict ? 'text-[10px]' : 'absolute left-2 right-2 top-0 z-10 text-xs'
-                                : hasConflict ? 'text-[10px]' : 'text-xs'
+                                ? (hasConflict || hasMultipleVisits) ? 'text-[10px]' : 'absolute left-2 right-2 top-0 z-10 text-xs'
+                                : (hasConflict || hasMultipleVisits) ? 'text-[10px]' : 'text-xs'
                             } ${getVisitColor(visit)} ${
                               hasConflict ? 'border-2 border-red-500' : ''
                             }`}
                             style={(visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro') && !hasConflict ? {
-                              height: `${hasVisits ? 160 : 80}px`, // 2 slots de altura
+                              height: `${hasVisits ? 160 : 80}px`, // 2 slots de altura (1 hora)
                               maxHeight: '160px'
                             } : undefined}
                           >
@@ -607,7 +608,7 @@ export default function AgendaPage() {
                                 ? `🤝 ${visit.leads?.nome || 'Lead não identificado'}` 
                                 : visit.clients?.nome || 'Cliente não identificado'}
                             </div>
-                            {!hasConflict && (
+                            {!hasConflict && !hasMultipleVisits && (
                               <div className="truncate opacity-90 leading-tight mt-0.5">
                                 {visit.tipo_encontro === 'pre_encontro'
                                   ? 'Pré-Encontro'
@@ -693,7 +694,8 @@ export default function AgendaPage() {
                 {weekDays.map(day => {
                   const visitsAtTime = getVisitConflicts(day, slot.time)
                   const isToday = isSameDay(day, new Date())
-                  const hasConflict = visitsAtTime.length > 1
+                  const hasMultipleVisits = visitsAtTime.length === 2
+                  const hasConflict = visitsAtTime.length > 2 // Warning apenas para 3+ visitas
 
                   return (
                     <div
@@ -714,7 +716,7 @@ export default function AgendaPage() {
                           ⚠️
                         </div>
                       )}
-                      <div className={hasConflict ? 'grid grid-cols-2 gap-0.5 auto-rows-min' : ''}>
+                      <div className={(hasConflict || hasMultipleVisits) ? 'grid grid-cols-2 gap-0.5 auto-rows-min' : ''}>
                         {visitsAtTime.map(visit => {
                           // Só renderizar visitas que começam neste horário exato
                           if (visit.horario.substring(0, 5) !== slot.time) return null;
@@ -736,13 +738,13 @@ export default function AgendaPage() {
                               }}
                               className={`p-1 rounded border cursor-move hover:shadow-md transition-shadow ${
                                 (visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro')
-                                  ? hasConflict ? 'text-[8px]' : 'absolute left-1 right-1 top-0 z-10 text-xs'
-                                  : hasConflict ? 'text-[8px]' : 'text-xs'
+                                  ? (hasConflict || hasMultipleVisits) ? 'text-[8px]' : 'absolute left-1 right-1 top-0 z-10 text-xs'
+                                  : (hasConflict || hasMultipleVisits) ? 'text-[8px]' : 'text-xs'
                               } ${getVisitColor(visit)} ${
                                 hasConflict ? 'border-2 border-red-500' : ''
                               }`}
                               style={(visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro') && !hasConflict ? {
-                                height: '80px', // 2 slots de altura
+                                height: '80px', // 2 slots de altura (1 hora)
                                 maxHeight: '80px'
                               } : undefined}
                             >
@@ -751,7 +753,7 @@ export default function AgendaPage() {
                                   ? `🤝 ${visit.leads?.nome || 'Lead não identificado'}` 
                                   : visit.clients?.nome || 'Cliente não identificado'}
                               </div>
-                              {!hasConflict && (
+                              {!hasConflict && !hasMultipleVisits && (
                                 <div className="truncate text-[9px] opacity-75 leading-tight mt-0.5">
                                   {visit.tipo_encontro === 'pre_encontro' ? '30min' : visit.tipo_visita === 'inteira' ? '1h' : '30min'}
                                 </div>

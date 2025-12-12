@@ -570,39 +570,46 @@ export default function AgendaPage() {
                         ⚠️ Conflito
                       </div>
                     )}
-                    <div className={(hasConflict || hasMultipleVisits) ? 'grid grid-cols-2 gap-1 auto-rows-min' : ''}>
-                      {visitsAtTime.map((visit) => {
-                        // Só renderizar visitas que começam neste horário exato
-                        if (visit.horario.substring(0, 5) !== slot.time) return null;
-                        
-                        return (
-                          <div
-                            key={visit.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, visit)}
-                            onTouchStart={(e) => handleTouchStart(e, visit)}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleTouchEnd}
-                            onTouchCancel={handleTouchCancel}
-                            onContextMenu={(e) => handleCardContextMenu(e, visit)}
-                            onClick={() => {
-                              // Só abre modal se não estiver arrastando
-                              if (!draggingVisit && !isDraggingTouch) {
-                                handleVisitClick(visit)
-                              }
-                            }}
-                            className={`p-1.5 rounded border cursor-move hover:shadow-md transition-shadow ${
-                              (visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro')
-                                ? (hasConflict || hasMultipleVisits) ? 'text-[10px]' : 'absolute left-2 right-2 top-0 z-10 text-xs'
-                                : (hasConflict || hasMultipleVisits) ? 'text-[10px]' : 'text-xs'
-                            } ${getVisitColor(visit)} ${
-                              hasConflict ? 'border-2 border-red-500' : ''
-                            }`}
-                            style={(visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro') && !hasConflict ? {
-                              height: `${hasVisits ? 160 : 80}px`, // 2 slots de altura (1 hora)
-                              maxHeight: '160px'
-                            } : undefined}
-                          >
+                    {/* Container para visitas - múltiplas visitas ficam lado a lado em posição absoluta */}
+                    {visitsAtTime.map((visit, index) => {
+                      // Só renderizar visitas que começam neste horário exato
+                      if (visit.horario.substring(0, 5) !== slot.time) return null;
+                      
+                      const isInteira = visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro'
+                      const cardHeight = isInteira ? 160 : undefined
+                      const hasMultiple = hasConflict || hasMultipleVisits
+                      
+                      // Calcular posição quando há múltiplas visitas (lado a lado)
+                      const leftPosition = hasMultiple && index === 0 ? '0.25rem' : hasMultiple && index === 1 ? 'calc(50% + 0.125rem)' : '0.5rem'
+                      const rightPosition = hasMultiple && index === 0 ? 'calc(50% + 0.125rem)' : hasMultiple && index === 1 ? '0.25rem' : '0.5rem'
+                      
+                      return (
+                        <div
+                          key={visit.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, visit)}
+                          onTouchStart={(e) => handleTouchStart(e, visit)}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
+                          onTouchCancel={handleTouchCancel}
+                          onContextMenu={(e) => handleCardContextMenu(e, visit)}
+                          onClick={() => {
+                            // Só abre modal se não estiver arrastando
+                            if (!draggingVisit && !isDraggingTouch) {
+                              handleVisitClick(visit)
+                            }
+                          }}
+                          className={`p-1.5 rounded border cursor-move hover:shadow-md transition-shadow ${
+                            hasMultiple ? 'text-[10px] absolute top-0 z-10' : isInteira ? 'text-xs absolute left-2 right-2 top-0 z-10' : 'text-xs'
+                          } ${getVisitColor(visit)} ${
+                            hasConflict ? 'border-2 border-red-500' : ''
+                          }`}
+                          style={hasMultiple || isInteira ? {
+                            ...(hasMultiple ? { left: leftPosition, right: rightPosition } : { left: '0.5rem', right: '0.5rem' }),
+                            height: cardHeight ? `${cardHeight}px` : undefined,
+                            maxHeight: cardHeight ? `${cardHeight}px` : undefined
+                          } : undefined}
+                        >
                             <div className="font-semibold truncate leading-tight">
                               {visit.tipo_encontro === 'pre_encontro' 
                                 ? `🤝 ${visit.leads?.nome || 'Lead não identificado'}` 
@@ -621,7 +628,6 @@ export default function AgendaPage() {
                           </div>
                         )
                       })}
-                    </div>
                   </div>
                 </div>
               )
@@ -716,52 +722,58 @@ export default function AgendaPage() {
                           ⚠️
                         </div>
                       )}
-                      <div className={(hasConflict || hasMultipleVisits) ? 'grid grid-cols-2 gap-0.5 auto-rows-min' : ''}>
-                        {visitsAtTime.map(visit => {
-                          // Só renderizar visitas que começam neste horário exato
-                          if (visit.horario.substring(0, 5) !== slot.time) return null;
-                          
-                          return (
-                            <div
-                              key={visit.id}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, visit)}
-                              onTouchStart={(e) => handleTouchStart(e, visit)}
-                              onTouchMove={handleTouchMove}
-                              onTouchEnd={handleTouchEnd}
-                              onTouchCancel={handleTouchCancel}
-                              onContextMenu={(e) => handleCardContextMenu(e, visit)}
-                              onClick={() => {
-                                if (!draggingVisit && !isDraggingTouch) {
-                                  handleVisitClick(visit)
-                                }
-                              }}
-                              className={`p-1 rounded border cursor-move hover:shadow-md transition-shadow ${
-                                (visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro')
-                                  ? (hasConflict || hasMultipleVisits) ? 'text-[8px]' : 'absolute left-1 right-1 top-0 z-10 text-xs'
-                                  : (hasConflict || hasMultipleVisits) ? 'text-[8px]' : 'text-xs'
-                              } ${getVisitColor(visit)} ${
-                                hasConflict ? 'border-2 border-red-500' : ''
-                              }`}
-                              style={(visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro') && !hasConflict ? {
-                                height: '80px', // 2 slots de altura (1 hora)
-                                maxHeight: '80px'
-                              } : undefined}
-                            >
-                              <div className="font-semibold truncate leading-tight">
-                                {visit.tipo_encontro === 'pre_encontro' 
-                                  ? `🤝 ${visit.leads?.nome || 'Lead não identificado'}` 
-                                  : visit.clients?.nome || 'Cliente não identificado'}
-                              </div>
-                              {!hasConflict && !hasMultipleVisits && (
-                                <div className="truncate text-[9px] opacity-75 leading-tight mt-0.5">
-                                  {visit.tipo_encontro === 'pre_encontro' ? '30min' : visit.tipo_visita === 'inteira' ? '1h' : '30min'}
-                                </div>
-                              )}
+                      {/* Container para visitas - múltiplas visitas ficam lado a lado em posição absoluta */}
+                      {visitsAtTime.map((visit, index) => {
+                        // Só renderizar visitas que começam neste horário exato
+                        if (visit.horario.substring(0, 5) !== slot.time) return null;
+                        
+                        const isInteira = visit.tipo_visita === 'inteira' && visit.tipo_encontro !== 'pre_encontro'
+                        const cardHeight = isInteira ? 80 : undefined
+                        const hasMultiple = hasConflict || hasMultipleVisits
+                        
+                        // Calcular posição quando há múltiplas visitas (lado a lado)
+                        const leftPosition = hasMultiple && index === 0 ? '0.25rem' : hasMultiple && index === 1 ? 'calc(50% + 0.125rem)' : '0.25rem'
+                        const rightPosition = hasMultiple && index === 0 ? 'calc(50% + 0.125rem)' : hasMultiple && index === 1 ? '0.25rem' : '0.25rem'
+                        
+                        return (
+                          <div
+                            key={visit.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, visit)}
+                            onTouchStart={(e) => handleTouchStart(e, visit)}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                            onTouchCancel={handleTouchCancel}
+                            onContextMenu={(e) => handleCardContextMenu(e, visit)}
+                            onClick={() => {
+                              if (!draggingVisit && !isDraggingTouch) {
+                                handleVisitClick(visit)
+                              }
+                            }}
+                            className={`p-1 rounded border cursor-move hover:shadow-md transition-shadow ${
+                              hasMultiple ? 'text-[8px] absolute top-0 z-10' : isInteira ? 'text-xs absolute left-1 right-1 top-0 z-10' : 'text-xs'
+                            } ${getVisitColor(visit)} ${
+                              hasConflict ? 'border-2 border-red-500' : ''
+                            }`}
+                            style={hasMultiple || isInteira ? {
+                              ...(hasMultiple ? { left: leftPosition, right: rightPosition } : { left: '0.25rem', right: '0.25rem' }),
+                              height: cardHeight ? `${cardHeight}px` : undefined,
+                              maxHeight: cardHeight ? `${cardHeight}px` : undefined
+                            } : undefined}
+                          >
+                            <div className="font-semibold truncate leading-tight">
+                              {visit.tipo_encontro === 'pre_encontro' 
+                                ? `🤝 ${visit.leads?.nome || 'Lead não identificado'}` 
+                                : visit.clients?.nome || 'Cliente não identificado'}
                             </div>
-                          )
+                            {!hasConflict && !hasMultipleVisits && (
+                              <div className="truncate text-[9px] opacity-75 leading-tight mt-0.5">
+                                {visit.tipo_encontro === 'pre_encontro' ? '30min' : visit.tipo_visita === 'inteira' ? '1h' : '30min'}
+                              </div>
+                            )}
+                          </div>
+                        )
                         })}
-                      </div>
                     </div>
                   )
                 })}

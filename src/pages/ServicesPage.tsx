@@ -378,11 +378,12 @@ export default function ServicesPage() {
     setSelectedClient(client || null)
     setFormData({ ...formData, client_id: clientId })
     
-    // Recalcular valores das visitas existentes
+    // Recalcular valores das visitas existentes e aplicar desconto padrão
     if (client) {
       const updatedVisits = visits.map(visit => ({
         ...visit,
-        valor: calculateVisitValue(client, visit.tipo_visita)
+        valor: calculateVisitValue(client, visit.tipo_visita),
+        desconto_plataforma: formData.desconto_plataforma_default
       }))
       setVisits(updatedVisits)
     }
@@ -1002,41 +1003,41 @@ export default function ServicesPage() {
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeModal}></div>
             
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+              <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
+                <h3 className="text-base leading-6 font-medium text-gray-900">
                   {editingService ? 'Editar Serviço' : 'Novo Serviço'}
                 </h3>
                 <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Nome do Serviço
                     </label>
                     <input
                       type="text"
                       value={formData.nome_servico}
                       onChange={(e) => setFormData({ ...formData, nome_servico: e.target.value })}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                       placeholder="Opcional"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Cliente *
                     </label>
                     <select
                       value={formData.client_id}
                       onChange={(e) => handleClientChange(e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                       required
                     >
                       <option value="">Selecione um cliente</option>
@@ -1049,13 +1050,13 @@ export default function ServicesPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Status de Pagamento
                     </label>
                     <select
                       value={formData.status_pagamento}
                       onChange={(e) => setFormData({ ...formData, status_pagamento: e.target.value as any })}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                     >
                       <option value="pendente">Pendente</option>
                       <option value="pendente_plataforma">Pendente Plataforma</option>
@@ -1064,8 +1065,8 @@ export default function ServicesPage() {
                     </select>
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Desconto Plataforma Padrão (%)
                     </label>
                     <input
@@ -1075,74 +1076,71 @@ export default function ServicesPage() {
                       max="100"
                       value={formData.desconto_plataforma_default}
                       onChange={(e) => setFormData({ ...formData, desconto_plataforma_default: parseFloat(e.target.value) || 0 })}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                       placeholder="0"
                     />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Será aplicado automaticamente em todas as visitas deste serviço (pode ser alterado individualmente)
-                    </p>
                   </div>
 
-                  <div className="md:col-span-2 bg-blue-50 p-4 rounded-lg">
-                    <h5 className="text-sm font-medium text-blue-900 mb-2">ℹ️ Informações automáticas</h5>
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      <li>• <strong>Período:</strong> Será calculado automaticamente baseado na primeira e última visita</li>
-                      <li>• <strong>Totais:</strong> Serão calculados automaticamente baseado nas visitas cadastradas</li>
+                  <div className="md:col-span-2 bg-primary-50 p-2.5 rounded-lg">
+                    <h5 className="text-xs font-medium text-primary-900 mb-1.5">ℹ️ Informações automáticas</h5>
+                    <ul className="text-xs text-primary-800 space-y-0.5">
+                      <li>• <strong>Período:</strong> Calculado baseado na primeira e última visita</li>
+                      <li>• <strong>Totais:</strong> Calculados baseado nas visitas cadastradas</li>
                     </ul>
                   </div>
                 </div>
 
                 {/* Seção de Visitas */}
-                <div className="border-t pt-6">
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2">
-                    <h4 className="text-md font-medium text-gray-900">Visitas</h4>
-                    <div className="flex flex-col sm:flex-row gap-2">
+                <div className="border-t pt-3">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-3 gap-2">
+                    <h4 className="text-sm font-medium text-gray-900">Visitas</h4>
+                    <div className="flex flex-col sm:flex-row gap-1.5">
                       <button
                         type="button"
                         onClick={addVisit}
                         disabled={!selectedClient}
-                        className="btn-fefelina-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center px-2.5 py-1.5 shadow-sm text-xs font-medium rounded text-white bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
                         Adicionar Visita
                       </button>
                       {/* Botão e inputs para gerar múltiplas visitas */}
-                      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                      <div className="flex flex-row gap-1.5 items-center">
                         <input
                           type="number"
                           id="multiVisitDays"
                           min="1"
                           max="60"
-                          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 w-24"
+                          className="border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 w-16"
                           value={multiVisitDays}
                           onChange={e => setMultiVisitDays(Number(e.target.value))}
                           disabled={!selectedClient || visits.length === 0}
-                          placeholder="Quantidade"
+                          placeholder="Qtd"
                         />
                         <button
                           type="button"
                           onClick={handleGenerateMultipleVisits}
                           disabled={!selectedClient || visits.length === 0 || multiVisitDays < 1}
-                          className="btn-fefelina-secondary disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                          className="inline-flex items-center px-2.5 py-1.5 shadow-sm text-xs font-medium rounded text-white bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap transition-colors"
                         >
-                          Gerar Múltiplas Visitas
+                          Gerar Múltiplas
                         </button>
                       </div>
                     </div>
                   </div>
 
                   {visits.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-6 text-gray-500 text-sm">
                       Nenhuma visita adicionada. Clique em "Adicionar Visita" para começar.
                     </div>
                   ) : (
-                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
                       {visits.map((visit, index) => (
-                        <div key={index} className="border border-gray-200 rounded-lg p-4">
-                          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                            <div>
+                        <div key={index} className="border border-gray-200 rounded-lg p-2.5">
+                          <div className="grid grid-cols-2 md:grid-cols-12 gap-2">
+                            <div className="md:col-span-2">
                               <label className="block text-xs font-medium text-gray-700 mb-1">
                                 Data *
                               </label>
@@ -1170,7 +1168,7 @@ export default function ServicesPage() {
                               />
                             </div>
 
-                            <div>
+                            <div className="md:col-span-2">
                               <label className="block text-xs font-medium text-gray-700 mb-1">
                                 Horário *
                               </label>
@@ -1183,7 +1181,7 @@ export default function ServicesPage() {
                               />
                             </div>
 
-                            <div>
+                            <div className="md:col-span-2">
                               <label className="block text-xs font-medium text-gray-700 mb-1">
                                 Tipo
                               </label>
@@ -1197,7 +1195,7 @@ export default function ServicesPage() {
                               </select>
                             </div>
 
-                            <div>
+                            <div className="md:col-span-2">
                               <label className="block text-xs font-medium text-gray-700 mb-1">
                                 Valor
                               </label>
@@ -1210,7 +1208,7 @@ export default function ServicesPage() {
                               />
                             </div>
 
-                            <div>
+                            <div className="md:col-span-3">
                               <label className="block text-xs font-medium text-gray-700 mb-1">
                                 Status
                               </label>
@@ -1225,46 +1223,31 @@ export default function ServicesPage() {
                               </select>
                             </div>
 
-                            <div className="flex items-end">
+                            <div className="md:col-span-1 flex items-end justify-center">
                               <button
                                 type="button"
                                 onClick={() => removeVisit(index)}
-                                className="w-full inline-flex justify-center items-center px-2 py-1 border border-red-300 shadow-sm text-xs font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded transition-colors"
+                                title="Remover visita"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                               </button>
                             </div>
                           </div>
 
-                          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Desconto Plataforma (%)
-                              </label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="100"
-                                value={visit.desconto_plataforma}
-                                onChange={(e) => updateVisit(index, 'desconto_plataforma', parseFloat(e.target.value) || 0)}
-                                className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="mt-3">
+                          {/* Observações */}
+                          <div className="mt-2">
                             <label className="block text-xs font-medium text-gray-700 mb-1">
                               Observações
                             </label>
                             <textarea
                               value={visit.observacoes || ''}
                               onChange={(e) => updateVisit(index, 'observacoes', e.target.value)}
-                              rows={2}
-                              className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                              placeholder="Observações sobre esta visita..."
+                              rows={1}
+                              className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+                              placeholder="Observações..."
                             />
                           </div>
                         </div>
@@ -1275,21 +1258,21 @@ export default function ServicesPage() {
 
                 {/* Resumo dos Totais */}
                 {visits.length > 0 && (
-                  <div className="border-t pt-4">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h5 className="text-sm font-medium text-gray-900 mb-3">Resumo do Serviço</h5>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="border-t pt-3">
+                    <div className="bg-primary-50 rounded-lg p-2.5">
+                      <h5 className="text-xs font-medium text-gray-900 mb-2">Resumo do Serviço</h5>
+                      <div className="grid grid-cols-3 gap-3 text-xs">
                         <div>
-                          <span className="text-gray-600">Total de Visitas:</span>
-                          <span className="font-semibold ml-2">{totalVisitas}</span>
+                          <span className="text-gray-600">Visitas:</span>
+                          <span className="font-semibold ml-1">{totalVisitas}</span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Valor Total:</span>
-                          <span className="font-semibold ml-2">{formatCurrency(totalValor)}</span>
+                          <span className="text-gray-600">Total:</span>
+                          <span className="font-semibold ml-1">{formatCurrency(totalValor)}</span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Valor a Receber:</span>
-                          <span className="font-semibold ml-2 text-primary-600">{formatCurrency(totalAReceber)}</span>
+                          <span className="text-gray-600">A Receber:</span>
+                          <span className="font-semibold ml-1 text-primary-600">{formatCurrency(totalAReceber)}</span>
                         </div>
                       </div>
                     </div>
@@ -1297,26 +1280,26 @@ export default function ServicesPage() {
                 )}
 
                 {/* Botões do Modal */}
-                <div className="flex justify-end space-x-3 pt-6 border-t">
+                <div className="flex justify-end space-x-2 pt-3 border-t px-6 pb-4">
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={editingService ? updating : submitting}
-                    className="btn-fefelina disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                   >
                     {(editingService ? updating : submitting) ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
                         Salvando...
                       </>
                     ) : (
-                      editingService ? 'Atualizar Serviço' : 'Criar Serviço'
+                      editingService ? 'Atualizar' : 'Criar Serviço'
                     )}
                   </button>
                 </div>
@@ -1383,61 +1366,61 @@ export default function ServicesPage() {
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeDetailsModal}></div>
             
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
-              <div className="flex justify-between items-center mb-6">
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+              <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
                 <div>
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  <h3 className="text-base leading-6 font-medium text-gray-900">
                     Detalhes do Serviço
                   </h3>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     Visualização completa do serviço e suas visitas
                   </p>
                 </div>
                 <button onClick={closeDetailsModal} className="text-gray-400 hover:text-gray-600">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="px-6 py-4 space-y-4">
                 {/* Informações Básicas do Serviço */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="text-md font-medium text-gray-900 mb-4">Informações do Serviço</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Informações do Serviço</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Nome do Serviço</label>
-                      <div className="mt-1 text-sm text-gray-900">
+                      <label className="block text-xs font-medium text-gray-700">Nome do Serviço</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
                         {viewingService.nome_servico || 'Não informado'}
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Cliente</label>
-                      <div className="mt-1 text-sm text-gray-900">
+                      <label className="block text-xs font-medium text-gray-700">Cliente</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
                         {viewingService.clients?.nome || 'Cliente não encontrado'}
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Status de Pagamento</label>
-                      <div className="mt-1">
+                      <label className="block text-xs font-medium text-gray-700">Status de Pagamento</label>
+                      <div className="mt-0.5">
                         {getPaymentStatusBadge(viewingService.status_pagamento)}
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Desconto Plataforma Padrão</label>
-                      <div className="mt-1 text-sm text-gray-900">
+                      <label className="block text-xs font-medium text-gray-700">Desconto Plataforma Padrão</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
                         {viewingService.desconto_plataforma_default}%
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Período do Serviço</label>
-                      <div className="mt-1 text-sm text-gray-900">
+                      <label className="block text-xs font-medium text-gray-700">Período do Serviço</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
                         {formatDate(viewingService.data_inicio)} - {formatDate(viewingService.data_fim)}
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Data de Criação</label>
-                      <div className="mt-1 text-sm text-gray-900">
+                      <label className="block text-xs font-medium text-gray-700">Data de Criação</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
                         {formatDate(viewingService.created_at.split('T')[0])}
                       </div>
                     </div>
@@ -1445,59 +1428,59 @@ export default function ServicesPage() {
                 </div>
 
                 {/* Resumo Financeiro */}
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h4 className="text-md font-medium text-gray-900 mb-4">Resumo Financeiro</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-primary-50 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Resumo Financeiro</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-900">{viewingService.total_visitas}</div>
-                      <div className="text-sm text-gray-600">Total de Visitas</div>
+                      <div className="text-xl font-bold text-gray-900">{viewingService.total_visitas}</div>
+                      <div className="text-xs text-gray-600">Total de Visitas</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-900">{formatCurrency(viewingService.total_valor)}</div>
-                      <div className="text-sm text-gray-600">Valor Total</div>
+                      <div className="text-xl font-bold text-gray-900">{formatCurrency(viewingService.total_valor)}</div>
+                      <div className="text-xs text-gray-600">Valor Total</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-primary-600">{formatCurrency(viewingService.total_a_receber)}</div>
-                      <div className="text-sm text-gray-600">Valor a Receber</div>
+                      <div className="text-xl font-bold text-primary-600">{formatCurrency(viewingService.total_a_receber)}</div>
+                      <div className="text-xs text-gray-600">Valor a Receber</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Lista de Visitas */}
                 <div>
-                  <h4 className="text-md font-medium text-gray-900 mb-4">Visitas do Serviço</h4>
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Visitas do Serviço</h4>
                   
                   {loadingDetails ? (
                     <div className="flex justify-center items-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                     </div>
                   ) : viewingVisits.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-gray-500 text-sm">
                       Nenhuma visita encontrada para este serviço.
                     </div>
                   ) : (
                     <>
-                      {/* Versão Desktop - Tabela */}
-                      <div className="hidden md:block overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                      {/* Versão Desktop - Tabela Compacta */}
+                      <div className="hidden md:block overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
                         <table className="min-w-full divide-y divide-gray-300">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Data/Horário
                               </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Tipo
                               </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Valor
                               </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Desconto
                               </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Status
                               </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Observações
                               </th>
                             </tr>
@@ -1505,14 +1488,14 @@ export default function ServicesPage() {
                           <tbody className="bg-white divide-y divide-gray-200">
                             {viewingVisits.map((visit, index) => (
                               <tr key={visit.id || index} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
                                   <div>
                                     <div className="font-medium">{formatDate(visit.data)}</div>
                                     <div className="text-gray-500">{visit.horario}</div>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                     visit.tipo_visita === 'inteira' 
                                       ? 'bg-blue-100 text-blue-800' 
                                       : 'bg-purple-100 text-purple-800'
@@ -1520,14 +1503,14 @@ export default function ServicesPage() {
                                     {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
                                   </span>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900">
                                   {formatCurrency(visit.valor)}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
                                   {visit.desconto_plataforma}%
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                     visit.status === 'realizada' 
                                       ? 'bg-green-100 text-green-800'
                                       : visit.status === 'agendada'
@@ -1538,7 +1521,7 @@ export default function ServicesPage() {
                                      visit.status === 'agendada' ? 'Agendada' : 'Cancelada'}
                                   </span>
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                                <td className="px-3 py-2 text-xs text-gray-900 max-w-xs">
                                   <div className="truncate" title={visit.observacoes || ''}>
                                     {visit.observacoes || '-'}
                                   </div>
@@ -1549,18 +1532,23 @@ export default function ServicesPage() {
                         </table>
                       </div>
 
-                      {/* Versão Mobile - Cards */}
-                      <div className="md:hidden space-y-4">
+                      {/* Versão Mobile - Cards Compactos */}
+                      <div className="md:hidden space-y-2">
                         {viewingVisits.map((visit, index) => (
-                          <div key={visit.id || index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                            {/* Header do card com data e status */}
-                            <div className="flex items-center justify-between mb-3">
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">{formatDate(visit.data)}</div>
-                                <div className="text-xs text-gray-500">{visit.horario}</div>
+                          <div key={visit.id || index} className="bg-white border border-gray-200 rounded-lg p-2.5 shadow-sm">
+                            {/* Layout horizontal compacto */}
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              {/* Data e horário */}
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div>
+                                  <div className="text-xs font-medium text-gray-900">{formatDate(visit.data)}</div>
+                                  <div className="text-xs text-gray-500">{visit.horario}</div>
+                                </div>
                               </div>
-                              <div className="flex flex-col items-end space-y-1">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              
+                              {/* Badges de tipo e status */}
+                              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                   visit.status === 'realizada' 
                                     ? 'bg-green-100 text-green-800'
                                     : visit.status === 'agendada'
@@ -1570,7 +1558,7 @@ export default function ServicesPage() {
                                   {visit.status === 'realizada' ? 'Realizada' : 
                                    visit.status === 'agendada' ? 'Agendada' : 'Cancelada'}
                                 </span>
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                   visit.tipo_visita === 'inteira' 
                                     ? 'bg-blue-100 text-blue-800' 
                                     : 'bg-purple-100 text-purple-800'
@@ -1580,23 +1568,25 @@ export default function ServicesPage() {
                               </div>
                             </div>
 
-                            {/* Informações financeiras */}
-                            <div className="grid grid-cols-2 gap-4 mb-3">
-                              <div>
-                                <div className="text-xs text-gray-500 mb-1">Valor</div>
-                                <div className="text-sm font-medium text-gray-900">{formatCurrency(visit.valor)}</div>
-                              </div>
-                              <div>
-                                <div className="text-xs text-gray-500 mb-1">Desconto Plataforma</div>
-                                <div className="text-sm font-medium text-gray-900">{visit.desconto_plataforma}%</div>
+                            {/* Linha inferior: Valor e Desconto */}
+                            <div className="flex items-center justify-between text-xs border-t border-gray-100 pt-2">
+                              <div className="flex items-center gap-3">
+                                <div>
+                                  <span className="text-gray-500">Valor:</span>
+                                  <span className="ml-1 font-medium text-gray-900">{formatCurrency(visit.valor)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Desc:</span>
+                                  <span className="ml-1 font-medium text-gray-900">{visit.desconto_plataforma}%</span>
+                                </div>
                               </div>
                             </div>
 
-                            {/* Observações */}
+                            {/* Observações (se houver) */}
                             {visit.observacoes && (
-                              <div className="border-t border-gray-100 pt-3">
-                                <div className="text-xs text-gray-500 mb-1">Observações</div>
-                                <div className="text-sm text-gray-900">{visit.observacoes}</div>
+                              <div className="border-t border-gray-100 pt-2 mt-2">
+                                <div className="text-xs text-gray-500 mb-0.5">Obs:</div>
+                                <div className="text-xs text-gray-900 line-clamp-2">{visit.observacoes}</div>
                               </div>
                             )}
                           </div>
@@ -1607,11 +1597,11 @@ export default function ServicesPage() {
                 </div>
 
                 {/* Botões de Ação */}
-                <div className="flex justify-end space-x-3 pt-6 border-t">
+                <div className="flex justify-end space-x-2 pt-4 border-t px-6 pb-4">
                   <button
                     type="button"
                     onClick={closeDetailsModal}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Fechar
                   </button>
@@ -1621,7 +1611,7 @@ export default function ServicesPage() {
                       closeDetailsModal()
                       openModal(viewingService)
                     }}
-                    className="btn-fefelina"
+                    className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors"
                   >
                     Editar Serviço
                   </button>

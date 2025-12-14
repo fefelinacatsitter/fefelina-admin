@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import ClientCombobox from '../components/ClientCombobox'
 
 interface Pet {
   id: string
@@ -343,19 +344,13 @@ export default function PetsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Dono *
                 </label>
-                <select
-                  required
-                  className="input-fefelina"
+                <ClientCombobox
+                  clients={clients}
                   value={formData.client_id}
-                  onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                >
-                  <option value="">Selecione o dono</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.nome}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(clientId) => setFormData({ ...formData, client_id: clientId })}
+                  placeholder="Digite para buscar dono..."
+                  required={true}
+                />
               </div>
 
               <div>

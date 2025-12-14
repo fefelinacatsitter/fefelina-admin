@@ -204,6 +204,11 @@ export default function LeadsPage() {
   const [motivoPerda, setMotivoPerda] = useState('')
   const [salvandoPerda, setSalvandoPerda] = useState(false)
 
+  // Estados para edição inline de pré-encontros
+  const [editingPreEncontroId, setEditingPreEncontroId] = useState<string | null>(null)
+  const [editingPreEncontroData, setEditingPreEncontroData] = useState<Visit | null>(null)
+  const [savingPreEncontro, setSavingPreEncontro] = useState(false)
+
   useEffect(() => {
     fetchLeads()
   }, [])
@@ -292,6 +297,72 @@ export default function LeadsPage() {
     } catch (error: any) {
       console.error('Erro ao cancelar pré-encontro:', error)
       toast.error('Erro ao cancelar pré-encontro')
+    }
+  }
+
+  const handleEditPreEncontro = (encontro: Visit) => {
+    setEditingPreEncontroId(encontro.id!)
+    setEditingPreEncontroData({ ...encontro })
+  }
+
+  const handleCancelEditPreEncontro = () => {
+    setEditingPreEncontroId(null)
+    setEditingPreEncontroData(null)
+  }
+
+  const handleSavePreEncontro = async () => {
+    if (!editingPreEncontroData || !editingPreEncontroId) return
+
+    // Validações
+    if (!editingPreEncontroData.data) {
+      toast.error('Data é obrigatória')
+      return
+    }
+    if (!editingPreEncontroData.horario) {
+      toast.error('Horário é obrigatório')
+      return
+    }
+
+    setSavingPreEncontro(true)
+
+    try {
+      const { error } = await supabase
+        .from('visits')
+        .update({
+          data: editingPreEncontroData.data,
+          horario: editingPreEncontroData.horario,
+          duracao_minutos: editingPreEncontroData.duracao_minutos || 30,
+          status: editingPreEncontroData.status,
+          observacoes: editingPreEncontroData.observacoes || null
+        })
+        .eq('id', editingPreEncontroId)
+
+      if (error) throw error
+
+      toast.success('Pré-encontro atualizado com sucesso!')
+      
+      // Recarregar lista de pré-encontros
+      if (selectedLead) {
+        await fetchPreEncontros(selectedLead.id)
+      }
+
+      // Limpar estados de edição
+      setEditingPreEncontroId(null)
+      setEditingPreEncontroData(null)
+    } catch (error: any) {
+      console.error('Erro ao atualizar pré-encontro:', error)
+      toast.error('Erro ao atualizar pré-encontro')
+    } finally {
+      setSavingPreEncontro(false)
+    }
+  }
+
+  const handlePreEncontroFieldChange = (field: keyof Visit, value: any) => {
+    if (editingPreEncontroData) {
+      setEditingPreEncontroData({
+        ...editingPreEncontroData,
+        [field]: value
+      })
     }
   }
 
@@ -582,6 +653,31 @@ export default function LeadsPage() {
       return
     }
 
+    // Se mudou para "Fechado Ganho", perguntar se quer converter em cliente
+    if (detailStatus === 'fechado_ganho' && selectedLead.status !== 'fechado_ganho') {
+      setLeadToConvert(selectedLead)
+      setShowConvertModal(true)
+      
+      // Atualizar o status da lead mesmo sem converter (usuário pode cancelar a conversão)
+      try {
+        const { error } = await supabase
+          .from('leads')
+          .update({ status: detailStatus })
+          .eq('id', selectedLead.id)
+
+        if (error) throw error
+
+        toast.success('Lead movido para "Fechado Ganho"')
+        fetchLeads()
+        setShowDetailModal(false)
+      } catch (error) {
+        console.error('Erro ao atualizar status:', error)
+        toast.error('Erro ao atualizar status')
+      }
+      return
+    }
+
+    // Para outros status, apenas atualizar
     try {
       const { error } = await supabase
         .from('leads')
@@ -1156,43 +1252,152 @@ export default function LeadsPage() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {preEncontros.map((encontro) => (
-                          <tr key={encontro.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-3 py-2.5 text-sm text-gray-900">
-                              {new Date(encontro.data + 'T00:00:00').toLocaleDateString('pt-BR')}
-                            </td>
-                            <td className="px-3 py-2.5 text-sm text-gray-900">
-                              {encontro.horario.substring(0, 5)} - {calcularHorarioFim(encontro.horario, encontro.duracao_minutos || 30)}
-                            </td>
-                            <td className="px-3 py-2.5 text-sm text-gray-600">
-                              {encontro.duracao_minutos || 30} min
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${
-                                encontro.status === 'realizada' 
-                                  ? 'bg-green-100 text-green-700' 
-                                  : encontro.status === 'cancelada'
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'bg-yellow-100 text-yellow-700'
-                              }`}>
-                                {encontro.status === 'realizada' ? 'Realizado' : 
-                                 encontro.status === 'cancelada' ? 'Cancelado' : 'Agendado'}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2.5 text-sm text-gray-600 max-w-xs truncate">
-                              {encontro.observacoes || '-'}
-                            </td>
-                            <td className="px-3 py-2.5 text-center">
-                              <button
-                                onClick={() => handleDeletePreEncontro(encontro.id!)}
-                                className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded transition-colors"
-                                title="Cancelar pré-encontro"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {preEncontros.map((encontro) => {
+                          const isEditing = editingPreEncontroId === encontro.id
+                          const editData = isEditing ? editingPreEncontroData : encontro
+
+                          return (
+                            <tr key={encontro.id} className={`transition-colors ${isEditing ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                              {/* Data */}
+                              <td className="px-3 py-2.5 text-sm text-gray-900">
+                                {isEditing ? (
+                                  <input
+                                    type="date"
+                                    value={editData?.data || ''}
+                                    onChange={(e) => handlePreEncontroFieldChange('data', e.target.value)}
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  />
+                                ) : (
+                                  new Date(encontro.data + 'T00:00:00').toLocaleDateString('pt-BR')
+                                )}
+                              </td>
+
+                              {/* Horário */}
+                              <td className="px-3 py-2.5 text-sm text-gray-900">
+                                {isEditing ? (
+                                  <input
+                                    type="time"
+                                    value={editData?.horario || ''}
+                                    onChange={(e) => handlePreEncontroFieldChange('horario', e.target.value)}
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  />
+                                ) : (
+                                  `${encontro.horario.substring(0, 5)} - ${calcularHorarioFim(encontro.horario, encontro.duracao_minutos || 30)}`
+                                )}
+                              </td>
+
+                              {/* Duração */}
+                              <td className="px-3 py-2.5 text-sm text-gray-600">
+                                {isEditing ? (
+                                  <select
+                                    value={editData?.duracao_minutos || 30}
+                                    onChange={(e) => handlePreEncontroFieldChange('duracao_minutos', parseInt(e.target.value))}
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  >
+                                    <option value={15}>15 min</option>
+                                    <option value={30}>30 min</option>
+                                    <option value={45}>45 min</option>
+                                    <option value={60}>60 min</option>
+                                    <option value={90}>90 min</option>
+                                    <option value={120}>120 min</option>
+                                  </select>
+                                ) : (
+                                  `${encontro.duracao_minutos || 30} min`
+                                )}
+                              </td>
+
+                              {/* Status */}
+                              <td className="px-3 py-2.5">
+                                {isEditing ? (
+                                  <select
+                                    value={editData?.status || 'agendada'}
+                                    onChange={(e) => handlePreEncontroFieldChange('status', e.target.value)}
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  >
+                                    <option value="agendada">Agendado</option>
+                                    <option value="realizada">Realizado</option>
+                                    <option value="cancelada">Cancelado</option>
+                                  </select>
+                                ) : (
+                                  <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${
+                                    encontro.status === 'realizada' 
+                                      ? 'bg-green-100 text-green-700' 
+                                      : encontro.status === 'cancelada'
+                                      ? 'bg-red-100 text-red-700'
+                                      : 'bg-yellow-100 text-yellow-700'
+                                  }`}>
+                                    {encontro.status === 'realizada' ? 'Realizado' : 
+                                     encontro.status === 'cancelada' ? 'Cancelado' : 'Agendado'}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Observações */}
+                              <td className="px-3 py-2.5 text-sm text-gray-600">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={editData?.observacoes || ''}
+                                    onChange={(e) => handlePreEncontroFieldChange('observacoes', e.target.value)}
+                                    placeholder="Observações..."
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  />
+                                ) : (
+                                  <span className="max-w-xs truncate block" title={encontro.observacoes || ''}>
+                                    {encontro.observacoes || '-'}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Ações */}
+                              <td className="px-3 py-2.5">
+                                {isEditing ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      onClick={handleSavePreEncontro}
+                                      disabled={savingPreEncontro}
+                                      className="text-green-600 hover:text-green-800 hover:bg-green-50 p-1.5 rounded transition-colors disabled:opacity-50"
+                                      title="Salvar alterações"
+                                    >
+                                      {savingPreEncontro ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                                      ) : (
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={handleCancelEditPreEncontro}
+                                      disabled={savingPreEncontro}
+                                      className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-1.5 rounded transition-colors disabled:opacity-50"
+                                      title="Cancelar edição"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      onClick={() => handleEditPreEncontro(encontro)}
+                                      className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1.5 rounded transition-colors"
+                                      title="Editar pré-encontro"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeletePreEncontro(encontro.id!)}
+                                      className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded transition-colors"
+                                      title="Cancelar pré-encontro"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import CatLoader from '../components/CatLoader'
+import ClientCombobox from '../components/ClientCombobox'
 
 interface Service {
   id: string
@@ -1117,19 +1118,13 @@ export default function ServicesPage() {
                     <label className="block text-xs font-medium text-gray-700 mb-1">
                       Cliente *
                     </label>
-                    <select
+                    <ClientCombobox
+                      clients={clients}
                       value={formData.client_id}
-                      onChange={(e) => handleClientChange(e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                      required
-                    >
-                      <option value="">Selecione um cliente</option>
-                      {clients.map((client) => (
-                        <option key={client.id} value={client.id}>
-                          {client.nome}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={handleClientChange}
+                      placeholder="Digite para buscar cliente..."
+                      required={true}
+                    />
                   </div>
 
                   <div>

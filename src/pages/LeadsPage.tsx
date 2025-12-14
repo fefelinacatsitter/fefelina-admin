@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { Users, Phone, MapPin, Calendar, DollarSign, Plus, X, Edit2, Clock } from 'lucide-react'
 import PreEncontroModal from '../components/PreEncontroModal'
 import ConvertLeadModal from '../components/ConvertLeadModal'
+import CatLoader from '../components/CatLoader'
 import {
   DndContext,
   DragEndEvent,
@@ -853,10 +854,7 @@ export default function LeadsPage() {
       <div className="flex-1 overflow-auto p-4">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <Users className="w-12 h-12 text-gray-400 mx-auto mb-2 animate-pulse" />
-              <p className="text-gray-600">Carregando leads...</p>
-            </div>
+            <CatLoader size="lg" variant="walking" text="Carregando leads..." />
           </div>
         ) : (
           // Visualização Kanban com Drag and Drop

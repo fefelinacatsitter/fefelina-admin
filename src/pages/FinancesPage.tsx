@@ -8,6 +8,7 @@ import {
   TrendingUp, Filter,
   Download, CreditCard, Clock, CheckCircle, X
 } from 'lucide-react'
+import CatLoader from '../components/CatLoader'
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -480,7 +481,7 @@ export default function FinancesPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <CatLoader size="lg" variant="paws" text="Carregando finanças..." />
       </div>
     )
   }

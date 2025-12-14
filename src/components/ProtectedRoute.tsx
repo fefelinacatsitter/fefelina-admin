@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Session } from '@supabase/supabase-js'
+import CatLoader from './CatLoader'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -45,11 +46,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Mostrar loading enquanto verifica autenticação
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Verificando acesso...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary-50 via-white to-primary-50">
+        <CatLoader size="lg" variant="sleeping" text="Verificando suas credenciais..." />
       </div>
     )
   }

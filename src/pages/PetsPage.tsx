@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import ClientCombobox from '../components/ClientCombobox'
+import CatLoader from '../components/CatLoader'
 
 interface Pet {
   id: string
@@ -199,10 +200,8 @@ export default function PetsPage() {
       <div>
         <h1 className="page-title-fefelina">Pets</h1>
         <div className="divider-fefelina"></div>
-        <div className="card-fefelina">
-          <div className="empty-state-fefelina">
-            <div className="text-gray-500">Carregando pets...</div>
-          </div>
+        <div className="flex justify-center items-center h-64">
+          <CatLoader size="lg" variant="sleeping" text="Carregando pets..." />
         </div>
       </div>
     )

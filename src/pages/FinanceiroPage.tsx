@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase, CaixaMovimento } from '../lib/supabase'
+import CatLoader from '../components/CatLoader'
 
 export default function FinanceiroPage() {
   const [movimentos, setMovimentos] = useState<CaixaMovimento[]>([])
@@ -241,7 +242,7 @@ export default function FinanceiroPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <CatLoader size="lg" variant="walking" text="Carregando movimentações..." />
       </div>
     )
   }

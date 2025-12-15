@@ -102,6 +102,12 @@ interface Visit {
   } | null
 }
 
+interface ClientQuickInfo {
+  endereco_completo?: string
+  telefone?: string
+  pets: Array<{ nome: string; caracteristica: string }>
+}
+
 export default function VisitsPage() {
   const navigate = useNavigate()
   const [visits, setVisits] = useState<Visit[]>([])
@@ -113,6 +119,11 @@ export default function VisitsPage() {
   // Estados para filtros de data
   const [filterStartDate, setFilterStartDate] = useState('')
   const [filterEndDate, setFilterEndDate] = useState('')
+  
+  // Estados para tooltip de cliente
+  const [hoveredVisitId, setHoveredVisitId] = useState<string | null>(null)
+  const [clientsQuickInfo, setClientsQuickInfo] = useState<Record<string, ClientQuickInfo>>({})
+  const [loadingClientInfo, setLoadingClientInfo] = useState<string | null>(null)
 
   useEffect(() => {
     fetchVisits()
@@ -245,6 +256,48 @@ export default function VisitsPage() {
       toast.error(`Erro ao atualizar status da visita: ${error.message}`)
     } finally {
       setUpdatingVisit(null)
+    }
+  }
+
+  const fetchClientQuickInfo = async (clientId: string) => {
+    // Se já temos a informação em cache, não busca novamente
+    if (clientsQuickInfo[clientId]) {
+      return
+    }
+
+    setLoadingClientInfo(clientId)
+
+    try {
+      // Buscar informações do cliente
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('endereco_completo, telefone')
+        .eq('id', clientId)
+        .single()
+
+      if (clientError) throw clientError
+
+      // Buscar pets do cliente
+      const { data: petsData, error: petsError } = await supabase
+        .from('pets')
+        .select('nome, caracteristica')
+        .eq('client_id', clientId)
+        .limit(3) // Limitar a 3 pets para não ficar muito grande
+
+      if (petsError) throw petsError
+
+      setClientsQuickInfo(prev => ({
+        ...prev,
+        [clientId]: {
+          endereco_completo: clientData.endereco_completo,
+          telefone: clientData.telefone,
+          pets: petsData || []
+        }
+      }))
+    } catch (error) {
+      console.error('Erro ao buscar informações do cliente:', error)
+    } finally {
+      setLoadingClientInfo(null)
     }
   }
 
@@ -486,12 +539,65 @@ export default function VisitsPage() {
                     ) : (
                       <>
                         {visit.client_id ? (
-                          <button
-                            onClick={() => navigate(`/clients/${visit.client_id}`)}
-                            className="text-sm text-primary-600 hover:text-primary-800 hover:underline font-medium text-left"
-                          >
-                            {visit.clients?.nome}
-                          </button>
+                          <div className="relative inline-block group">
+                            <button
+                              onClick={() => navigate(`/clients/${visit.client_id}`)}
+                              onMouseEnter={() => {
+                                setHoveredVisitId(visit.id)
+                                if (visit.client_id) {
+                                  fetchClientQuickInfo(visit.client_id)
+                                }
+                              }}
+                              onMouseLeave={() => setHoveredVisitId(null)}
+                              className="text-sm text-primary-600 hover:text-primary-800 hover:underline font-medium text-left"
+                            >
+                              {visit.clients?.nome}
+                            </button>
+                            
+                            {/* Tooltip Mobile */}
+                            {hoveredVisitId === visit.id && visit.client_id && clientsQuickInfo[visit.client_id] && (
+                              <div className="absolute left-0 top-full mt-1 z-50 w-64 bg-white rounded-md shadow-lg border border-gray-200 p-2 text-left pointer-events-none">
+                                <div className="space-y-1.5 text-xs">
+                                  {clientsQuickInfo[visit.client_id].endereco_completo && (
+                                    <div className="flex items-start gap-1.5">
+                                      <svg className="w-3 h-3 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      </svg>
+                                      <p className="text-gray-600 flex-1 leading-tight line-clamp-2">{clientsQuickInfo[visit.client_id].endereco_completo}</p>
+                                    </div>
+                                  )}
+                                  {clientsQuickInfo[visit.client_id].telefone && (
+                                    <div className="flex items-center gap-1.5">
+                                      <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                      </svg>
+                                      <p className="text-gray-600">{clientsQuickInfo[visit.client_id].telefone}</p>
+                                    </div>
+                                  )}
+                                  {clientsQuickInfo[visit.client_id].pets.length > 0 && (
+                                    <div className="pt-1.5 border-t border-gray-100">
+                                      <div className="flex items-center gap-1 mb-1">
+                                        <svg className="w-3 h-3 text-primary-500" fill="currentColor" viewBox="0 0 24 24">
+                                          <path d="M8.5 5C7.67157 5 7 5.67157 7 6.5C7 7.32843 7.67157 8 8.5 8C9.32843 8 10 7.32843 10 6.5C10 5.67157 9.32843 5 8.5 5Z"/>
+                                          <path d="M15.5 5C14.6716 5 14 5.67157 14 6.5C14 7.32843 14.6716 8 15.5 8C16.3284 8 17 7.32843 17 6.5C17 5.67157 16.3284 5 15.5 5Z"/>
+                                          <path d="M5 9.5C5 8.67157 5.67157 8 6.5 8C7.32843 8 8 8.67157 8 9.5C8 10.3284 7.32843 11 6.5 11C5.67157 11 5 10.3284 5 9.5Z"/>
+                                          <path d="M17.5 8C16.6716 8 16 8.67157 16 9.5C16 10.3284 16.6716 11 17.5 11C18.3284 11 19 10.3284 19 9.5C19 8.67157 18.3284 8 17.5 8Z"/>
+                                          <path d="M12 10C9.79086 10 8 11.7909 8 14C8 15.8638 9.27477 17.4299 11 17.874V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V17.874C14.7252 17.4299 16 15.8638 16 14C16 11.7909 14.2091 10 12 10Z"/>
+                                        </svg>
+                                        <span className="font-medium text-gray-700">Pets:</span>
+                                      </div>
+                                      {clientsQuickInfo[visit.client_id].pets.map((pet, idx) => (
+                                        <div key={idx} className="text-gray-600 ml-4 leading-tight">
+                                          • <span className="font-medium">{pet.nome}</span> <span className="text-gray-400">·</span> <span className="text-[10px]">{pet.caracteristica}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <div className="text-sm text-gray-700">{visit.clients?.nome}</div>
                         )}
@@ -592,12 +698,65 @@ export default function VisitsPage() {
                         ) : (
                           <div>
                             {visit.client_id ? (
-                              <button
-                                onClick={() => navigate(`/clients/${visit.client_id}`)}
-                                className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline text-left"
-                              >
-                                {visit.clients?.nome}
-                              </button>
+                              <div className="relative inline-block group">
+                                <button
+                                  onClick={() => navigate(`/clients/${visit.client_id}`)}
+                                  onMouseEnter={() => {
+                                    setHoveredVisitId(visit.id)
+                                    if (visit.client_id) {
+                                      fetchClientQuickInfo(visit.client_id)
+                                    }
+                                  }}
+                                  onMouseLeave={() => setHoveredVisitId(null)}
+                                  className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline text-left"
+                                >
+                                  {visit.clients?.nome}
+                                </button>
+                                
+                                {/* Tooltip Desktop */}
+                                {hoveredVisitId === visit.id && visit.client_id && clientsQuickInfo[visit.client_id] && (
+                                  <div className="absolute left-0 top-full mt-1 z-50 w-72 bg-white rounded-md shadow-lg border border-gray-200 p-2.5 text-left pointer-events-none">
+                                    <div className="space-y-1.5 text-xs">
+                                      {clientsQuickInfo[visit.client_id].endereco_completo && (
+                                        <div className="flex items-start gap-1.5">
+                                          <svg className="w-3 h-3 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                          </svg>
+                                          <p className="text-gray-600 flex-1 leading-tight line-clamp-2">{clientsQuickInfo[visit.client_id].endereco_completo}</p>
+                                        </div>
+                                      )}
+                                      {clientsQuickInfo[visit.client_id].telefone && (
+                                        <div className="flex items-center gap-1.5">
+                                          <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                          </svg>
+                                          <p className="text-gray-600">{clientsQuickInfo[visit.client_id].telefone}</p>
+                                        </div>
+                                      )}
+                                      {clientsQuickInfo[visit.client_id].pets.length > 0 && (
+                                        <div className="pt-1.5 border-t border-gray-100">
+                                          <div className="flex items-center gap-1 mb-1">
+                                            <svg className="w-3 h-3 text-primary-500" fill="currentColor" viewBox="0 0 24 24">
+                                              <path d="M8.5 5C7.67157 5 7 5.67157 7 6.5C7 7.32843 7.67157 8 8.5 8C9.32843 8 10 7.32843 10 6.5C10 5.67157 9.32843 5 8.5 5Z"/>
+                                              <path d="M15.5 5C14.6716 5 14 5.67157 14 6.5C14 7.32843 14.6716 8 15.5 8C16.3284 8 17 7.32843 17 6.5C17 5.67157 16.3284 5 15.5 5Z"/>
+                                              <path d="M5 9.5C5 8.67157 5.67157 8 6.5 8C7.32843 8 8 8.67157 8 9.5C8 10.3284 7.32843 11 6.5 11C5.67157 11 5 10.3284 5 9.5Z"/>
+                                              <path d="M17.5 8C16.6716 8 16 8.67157 16 9.5C16 10.3284 16.6716 11 17.5 11C18.3284 11 19 10.3284 19 9.5C19 8.67157 18.3284 8 17.5 8Z"/>
+                                              <path d="M12 10C9.79086 10 8 11.7909 8 14C8 15.8638 9.27477 17.4299 11 17.874V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V17.874C14.7252 17.4299 16 15.8638 16 14C16 11.7909 14.2091 10 12 10Z"/>
+                                            </svg>
+                                            <span className="font-medium text-gray-700">Pets:</span>
+                                          </div>
+                                          {clientsQuickInfo[visit.client_id].pets.map((pet, idx) => (
+                                            <div key={idx} className="text-gray-600 ml-4 leading-tight">
+                                              • <span className="font-medium">{pet.nome}</span> <span className="text-gray-400 text-[10px]">·</span> <span className="text-[10px]">{pet.caracteristica}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             ) : (
                               <div className="text-sm font-medium text-gray-900">
                                 {visit.clients?.nome}

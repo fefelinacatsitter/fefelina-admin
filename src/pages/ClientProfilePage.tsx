@@ -1638,11 +1638,13 @@ export default function ClientProfilePage() {
 
       {/* Modal de Notas */}
       {showNotesModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowNotesModal(false)}></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div 
+            className="absolute inset-0" 
+            onClick={() => setShowNotesModal(false)}
+          ></div>
             
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+            <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
               <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-4 flex justify-between items-center">
                 <h3 className="text-lg leading-6 font-medium text-gray-900">
                   Notas sobre {client.nome}
@@ -1654,7 +1656,7 @@ export default function ClientProfilePage() {
                 </button>
               </div>
 
-              <div className="px-6 py-4">
+              <div className="px-6 py-4 overflow-y-auto flex-1">
                 <p className="text-sm text-gray-600 mb-4">
                   Use este espaço para registrar informações importantes sobre o cliente, observações de atendimento, preferências, histórico de conversas, etc.
                 </p>
@@ -1662,9 +1664,10 @@ export default function ClientProfilePage() {
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  rows={10}
+                  rows={12}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                   placeholder="Digite suas notas aqui...&#10;&#10;Exemplos:&#10;- Preferências de horário&#10;- Histórico de comunicação&#10;- Observações importantes&#10;- Datas especiais"
+                  autoFocus
                 />
               </div>
 
@@ -1693,7 +1696,6 @@ export default function ClientProfilePage() {
                 </button>
               </div>
             </div>
-          </div>
         </div>
       )}
 

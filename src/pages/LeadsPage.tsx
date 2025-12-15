@@ -20,6 +20,33 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
+// Função para formatar telefone com máscara +55(XX)XXXXX-XXXX
+function formatPhoneInput(value: string): string {
+  // Remove tudo que não é número
+  const numbers = value.replace(/\D/g, '')
+  
+  // Limita a 13 dígitos (55 + 2 DDD + 9 número)
+  const limited = numbers.slice(0, 13)
+  
+  // Aplica a máscara +55(XX)XXXXX-XXXX ou +55(XX)XXXX-XXXX
+  if (limited.length <= 2) {
+    return `+${limited}`
+  } else if (limited.length <= 4) {
+    return `+${limited.slice(0, 2)}(${limited.slice(2)}`
+  } else if (limited.length <= 9) {
+    return `+${limited.slice(0, 2)}(${limited.slice(2, 4)})${limited.slice(4)}`
+  } else {
+    const phone = limited.slice(4)
+    if (phone.length <= 4) {
+      return `+${limited.slice(0, 2)}(${limited.slice(2, 4)})${phone}`
+    } else {
+      // Se tem 9 dígitos (celular) ou 8 (fixo)
+      const separator = phone.length === 9 ? 5 : 4
+      return `+${limited.slice(0, 2)}(${limited.slice(2, 4)})${phone.slice(0, separator)}-${phone.slice(separator)}`
+    }
+  }
+}
+
 type LeadStatus = 'em_contato' | 'negociacao' | 'aguardando_resposta' | 'fechado_ganho' | 'fechado_perdido'
 
 const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; bgColor: string; borderColor: string }> = {
@@ -966,7 +993,8 @@ export default function LeadsPage() {
                 <input
                   type="text"
                   value={formData.telefone}
-                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, telefone: formatPhoneInput(e.target.value) })}
+                  placeholder="+55(47)99999-9999"
                   className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>

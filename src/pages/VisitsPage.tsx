@@ -123,7 +123,6 @@ export default function VisitsPage() {
   // Estados para tooltip de cliente
   const [hoveredVisitId, setHoveredVisitId] = useState<string | null>(null)
   const [clientsQuickInfo, setClientsQuickInfo] = useState<Record<string, ClientQuickInfo>>({})
-  const [loadingClientInfo, setLoadingClientInfo] = useState<string | null>(null)
 
   useEffect(() => {
     fetchVisits()
@@ -265,8 +264,6 @@ export default function VisitsPage() {
       return
     }
 
-    setLoadingClientInfo(clientId)
-
     try {
       // Buscar informações do cliente
       const { data: clientData, error: clientError } = await supabase
@@ -296,8 +293,6 @@ export default function VisitsPage() {
       }))
     } catch (error) {
       console.error('Erro ao buscar informações do cliente:', error)
-    } finally {
-      setLoadingClientInfo(null)
     }
   }
 

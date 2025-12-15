@@ -6,7 +6,7 @@ import {
 } from 'recharts'
 import { 
   TrendingUp, Filter,
-  Download, CreditCard, Clock, CheckCircle, X
+  Download, CreditCard, Clock, CheckCircle, X, Eye, EyeOff
 } from 'lucide-react'
 import CatLoader from '../components/CatLoader'
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns'
@@ -58,6 +58,11 @@ export default function FinancesPage() {
     recentTransactions: []
   })
   const [loading, setLoading] = useState(true)
+  const [showValues, setShowValues] = useState(() => {
+    // Carregar preferência salva do localStorage (padrão: true se não houver)
+    const saved = localStorage.getItem('fefelina_showFinanceValues')
+    return saved !== null ? saved === 'true' : true
+  })
   const [chartFilters, setChartFilters] = useState<ChartFilters>({
     selectedMonth: currentDate.getMonth() + 1,
     selectedYear: currentDate.getFullYear(),
@@ -82,6 +87,11 @@ export default function FinancesPage() {
     yearReceived: 0,
     yearTotal: 0
   })
+
+  // Salvar preferência de visualização no localStorage
+  useEffect(() => {
+    localStorage.setItem('fefelina_showFinanceValues', showValues.toString())
+  }, [showValues])
 
   useEffect(() => {
     fetchFinancialData()
@@ -412,6 +422,9 @@ export default function FinancesPage() {
   }
 
   const formatCurrency = (value: number) => {
+    if (!showValues) {
+      return 'R$ ••••••'
+    }
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
@@ -497,6 +510,23 @@ export default function FinancesPage() {
           <div className="divider-fefelina"></div>
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-3">
+          <button 
+            onClick={() => setShowValues(!showValues)}
+            className="btn-secondary"
+            title={showValues ? 'Ocultar valores' : 'Mostrar valores'}
+          >
+            {showValues ? (
+              <>
+                <EyeOff className="w-4 h-4 mr-2" />
+                Ocultar Valores
+              </>
+            ) : (
+              <>
+                <Eye className="w-4 h-4 mr-2" />
+                Mostrar Valores
+              </>
+            )}
+          </button>
           <button className="btn-secondary">
             <Download className="w-4 h-4 mr-2" />
             Exportar
@@ -669,7 +699,7 @@ export default function FinancesPage() {
                 <YAxis 
                   tick={{ fontSize: 12 }}
                   stroke="#6b7280"
-                  tickFormatter={(value) => `R$ ${value.toLocaleString('pt-BR')}`}
+                  tickFormatter={(value) => showValues ? `R$ ${value.toLocaleString('pt-BR')}` : '••••'}
                 />
                 <Tooltip 
                   formatter={(value) => [formatCurrency(Number(value)), '']}

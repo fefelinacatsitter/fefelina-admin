@@ -52,6 +52,7 @@ interface Visit {
   valor: number
   status: 'agendada' | 'realizada' | 'cancelada'
   desconto_plataforma: number
+  observacoes?: string
 }
 
 interface MonthlyStats {
@@ -91,6 +92,27 @@ export default function ClientProfilePage() {
     veterinario_confianca: ''
   })
   const [updating, setUpdating] = useState(false)
+  
+  // Estados para modal de Pet
+  const [showPetModal, setShowPetModal] = useState(false)
+  const [petFormData, setPetFormData] = useState({
+    nome: '',
+    caracteristica: '',
+    observacoes: '',
+    client_id: id || ''
+  })
+  const [submittingPet, setSubmittingPet] = useState(false)
+  
+  // Estados para modal de Serviço
+  const [showServiceModal, setShowServiceModal] = useState(false)
+  const [serviceFormData, setServiceFormData] = useState({
+    nome_servico: '',
+    client_id: id || '',
+    status_pagamento: 'pendente' as 'pendente' | 'pendente_plataforma' | 'pago_parcialmente' | 'pago',
+    desconto_plataforma_default: 0
+  })
+  const [serviceVisits, setServiceVisits] = useState<Visit[]>([])
+  const [submittingService, setSubmittingService] = useState(false)
   
   // Métricas globais para comparação
   const [globalAverageRevenue, setGlobalAverageRevenue] = useState(0)
@@ -559,6 +581,197 @@ export default function ClientProfilePage() {
         {labels[status as keyof typeof labels]}
       </span>
     )
+  }
+
+  // Funções para modal de Pet
+  const openPetModal = () => {
+    setPetFormData({
+      nome: '',
+      caracteristica: '',
+      observacoes: '',
+      client_id: id || ''
+    })
+    setShowPetModal(true)
+  }
+
+  const closePetModal = () => {
+    setShowPetModal(false)
+    setPetFormData({
+      nome: '',
+      caracteristica: '',
+      observacoes: '',
+      client_id: id || ''
+    })
+  }
+
+  const handleSubmitPet = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (submittingPet) {
+      toast.error('Aguarde, o pet está sendo salvo...')
+      return
+    }
+
+    setSubmittingPet(true)
+
+    try {
+      const { error } = await supabase
+        .from('pets')
+        .insert([petFormData])
+      
+      if (error) throw error
+      
+      toast.success(`Pet "${petFormData.nome}" adicionado com sucesso!`)
+      await fetchClientData() // Recarregar dados
+      closePetModal()
+    } catch (error: any) {
+      console.error('Erro ao salvar pet:', error)
+      toast.error(`Erro ao salvar pet: ${error.message}`)
+    } finally {
+      setSubmittingPet(false)
+    }
+  }
+
+  // Funções para modal de Serviço
+  const openServiceModal = () => {
+    setServiceFormData({
+      nome_servico: '',
+      client_id: id || '',
+      status_pagamento: 'pendente',
+      desconto_plataforma_default: 0
+    })
+    setServiceVisits([])
+    setShowServiceModal(true)
+  }
+
+  const closeServiceModal = () => {
+    setShowServiceModal(false)
+    setServiceFormData({
+      nome_servico: '',
+      client_id: id || '',
+      status_pagamento: 'pendente',
+      desconto_plataforma_default: 0
+    })
+    setServiceVisits([])
+  }
+
+  const calculateVisitValue = (tipo: 'inteira' | 'meia') => {
+    if (!client) return 0
+    return tipo === 'inteira' ? client.valor_diaria : client.valor_duas_visitas / 2
+  }
+
+  const addVisit = () => {
+    const newVisit: Visit = {
+      id: `temp-${Date.now()}`,
+      service_id: '',
+      data: '',
+      horario: '',
+      tipo_visita: 'inteira',
+      valor: client?.valor_diaria || 0,
+      status: 'agendada',
+      desconto_plataforma: serviceFormData.desconto_plataforma_default
+    }
+    setServiceVisits([...serviceVisits, newVisit])
+  }
+
+  const removeVisit = (index: number) => {
+    setServiceVisits(serviceVisits.filter((_, i) => i !== index))
+  }
+
+  const updateVisit = (index: number, field: keyof Visit, value: any) => {
+    const updated = [...serviceVisits]
+    updated[index] = { ...updated[index], [field]: value }
+    
+    // Se mudou o tipo de visita, recalcular o valor
+    if (field === 'tipo_visita') {
+      updated[index].valor = calculateVisitValue(value as 'inteira' | 'meia')
+    }
+    
+    setServiceVisits(updated)
+  }
+
+  const handleSubmitService = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (submittingService) {
+      toast.error('Aguarde, o serviço está sendo salvo...')
+      return
+    }
+
+    if (serviceVisits.length === 0) {
+      toast.error('Adicione pelo menos uma visita')
+      return
+    }
+
+    const visitsWithoutDate = serviceVisits.filter(v => !v.data)
+    if (visitsWithoutDate.length > 0) {
+      toast.error('Todas as visitas devem ter uma data preenchida')
+      return
+    }
+
+    setSubmittingService(true)
+
+    try {
+      // Ordenar visitas por data
+      const sortedVisits = [...serviceVisits].sort((a, b) => 
+        new Date(a.data).getTime() - new Date(b.data).getTime()
+      )
+
+      const dataInicio = sortedVisits[0].data
+      const dataFim = sortedVisits[sortedVisits.length - 1].data
+
+      const totalVisitas = sortedVisits.filter(v => v.status !== 'cancelada').length
+      const totalValor = sortedVisits
+        .filter(v => v.status !== 'cancelada')
+        .reduce((sum, v) => sum + v.valor, 0)
+      const totalAReceber = sortedVisits
+        .filter(v => v.status !== 'cancelada')
+        .reduce((sum, v) => sum + (v.valor * (1 - v.desconto_plataforma / 100)), 0)
+
+      // Criar serviço
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('services')
+        .insert([{
+          ...serviceFormData,
+          data_inicio: dataInicio,
+          data_fim: dataFim,
+          total_visitas: totalVisitas,
+          total_valor: totalValor,
+          total_a_receber: totalAReceber
+        }])
+        .select()
+        .single()
+
+      if (serviceError) throw serviceError
+
+      // Criar visitas
+      const visitsToInsert = sortedVisits.map(visit => ({
+        service_id: serviceData.id,
+        client_id: serviceFormData.client_id,
+        data: visit.data,
+        horario: visit.horario,
+        tipo_visita: visit.tipo_visita,
+        valor: visit.valor,
+        status: visit.status,
+        desconto_plataforma: visit.desconto_plataforma,
+        observacoes: visit.observacoes
+      }))
+
+      const { error: visitsError } = await supabase
+        .from('visits')
+        .insert(visitsToInsert)
+
+      if (visitsError) throw visitsError
+
+      toast.success('Serviço criado com sucesso!')
+      await fetchClientData() // Recarregar dados
+      closeServiceModal()
+    } catch (error: any) {
+      console.error('Erro ao salvar serviço:', error)
+      toast.error(`Erro ao salvar serviço: ${error.message}`)
+    } finally {
+      setSubmittingService(false)
+    }
   }
 
   if (loading) {
@@ -1212,11 +1425,26 @@ export default function ClientProfilePage() {
 
         {/* Pets */}
         <div className="card-fefelina p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Pets ({pets.length})</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Pets ({pets.length})</h3>
+            <button
+              onClick={openPetModal}
+              className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-full p-1.5 transition-colors"
+              title="Adicionar Pet"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
           {pets.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8.5 5C7.67157 5 7 5.67157 7 6.5C7 7.32843 7.67157 8 8.5 8C9.32843 8 10 7.32843 10 6.5C10 5.67157 9.32843 5 8.5 5Z"/>
+                <path d="M15.5 5C14.6716 5 14 5.67157 14 6.5C14 7.32843 14.6716 8 15.5 8C16.3284 8 17 7.32843 17 6.5C17 5.67157 16.3284 5 15.5 5Z"/>
+                <path d="M5 9.5C5 8.67157 5.67157 8 6.5 8C7.32843 8 8 8.67157 8 9.5C8 10.3284 7.32843 11 6.5 11C5.67157 11 5 10.3284 5 9.5Z"/>
+                <path d="M17.5 8C16.6716 8 16 8.67157 16 9.5C16 10.3284 16.6716 11 17.5 11C18.3284 11 19 10.3284 19 9.5C19 8.67157 18.3284 8 17.5 8Z"/>
+                <path d="M12 10C9.79086 10 8 11.7909 8 14C8 15.8638 9.27477 17.4299 11 17.874V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V17.874C14.7252 17.4299 16 15.8638 16 14C16 11.7909 14.2091 10 12 10Z"/>
               </svg>
               <p className="text-sm">Nenhum pet cadastrado</p>
             </div>
@@ -1226,8 +1454,12 @@ export default function ClientProfilePage() {
                 <div key={pet.id} className="border border-gray-200 rounded-lg p-3 hover:border-primary-300 transition-colors">
                   <div className="flex items-start">
                     <div className="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
-                      <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg className="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8.5 5C7.67157 5 7 5.67157 7 6.5C7 7.32843 7.67157 8 8.5 8C9.32843 8 10 7.32843 10 6.5C10 5.67157 9.32843 5 8.5 5Z"/>
+                        <path d="M15.5 5C14.6716 5 14 5.67157 14 6.5C14 7.32843 14.6716 8 15.5 8C16.3284 8 17 7.32843 17 6.5C17 5.67157 16.3284 5 15.5 5Z"/>
+                        <path d="M5 9.5C5 8.67157 5.67157 8 6.5 8C7.32843 8 8 8.67157 8 9.5C8 10.3284 7.32843 11 6.5 11C5.67157 11 5 10.3284 5 9.5Z"/>
+                        <path d="M17.5 8C16.6716 8 16 8.67157 16 9.5C16 10.3284 16.6716 11 17.5 11C18.3284 11 19 10.3284 19 9.5C19 8.67157 18.3284 8 17.5 8Z"/>
+                        <path d="M12 10C9.79086 10 8 11.7909 8 14C8 15.8638 9.27477 17.4299 11 17.874V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V17.874C14.7252 17.4299 16 15.8638 16 14C16 11.7909 14.2091 10 12 10Z"/>
                       </svg>
                     </div>
                     <div className="ml-3 flex-1">
@@ -1247,7 +1479,18 @@ export default function ClientProfilePage() {
 
       {/* Serviços */}
       <div className="card-fefelina p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Serviços Contratados ({services.length})</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Serviços Contratados ({services.length})</h3>
+          <button
+            onClick={openServiceModal}
+            className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-full p-1.5 transition-colors"
+            title="Adicionar Serviço"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
         
         {services.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
@@ -1676,6 +1919,310 @@ export default function ClientProfilePage() {
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Novo Pet */}
+      {showPetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="modal-fefelina max-w-md w-full">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="section-title-fefelina">Novo Pet</h2>
+              <button
+                onClick={closePetModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitPet} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome do Pet *
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="input-fefelina"
+                  value={petFormData.nome}
+                  onChange={(e) => setPetFormData({ ...petFormData, nome: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Característica *
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="input-fefelina"
+                  placeholder="Ex: Gato, Siamês, 3 anos"
+                  value={petFormData.caracteristica}
+                  onChange={(e) => setPetFormData({ ...petFormData, caracteristica: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Observações
+                </label>
+                <textarea
+                  className="input-fefelina"
+                  rows={3}
+                  placeholder="Informações adicionais sobre o pet..."
+                  value={petFormData.observacoes}
+                  onChange={(e) => setPetFormData({ ...petFormData, observacoes: e.target.value })}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={closePetModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingPet}
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {submittingPet ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Salvando...
+                    </>
+                  ) : (
+                    'Adicionar Pet'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Novo Serviço */}
+      {showServiceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="modal-fefelina max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="section-title-fefelina">Novo Serviço</h2>
+              <button
+                onClick={closeServiceModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitService} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nome do Serviço
+                  </label>
+                  <input
+                    type="text"
+                    className="input-fefelina"
+                    placeholder="Ex: Férias Dezembro 2024"
+                    value={serviceFormData.nome_servico}
+                    onChange={(e) => setServiceFormData({ ...serviceFormData, nome_servico: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status de Pagamento
+                  </label>
+                  <select
+                    className="input-fefelina"
+                    value={serviceFormData.status_pagamento}
+                    onChange={(e) => setServiceFormData({ ...serviceFormData, status_pagamento: e.target.value as any })}
+                  >
+                    <option value="pendente">Pendente</option>
+                    <option value="pendente_plataforma">Pendente Plataforma</option>
+                    <option value="pago_parcialmente">Pago Parcialmente</option>
+                    <option value="pago">Pago</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Desconto Plataforma Padrão (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    className="input-fefelina"
+                    value={serviceFormData.desconto_plataforma_default}
+                    onChange={(e) => setServiceFormData({ ...serviceFormData, desconto_plataforma_default: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              {/* Visitas */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Visitas *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addVisit}
+                    className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Adicionar Visita
+                  </button>
+                </div>
+
+                {serviceVisits.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <p className="text-sm text-gray-500">Nenhuma visita adicionada ainda</p>
+                    <button
+                      type="button"
+                      onClick={addVisit}
+                      className="mt-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      Adicionar primeira visita
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {serviceVisits.map((visit, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-2 p-3 bg-gray-50 rounded-lg">
+                        <div className="col-span-3">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Data *</label>
+                          <input
+                            type="date"
+                            required
+                            className="input-fefelina text-sm"
+                            value={visit.data}
+                            onChange={(e) => updateVisit(index, 'data', e.target.value)}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Horário</label>
+                          <input
+                            type="time"
+                            className="input-fefelina text-sm"
+                            value={visit.horario}
+                            onChange={(e) => updateVisit(index, 'horario', e.target.value)}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                          <select
+                            className="input-fefelina text-sm"
+                            value={visit.tipo_visita}
+                            onChange={(e) => updateVisit(index, 'tipo_visita', e.target.value)}
+                          >
+                            <option value="inteira">Inteira</option>
+                            <option value="meia">Meia</option>
+                          </select>
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Valor</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            className="input-fefelina text-sm"
+                            value={visit.valor}
+                            onChange={(e) => updateVisit(index, 'valor', parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                          <select
+                            className="input-fefelina text-sm"
+                            value={visit.status}
+                            onChange={(e) => updateVisit(index, 'status', e.target.value)}
+                          >
+                            <option value="agendada">Agendada</option>
+                            <option value="realizada">Realizada</option>
+                            <option value="cancelada">Cancelada</option>
+                          </select>
+                        </div>
+                        <div className="col-span-1 flex items-end">
+                          <button
+                            type="button"
+                            onClick={() => removeVisit(index)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Remover visita"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Resumo */}
+              {serviceVisits.length > 0 && (
+                <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2">Resumo</h4>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Total Visitas:</span>
+                      <span className="ml-2 font-medium">{serviceVisits.filter(v => v.status !== 'cancelada').length}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Valor Total:</span>
+                      <span className="ml-2 font-medium">
+                        {formatCurrency(serviceVisits.filter(v => v.status !== 'cancelada').reduce((sum, v) => sum + v.valor, 0))}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">A Receber:</span>
+                      <span className="ml-2 font-medium text-green-700">
+                        {formatCurrency(serviceVisits.filter(v => v.status !== 'cancelada').reduce((sum, v) => sum + (v.valor * (1 - v.desconto_plataforma / 100)), 0))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={closeServiceModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingService}
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {submittingService ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Salvando...
+                    </>
+                  ) : (
+                    'Criar Serviço'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

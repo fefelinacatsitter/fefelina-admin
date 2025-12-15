@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import CatLoader from '../components/CatLoader'
@@ -80,6 +81,7 @@ const isValidDate = (dateString: string): boolean => {
 interface Visit {
   id: string
   service_id: string
+  client_id?: string | null
   lead_id?: string | null
   data: string
   horario: string
@@ -101,6 +103,7 @@ interface Visit {
 }
 
 export default function VisitsPage() {
+  const navigate = useNavigate()
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
   const [updatingVisit, setUpdatingVisit] = useState<string | null>(null)
@@ -482,7 +485,16 @@ export default function VisitsPage() {
                       </>
                     ) : (
                       <>
-                        <div className="text-sm text-gray-700">{visit.clients?.nome}</div>
+                        {visit.client_id ? (
+                          <button
+                            onClick={() => navigate(`/clients/${visit.client_id}`)}
+                            className="text-sm text-primary-600 hover:text-primary-800 hover:underline font-medium text-left"
+                          >
+                            {visit.clients?.nome}
+                          </button>
+                        ) : (
+                          <div className="text-sm text-gray-700">{visit.clients?.nome}</div>
+                        )}
                         {visit.services?.nome_servico && (
                           <div className="text-xs text-gray-500">{visit.services.nome_servico}</div>
                         )}
@@ -579,9 +591,18 @@ export default function VisitsPage() {
                           </div>
                         ) : (
                           <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {visit.clients?.nome}
-                            </div>
+                            {visit.client_id ? (
+                              <button
+                                onClick={() => navigate(`/clients/${visit.client_id}`)}
+                                className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline text-left"
+                              >
+                                {visit.clients?.nome}
+                              </button>
+                            ) : (
+                              <div className="text-sm font-medium text-gray-900">
+                                {visit.clients?.nome}
+                              </div>
+                            )}
                             {visit.services?.nome_servico && (
                               <div className="text-sm text-gray-500">
                                 {visit.services.nome_servico}

@@ -123,6 +123,7 @@ export default function VisitsPage() {
   // Estados para tooltip de cliente
   const [hoveredVisitId, setHoveredVisitId] = useState<string | null>(null)
   const [clientsQuickInfo, setClientsQuickInfo] = useState<Record<string, ClientQuickInfo>>({})
+  const [tooltipPosition, setTooltipPosition] = useState<'bottom' | 'top'>('bottom')
 
   useEffect(() => {
     fetchVisits()
@@ -255,6 +256,32 @@ export default function VisitsPage() {
       toast.error(`Erro ao atualizar status da visita: ${error.message}`)
     } finally {
       setUpdatingVisit(null)
+    }
+  }
+
+  const handleMouseEnter = (visitId: string, clientId: string, event: React.MouseEvent, visitIndex: number, totalVisits: number) => {
+    setHoveredVisitId(visitId)
+    fetchClientQuickInfo(clientId)
+    
+    // Detectar se é uma das últimas 2 linhas da tabela
+    // Isso evita o scroll mesmo quando a tabela é pequena
+    const isNearBottom = visitIndex >= totalVisits - 2
+    
+    if (isNearBottom) {
+      setTooltipPosition('top')
+    } else {
+      // Calcular se há espaço suficiente embaixo na viewport
+      const target = event.currentTarget
+      const rect = target.getBoundingClientRect()
+      const windowHeight = window.innerHeight
+      const tooltipHeight = 200 // altura aproximada do tooltip
+      
+      // Se não há espaço suficiente embaixo, abre para cima
+      if (rect.bottom + tooltipHeight > windowHeight) {
+        setTooltipPosition('top')
+      } else {
+        setTooltipPosition('bottom')
+      }
     }
   }
 
@@ -516,7 +543,7 @@ export default function VisitsPage() {
         <>
           {/* Mobile: Cards */}
           <div className="block md:hidden space-y-4">
-            {getSortedVisits().map((visit) => (
+            {getSortedVisits().map((visit, index, array) => (
               <div key={visit.id} className={`border rounded-lg p-4 shadow-sm ${visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50 border-purple-200' : 'bg-white'}`}>
                 <div className="flex justify-between items-center mb-2">
                   <div>
@@ -537,10 +564,9 @@ export default function VisitsPage() {
                           <div className="relative inline-block group">
                             <button
                               onClick={() => navigate(`/clients/${visit.client_id}`)}
-                              onMouseEnter={() => {
-                                setHoveredVisitId(visit.id)
+                              onMouseEnter={(e) => {
                                 if (visit.client_id) {
-                                  fetchClientQuickInfo(visit.client_id)
+                                  handleMouseEnter(visit.id, visit.client_id, e, index, array.length)
                                 }
                               }}
                               onMouseLeave={() => setHoveredVisitId(null)}
@@ -551,7 +577,9 @@ export default function VisitsPage() {
                             
                             {/* Tooltip Mobile */}
                             {hoveredVisitId === visit.id && visit.client_id && clientsQuickInfo[visit.client_id] && (
-                              <div className="absolute left-0 top-full mt-1 z-50 w-64 bg-white rounded-md shadow-lg border border-gray-200 p-2 text-left pointer-events-none">
+                              <div className={`absolute left-0 z-50 w-64 bg-white rounded-md shadow-lg border border-gray-200 p-2 text-left pointer-events-none ${
+                                tooltipPosition === 'bottom' ? 'top-full mt-1' : 'bottom-full mb-1'
+                              }`}>
                                 <div className="space-y-1.5 text-xs">
                                   {clientsQuickInfo[visit.client_id].endereco_completo && (
                                     <div className="flex items-start gap-1.5">
@@ -665,7 +693,7 @@ export default function VisitsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {getSortedVisits().map((visit) => (
+                  {getSortedVisits().map((visit, index, array) => (
                     <tr key={visit.id} className={`${visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50' : 'hover:bg-gray-50'}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
@@ -696,10 +724,9 @@ export default function VisitsPage() {
                               <div className="relative inline-block group">
                                 <button
                                   onClick={() => navigate(`/clients/${visit.client_id}`)}
-                                  onMouseEnter={() => {
-                                    setHoveredVisitId(visit.id)
+                                  onMouseEnter={(e) => {
                                     if (visit.client_id) {
-                                      fetchClientQuickInfo(visit.client_id)
+                                      handleMouseEnter(visit.id, visit.client_id, e, index, array.length)
                                     }
                                   }}
                                   onMouseLeave={() => setHoveredVisitId(null)}
@@ -710,7 +737,9 @@ export default function VisitsPage() {
                                 
                                 {/* Tooltip Desktop */}
                                 {hoveredVisitId === visit.id && visit.client_id && clientsQuickInfo[visit.client_id] && (
-                                  <div className="absolute left-0 top-full mt-1 z-50 w-72 bg-white rounded-md shadow-lg border border-gray-200 p-2.5 text-left pointer-events-none">
+                                  <div className={`absolute left-0 z-50 w-72 bg-white rounded-md shadow-lg border border-gray-200 p-2.5 text-left pointer-events-none ${
+                                    tooltipPosition === 'bottom' ? 'top-full mt-1' : 'bottom-full mb-1'
+                                  }`}>
                                     <div className="space-y-1.5 text-xs">
                                       {clientsQuickInfo[visit.client_id].endereco_completo && (
                                         <div className="flex items-start gap-1.5">

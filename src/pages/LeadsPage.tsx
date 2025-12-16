@@ -174,7 +174,7 @@ function DroppableColumn({ status, children, isActive }: DroppableColumnProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`space-y-2 flex-1 min-h-[300px] rounded-md transition-all ${
+      className={`space-y-2 flex-1 min-h-[300px] rounded-md p-2 transition-all ${
         isActive ? 'bg-blue-50/50 ring-1 ring-blue-300' : 'bg-gray-50/30'
       }`}
     >
@@ -801,35 +801,36 @@ export default function LeadsPage() {
     fechado_ganho: getLeadsByStatus('fechado_ganho').length,
     fechado_perdido: getLeadsByStatus('fechado_perdido').length,
     valor_potencial: leads
-      .filter(l => !['fechado_perdido'].includes(l.status))
+      .filter(l => !['fechado_perdido', 'fechado_ganho'].includes(l.status))
       .reduce((sum, l) => sum + (l.valor_orcamento || 0), 0)
   }
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Users className="w-5 h-5 text-purple-600" />
-              Leads (CRM)
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">Gerencie potenciais clientes</p>
+      <div className="bg-white border-b border-gray-200 px-4 pt-4 pb-2">
+        <div className="sm:flex sm:items-center">
+          <div className="sm:flex-auto">
+            <h1 className="page-title-fefelina">Leads</h1>
+            <p className="mt-2 text-sm text-gray-700">
+              Gerencie potenciais clientes e oportunidades de negócio.
+            </p>
+            <div className="divider-fefelina"></div>
           </div>
-          <div>
+          <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
             <button
+              type="button"
+              className="btn-fefelina"
               onClick={() => setShowForm(true)}
-              className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 transition-colors flex items-center gap-2"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 mr-2" />
               Novo Lead
             </button>
           </div>
         </div>
 
         {/* Métricas principais */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 mb-4">
           {/* Total de Leads */}
           <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between">
@@ -877,8 +878,8 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* Conteúdo */}
-      <div className="flex-1 overflow-auto p-4">
+      {/* Conteúdo - Kanban Board */}
+      <div className="flex-1 overflow-auto mt-6">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <CatLoader size="lg" variant="walking" text="Carregando leads..." />
@@ -908,7 +909,7 @@ export default function LeadsPage() {
                   >
                     <div className={`flex flex-col ${!isLastColumn ? 'border-r border-gray-200 pr-3' : ''}`}>
                       {/* Header da coluna estilo Jira - altura fixa */}
-                      <div className="mb-2 h-8 flex items-center justify-between">
+                      <div className="mb-2 h-8 flex items-center justify-between px-2">
                         <h3 className={`text-xs font-semibold uppercase ${config.color} tracking-wide`}>
                           {config.label}
                         </h3>

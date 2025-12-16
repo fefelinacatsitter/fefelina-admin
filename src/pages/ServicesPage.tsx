@@ -1739,37 +1739,24 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                 </div>
 
                 {/* Botões de Ação */}
-                <div className="flex justify-between items-center pt-4 border-t px-6 pb-4">
+                <div className="flex justify-end space-x-2 pt-4 border-t px-6 pb-4">
+                  <button
+                    type="button"
+                    onClick={closeDetailsModal}
+                    className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Fechar
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
-                      copyWhatsAppMessage(viewingService)
+                      closeDetailsModal()
+                      openModal(viewingService)
                     }}
-                    className="inline-flex items-center px-3 py-1.5 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-white hover:bg-green-50 transition-colors"
+                    className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors"
                   >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copiar WhatsApp
+                    Editar Serviço
                   </button>
-                  
-                  <div className="flex space-x-2">
-                    <button
-                      type="button"
-                      onClick={closeDetailsModal}
-                      className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      Fechar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        closeDetailsModal()
-                        openModal(viewingService)
-                      }}
-                      className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors"
-                    >
-                      Editar Serviço
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>

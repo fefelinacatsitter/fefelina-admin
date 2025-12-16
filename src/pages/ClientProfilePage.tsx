@@ -114,6 +114,10 @@ export default function ClientProfilePage() {
   const [serviceVisits, setServiceVisits] = useState<Visit[]>([])
   const [submittingService, setSubmittingService] = useState(false)
   
+  // Estados para exclusão
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  
   // Métricas globais para comparação
   const [globalAverageRevenue, setGlobalAverageRevenue] = useState(0)
   const [globalAverageServices, setGlobalAverageServices] = useState(0)
@@ -530,6 +534,66 @@ export default function ClientProfilePage() {
       toast.error('Erro ao atualizar cliente')
     } finally {
       setUpdating(false)
+    }
+  }
+
+  const handleDeleteClient = async () => {
+    if (!client) return
+
+    setDeleting(true)
+    try {
+      // 1. Buscar todos os serviços do cliente
+      const { data: clientServices, error: servicesError } = await supabase
+        .from('services')
+        .select('id')
+        .eq('client_id', client.id)
+
+      if (servicesError) throw servicesError
+
+      // 2. Deletar todas as visitas dos serviços do cliente
+      if (clientServices && clientServices.length > 0) {
+        const serviceIds = clientServices.map(s => s.id)
+        const { error: visitsError } = await supabase
+          .from('visits')
+          .delete()
+          .in('service_id', serviceIds)
+
+        if (visitsError) throw visitsError
+      }
+
+      // 3. Deletar todos os serviços do cliente
+      const { error: deleteServicesError } = await supabase
+        .from('services')
+        .delete()
+        .eq('client_id', client.id)
+
+      if (deleteServicesError) throw deleteServicesError
+
+      // 4. Deletar todos os pets do cliente
+      const { error: petsError } = await supabase
+        .from('pets')
+        .delete()
+        .eq('client_id', client.id)
+
+      if (petsError) throw petsError
+
+      // 5. Finalmente, deletar o cliente
+      const { error: clientError } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', client.id)
+
+      if (clientError) throw clientError
+
+      toast.success(`Cliente "${client.nome}" excluído com sucesso!`)
+      navigate('/clients')
+      
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error)
+      toast.error('Erro ao excluir cliente')
+    } finally {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -1636,6 +1700,32 @@ export default function ClientProfilePage() {
         )}
       </div>
 
+      {/* Zona de Perigo */}
+      <div className="mt-8 border border-red-200 rounded-lg overflow-hidden">
+        <div className="bg-red-50 px-6 py-3 border-b border-red-200">
+          <h3 className="text-sm font-semibold text-red-900">Zona de Perigo</h3>
+        </div>
+        <div className="bg-white px-6 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h4 className="text-sm font-medium text-gray-900">Excluir este cliente</h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Uma vez excluído, não há como voltar atrás. Por favor, tenha certeza.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="inline-flex items-center justify-center px-4 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 transition-colors flex-shrink-0"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Excluir Cliente
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Modal de Notas */}
       {showNotesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
@@ -2225,6 +2315,76 @@ export default function ClientProfilePage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200 px-6 py-3 flex justify-between items-center">
+              <h3 className="text-base font-semibold text-gray-900">Confirmar Exclusão</h3>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Excluir Cliente</h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Tem certeza que deseja excluir o cliente <strong>{client?.nome}</strong>?
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+                <p className="text-xs text-yellow-800">
+                  <strong>Atenção:</strong> Esta ação não pode ser desfeita. Todos os dados relacionados (pets, serviços e visitas) também serão excluídos.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteClient}
+                  disabled={deleting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {deleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Excluindo...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Excluir
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

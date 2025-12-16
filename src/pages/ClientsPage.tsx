@@ -40,14 +40,12 @@ export default function ClientsPage() {
   const navigate = useNavigate()
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
-  const [deletingClient, setDeletingClient] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [clientPets, setClientPets] = useState<Pet[]>([])
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<Client | null>(null)
   const [sortBy, setSortBy] = useState<'recent_services' | 'alphabetical'>('alphabetical')
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredClients, setFilteredClients] = useState<Client[]>([])
@@ -511,68 +509,6 @@ export default function ClientsPage() {
     setPets([{ nome: '', caracteristica: '', observacoes: '' }])
   }
 
-  const handleDeleteClient = async (client: Client) => {
-    setShowDeleteConfirm(client)
-  }
-
-  const confirmDeleteClient = async () => {
-    if (!showDeleteConfirm) return
-
-    const client = showDeleteConfirm
-    setDeletingClient(client.id)
-    setShowDeleteConfirm(null)
-
-    try {
-      // Buscar IDs dos serviços do cliente primeiro
-      const { data: servicesData } = await supabase
-        .from('services')
-        .select('id')
-        .eq('client_id', client.id)
-
-      const serviceIds = servicesData?.map(s => s.id) || []
-
-      // Excluir em cascata de forma organizada
-      if (serviceIds.length > 0) {
-        // 1. Excluir visitas dos serviços
-        await supabase
-          .from('visits')
-          .delete()
-          .in('service_id', serviceIds)
-
-        // 2. Excluir serviços
-        await supabase
-          .from('services')
-          .delete()
-          .eq('client_id', client.id)
-      }
-
-      // 3. Excluir pets
-      await supabase
-        .from('pets')
-        .delete()
-        .eq('client_id', client.id)
-
-      // 4. Excluir cliente
-      const { error: clientError } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', client.id)
-
-      if (clientError) {
-        throw clientError
-      }
-
-      // Sucesso
-      toast.success(`Cliente "${client.nome}" excluído com sucesso!`)
-      fetchClients()
-
-    } catch (error: any) {
-      console.error('Erro ao excluir cliente:', error)
-      toast.error(`Erro ao excluir cliente: ${error.message}`)
-    } finally {
-      setDeletingClient(null)
-    }
-  }
   return (
     <div>
       <div className="sm:flex sm:items-center">
@@ -1078,39 +1014,24 @@ export default function ClientsPage() {
           </div>
         ) : (
           filteredClients.map((client) => (
-            <div key={client.id} className="bg-white rounded-lg shadow-sm border p-4">
+            <div 
+              key={client.id} 
+              onClick={() => navigate(`/clients/${client.id}`)}
+              className="bg-white rounded-lg shadow-sm border p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+            >
               <div className="flex justify-between items-start mb-3">
-                <button
-                  onClick={() => navigate(`/clients/${client.id}`)}
-                  className="font-medium text-gray-900 text-base hover:text-primary-600 transition-colors text-left"
-                >
+                <h3 className="font-medium text-gray-900 text-base">
                   {client.nome}
+                </h3>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditForm(client);
+                  }}
+                  className="text-primary-600 hover:text-primary-900 text-sm"
+                >
+                  Editar
                 </button>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => navigate(`/clients/${client.id}`)}
-                    className="text-blue-600 hover:text-blue-900 text-sm"
-                  >
-                    Detalhes
-                  </button>
-                  <button 
-                    onClick={() => openEditForm(client)}
-                    className="text-primary-600 hover:text-primary-900 text-sm"
-                  >
-                    Editar
-                  </button>
-                  <button 
-                    onClick={() => handleDeleteClient(client)}
-                    disabled={deletingClient === client.id}
-                    className={`text-sm ${
-                      deletingClient === client.id 
-                        ? 'text-gray-400 cursor-not-allowed' 
-                        : 'text-red-600 hover:text-red-900'
-                    }`}
-                  >
-                    {deletingClient === client.id ? 'Excluindo...' : 'Excluir'}
-                  </button>
-                </div>
               </div>
               
               <div className="space-y-2 text-sm">
@@ -1180,15 +1101,13 @@ export default function ClientsPage() {
                     </tr>
                   ) : (
                     filteredClients.map((client) => (
-                      <tr key={client.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-medium">
-                          <button
-                            onClick={() => navigate(`/clients/${client.id}`)}
-                            className="text-gray-900 hover:text-primary-600 transition-colors truncate block"
-                            title={client.nome}
-                          >
-                            {client.nome}
-                          </button>
+                      <tr 
+                        key={client.id} 
+                        onClick={() => navigate(`/clients/${client.id}`)}
+                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      >
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {client.nome}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                           R$ {client.valor_diaria.toFixed(2)}
@@ -1204,30 +1123,14 @@ export default function ClientsPage() {
                         <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex justify-end gap-2">
                             <button 
-                              onClick={() => navigate(`/clients/${client.id}`)}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="Ver detalhes"
-                            >
-                              Detalhes
-                            </button>
-                            <button 
-                              onClick={() => openEditForm(client)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditForm(client);
+                              }}
                               className="text-primary-600 hover:text-primary-900"
                               title="Editar cliente"
                             >
                               Editar
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteClient(client)}
-                              disabled={deletingClient === client.id}
-                              className={`${
-                                deletingClient === client.id 
-                                  ? 'text-gray-400 cursor-not-allowed' 
-                                  : 'text-red-600 hover:text-red-900'
-                              }`}
-                              title={deletingClient === client.id ? 'Excluindo...' : 'Excluir cliente'}
-                            >
-                              {deletingClient === client.id ? 'Excluindo...' : 'Excluir'}
                             </button>
                           </div>
                         </td>
@@ -1240,67 +1143,6 @@ export default function ClientsPage() {
           </div>
         </div>
       </div>
-
-      {/* Modal de Confirmação de Exclusão */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
-            {/* Header com gradiente */}
-            <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
-              <h3 className="text-base font-semibold text-gray-900">Confirmar Exclusão</h3>
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="p-6">
-              <div className="text-center mb-4">
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-3">
-                  <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                
-                <p className="text-sm text-gray-600 mb-4">
-                  Tem certeza que deseja excluir o cliente <strong>"{showDeleteConfirm?.nome}"</strong>?
-                </p>
-                
-                <div className="bg-red-50 border border-red-200 rounded-md p-3 text-left">
-                  <p className="text-xs font-semibold text-red-800 mb-2">⚠️ ATENÇÃO: Esta ação irá excluir também:</p>
-                  <ul className="text-xs text-red-700 space-y-1">
-                    <li>• Todos os pets do cliente</li>
-                    <li>• Todos os serviços relacionados</li>
-                    <li>• Todas as visitas agendadas</li>
-                  </ul>
-                  <p className="text-xs font-semibold text-red-800 mt-2">Esta ação não pode ser desfeita.</p>
-                </div>
-              </div>
-              
-              <div className="flex justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(null)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmDeleteClient}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
-                >
-                  Confirmar Exclusão
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal de Adicionar/Editar Pet */}
       {showPetModal && (

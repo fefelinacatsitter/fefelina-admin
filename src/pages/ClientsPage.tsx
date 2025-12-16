@@ -48,7 +48,7 @@ export default function ClientsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [clientPets, setClientPets] = useState<Pet[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<Client | null>(null)
-  const [sortBy, setSortBy] = useState<'recent_services' | 'alphabetical'>('recent_services')
+  const [sortBy, setSortBy] = useState<'recent_services' | 'alphabetical'>('alphabetical')
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredClients, setFilteredClients] = useState<Client[]>([])
   

@@ -513,16 +513,17 @@ export default function ClientsPage() {
     <div>
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
-          <h1 className="text-lg font-semibold text-secondary-700">Clientes</h1>
-          <p className="mt-2 text-sm text-secondary-500">
+          <h1 className="page-title-fefelina">Clientes</h1>
+          <p className="mt-2 text-sm text-gray-700">
             Lista de todos os clientes registrados no sistema.
           </p>
+          <div className="divider-fefelina"></div>
         </div>
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
           <button
             type="button"
             onClick={() => setShowAddForm(true)}
-            className="inline-flex items-center justify-center rounded-lg border border-transparent bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-fefelina hover:bg-primary-600 hover:shadow-fefelina-hover focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:w-auto transition-all duration-300 transform hover:-translate-y-1"
+            className="btn-fefelina"
           >
             Adicionar Cliente
           </button>

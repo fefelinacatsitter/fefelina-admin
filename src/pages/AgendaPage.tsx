@@ -817,11 +817,21 @@ export default function AgendaPage() {
     <div className="h-full flex flex-col bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-4">
+        {/* Título e descrição */}
+        <div className="sm:flex sm:items-center mb-4">
+          <div className="sm:flex-auto">
+            <h1 className="page-title-fefelina">Agenda</h1>
+            <p className="mt-2 text-sm text-gray-700">
+              Visualize e gerencie os horários de visitas agendadas.
+            </p>
+            <div className="divider-fefelina"></div>
+          </div>
+        </div>
+
+        {/* Navegação e controles */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          {/* Título e navegação */}
+          {/* Navegação de data */}
           <div className="flex items-center gap-4">
-            <h1 className="text-lg font-bold text-gray-900">Agenda</h1>
-            
             <div className="flex items-center gap-2">
               <button
                 onClick={navigatePrevious}

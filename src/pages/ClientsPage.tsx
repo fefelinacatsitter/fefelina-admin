@@ -1140,25 +1140,25 @@ export default function ClientsPage() {
 
       {/* Versão Desktop - Tabela */}
       <div className="mt-8 hidden md:flex flex-col">
-        <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+        <div className="overflow-x-auto">
+          <div className="inline-block min-w-full py-2 align-middle">
             <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
+              <table className="min-w-full divide-y divide-gray-300 table-fixed">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[20%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Nome
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Valor Diária
+                    <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Diária
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Valor 2 Visitas
+                    <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      2 Visitas
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[30%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Endereço
                     </th>
-                    <th className="relative px-6 py-3">
+                    <th className="w-[26%] relative px-4 py-3">
                       <span className="sr-only">Ações</span>
                     </th>
                   </tr>
@@ -1181,47 +1181,55 @@ export default function ClientsPage() {
                   ) : (
                     filteredClients.map((client) => (
                       <tr key={client.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-4 py-3 text-sm font-medium">
                           <button
                             onClick={() => navigate(`/clients/${client.id}`)}
-                            className="text-gray-900 hover:text-primary-600 transition-colors"
+                            className="text-gray-900 hover:text-primary-600 transition-colors truncate block"
+                            title={client.nome}
                           >
                             {client.nome}
                           </button>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                           R$ {client.valor_diaria.toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                           R$ {client.valor_duas_visitas.toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {client.endereco_completo}
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          <div className="truncate" title={client.endereco_completo}>
+                            {client.endereco_completo}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button 
-                            onClick={() => navigate(`/clients/${client.id}`)}
-                            className="text-blue-600 hover:text-blue-900 mr-3"
-                          >
-                            Detalhes
-                          </button>
-                          <button 
-                            onClick={() => openEditForm(client)}
-                            className="text-primary-600 hover:text-primary-900 mr-3"
-                          >
-                            Editar
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteClient(client)}
-                            disabled={deletingClient === client.id}
-                            className={`${
-                              deletingClient === client.id 
-                                ? 'text-gray-400 cursor-not-allowed' 
-                                : 'text-red-600 hover:text-red-900'
-                            }`}
-                          >
-                            {deletingClient === client.id ? 'Excluindo...' : 'Excluir'}
-                          </button>
+                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex justify-end gap-2">
+                            <button 
+                              onClick={() => navigate(`/clients/${client.id}`)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Ver detalhes"
+                            >
+                              Detalhes
+                            </button>
+                            <button 
+                              onClick={() => openEditForm(client)}
+                              className="text-primary-600 hover:text-primary-900"
+                              title="Editar cliente"
+                            >
+                              Editar
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteClient(client)}
+                              disabled={deletingClient === client.id}
+                              className={`${
+                                deletingClient === client.id 
+                                  ? 'text-gray-400 cursor-not-allowed' 
+                                  : 'text-red-600 hover:text-red-900'
+                              }`}
+                              title={deletingClient === client.id ? 'Excluindo...' : 'Excluir cliente'}
+                            >
+                              {deletingClient === client.id ? 'Excluindo...' : 'Excluir'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))

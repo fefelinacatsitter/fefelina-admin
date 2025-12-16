@@ -999,13 +999,8 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
           {getFilteredServices().map((service) => (
             <div key={service.id} className="card-fefelina">
               <div 
-                className="p-3 cursor-pointer md:cursor-default"
-                onClick={() => {
-                  // No mobile, clique no card abre os detalhes
-                  if (window.innerWidth < 768) {
-                    openDetailsModal(service)
-                  }
-                }}
+                className="p-3 cursor-pointer"
+                onClick={() => openDetailsModal(service)}
                 onTouchStart={() => handleMobilePress(service)}
                 onTouchEnd={handleMobileRelease}
                 onTouchCancel={handleMobileRelease}
@@ -1025,7 +1020,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                   </div>
                   
                   {/* Métricas centralizadas - lado a lado no desktop, empilhadas no mobile */}
-                  <div className="flex flex-col md:flex-row items-center justify-center gap-4 px-2 min-w-0 md:min-w-[240px] w-full md:w-auto">
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-3 px-2 min-w-0 md:min-w-[200px] w-full md:w-auto">
                     <div className="text-center">
                       <div className="text-gray-500 font-medium mb-0.5 text-xs">Visitas</div>
                       <div className="font-semibold text-gray-900 text-sm">{service.total_visitas}</div>
@@ -1041,83 +1036,45 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                   </div>
                   
                   {/* Status e botões de ação - área fixa à direita */}
-                  <div className="flex flex-col md:flex-col items-center space-y-2 md:space-y-2 flex-shrink-0 pl-0 md:pl-6">
+                  <div className="flex flex-col md:flex-col items-center space-y-2 md:space-y-2 flex-shrink-0 pl-0 md:pl-4">
                     <div className="flex flex-col items-center space-y-1">
                       {getPaymentStatusBadge(service.status_pagamento)}
                     </div>
                     
-                    {/* Botões visíveis apenas no desktop */}
-                    <div className="hidden md:flex flex-col gap-2">
-                      {/* Linha de botões principais */}
-                      <div className="flex flex-wrap items-center gap-2 justify-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openDetailsModal(service)
-                          }}
-                          className="inline-flex items-center px-2 py-1.5 border border-blue-300 shadow-sm text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 transition-colors"
-                        >
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          Ver Detalhes
-                        </button>
-                        
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openModal(service)
-                          }}
-                          className="inline-flex items-center px-2 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                        >
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                          Editar
-                        </button>
-                      </div>
+                    {/* Botões visíveis apenas no desktop - Lado a lado */}
+                    <div className="hidden md:flex flex-row items-center gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openModal(service)
+                        }}
+                        className="inline-flex items-center px-2 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Editar
+                      </button>
                       
-                      {/* Linha de botões secundários */}
-                      <div className="flex flex-wrap items-center gap-2 justify-center">
-                        {service.status_pagamento !== 'pago' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              markServiceAsPaid(service.id)
-                            }}
-                            className="inline-flex items-center px-2 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 transition-colors"
-                          >
-                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            Marcar Pago
-                          </button>
-                        )}
-                        
+                      {service.status_pagamento !== 'pago' && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            deleteService(service)
+                            markServiceAsPaid(service.id)
                           }}
-                          disabled={deletingService === service.id}
-                          className={`inline-flex items-center px-2 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded transition-colors ${
-                            deletingService === service.id 
-                              ? 'text-red-400 bg-red-50 cursor-not-allowed' 
-                              : 'text-red-700 bg-white hover:bg-red-50'
-                          }`}
+                          className="inline-flex items-center px-2 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 transition-colors"
                         >
                           <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                          {deletingService === service.id ? 'Excluindo...' : 'Excluir'}
+                          Marcar Pago
                         </button>
-                      </div>
+                      )}
                     </div>
 
                     {/* Indicador visual para mobile mostrando que o card é clicável */}
                     <div className="flex md:hidden items-center justify-center mt-2">
-                      <div className="flex items-center text-xs text-gray-500">
+                      <div className="flex items-center text-xs text-gray-400">
                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -1707,24 +1664,47 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                 </div>
 
                 {/* Botões de Ação */}
-                <div className="flex justify-end space-x-2 pt-4 border-t px-6 pb-4">
-                  <button
-                    type="button"
-                    onClick={closeDetailsModal}
-                    className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Fechar
-                  </button>
+                <div className="flex justify-between items-center pt-4 border-t px-6 pb-4">
+                  {/* Botão Excluir - Canto Esquerdo */}
                   <button
                     type="button"
                     onClick={() => {
                       closeDetailsModal()
-                      openModal(viewingService)
+                      deleteService(viewingService)
                     }}
-                    className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors"
+                    disabled={deletingService === viewingService.id}
+                    className={`inline-flex items-center px-3 py-1.5 border border-red-200 rounded-md text-sm font-medium transition-colors ${
+                      deletingService === viewingService.id
+                        ? 'text-red-400 bg-red-50 cursor-not-allowed'
+                        : 'text-red-600 bg-transparent hover:bg-red-50 hover:border-red-300'
+                    }`}
                   >
-                    Editar Serviço
+                    <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    {deletingService === viewingService.id ? 'Excluindo...' : 'Excluir'}
                   </button>
+
+                  {/* Botões principais - Canto Direito */}
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={closeDetailsModal}
+                      className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Fechar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeDetailsModal()
+                        openModal(viewingService)
+                      }}
+                      className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors"
+                    >
+                      Editar Serviço
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -33,7 +33,6 @@ interface Visit {
   valor: number
   status: 'agendada' | 'realizada' | 'cancelada'
   desconto_plataforma: number
-  observacoes?: string
 }
 
 interface Client {
@@ -303,8 +302,7 @@ export default function ServicesPage() {
       tipo_visita: 'inteira',
       valor: calculateVisitValue(selectedClient, 'inteira'),
       status: 'agendada',
-      desconto_plataforma: formData.desconto_plataforma_default,
-      observacoes: ''
+      desconto_plataforma: formData.desconto_plataforma_default
     }
     setVisits([...visits, newVisit])
   }
@@ -366,7 +364,7 @@ export default function ServicesPage() {
     try {
       const { data, error } = await supabase
         .from('visits')
-        .select('id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, observacoes, client_id, created_at')
+        .select('id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, client_id, created_at')
         .eq('service_id', serviceId)
         .order('data', { ascending: true })
 
@@ -1368,20 +1366,6 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                               </button>
                             </div>
                           </div>
-
-                          {/* Observações */}
-                          <div className="mt-2">
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                              Observações
-                            </label>
-                            <textarea
-                              value={visit.observacoes || ''}
-                              onChange={(e) => updateVisit(index, 'observacoes', e.target.value)}
-                              rows={1}
-                              className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
-                              placeholder="Observações..."
-                            />
-                          </div>
                         </div>
                       ))}
                     </div>
@@ -1622,9 +1606,6 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Status
                               </th>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Observações
-                              </th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
@@ -1662,11 +1643,6 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                                     {visit.status === 'realizada' ? 'Realizada' : 
                                      visit.status === 'agendada' ? 'Agendada' : 'Cancelada'}
                                   </span>
-                                </td>
-                                <td className="px-3 py-2 text-xs text-gray-900 max-w-xs">
-                                  <div className="truncate" title={visit.observacoes || ''}>
-                                    {visit.observacoes || '-'}
-                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -1723,14 +1699,6 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                                 </div>
                               </div>
                             </div>
-
-                            {/* Observações (se houver) */}
-                            {visit.observacoes && (
-                              <div className="border-t border-gray-100 pt-2 mt-2">
-                                <div className="text-xs text-gray-500 mb-0.5">Obs:</div>
-                                <div className="text-xs text-gray-900 line-clamp-2">{visit.observacoes}</div>
-                              </div>
-                            )}
                           </div>
                         ))}
                       </div>

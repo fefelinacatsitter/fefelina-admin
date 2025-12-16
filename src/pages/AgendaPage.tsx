@@ -1009,16 +1009,6 @@ export default function AgendaPage() {
                     </p>
                   </div>
                 )}
-
-                {/* Observações */}
-                {selectedVisit.observacoes && (
-                  <div className="border-t border-gray-200 pt-4">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Observações</label>
-                    <p className="text-base text-gray-700 mt-2 whitespace-pre-wrap">
-                      {selectedVisit.observacoes}
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Footer da modal */}

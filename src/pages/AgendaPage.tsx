@@ -591,9 +591,10 @@ export default function AgendaPage() {
                         const cardHeight = isInteira ? 160 : undefined
                         const hasMultiple = hasConflict || hasMultipleVisits
                       
-                      // Calcular posição quando há múltiplas visitas (lado a lado)
-                      const leftPosition = hasMultiple && index === 0 ? '0.25rem' : hasMultiple && index === 1 ? 'calc(50% + 0.125rem)' : '0.5rem'
-                      const rightPosition = hasMultiple && index === 0 ? 'calc(50% + 0.125rem)' : hasMultiple && index === 1 ? '0.25rem' : '0.5rem'
+                      // Calcular posição APENAS quando há múltiplas visitas (lado a lado)
+                      // Quando está sozinha, ocupa 100% da largura
+                      const leftPosition = hasMultiple ? (index === 0 ? '0.25rem' : 'calc(50% + 0.125rem)') : '0.5rem'
+                      const rightPosition = hasMultiple ? (index === 0 ? 'calc(50% + 0.125rem)' : '0.25rem') : '0.5rem'
                       
                       return (
                         <div
@@ -611,16 +612,17 @@ export default function AgendaPage() {
                               handleVisitClick(visit)
                             }
                           }}
-                          className={`p-1.5 rounded border cursor-move hover:shadow-md transition-shadow ${
-                            hasMultiple ? 'text-[10px] absolute top-0 z-10' : isInteira ? 'text-xs absolute left-2 right-2 top-0 z-10' : 'text-xs'
+                          className={`p-1.5 rounded border cursor-move hover:shadow-md transition-shadow absolute top-0 z-10 ${
+                            hasMultiple ? 'text-[10px]' : 'text-xs'
                           } ${getVisitColor(visit)} ${
                             hasConflict ? 'border-2 border-red-500' : ''
                           }`}
-                          style={hasMultiple || isInteira ? {
-                            ...(hasMultiple ? { left: leftPosition, right: rightPosition } : { left: '0.5rem', right: '0.5rem' }),
+                          style={{
+                            left: leftPosition,
+                            right: rightPosition,
                             height: cardHeight ? `${cardHeight}px` : undefined,
                             maxHeight: cardHeight ? `${cardHeight}px` : undefined
-                          } : undefined}
+                          }}
                         >
                             <div className="font-semibold truncate leading-tight">
                               {visit.tipo_encontro === 'pre_encontro' 
@@ -755,9 +757,10 @@ export default function AgendaPage() {
                           const cardHeight = isInteira ? 80 : undefined
                           const hasMultiple = hasConflict || hasMultipleVisits
                           
-                          // Calcular posição quando há múltiplas visitas (lado a lado)
-                          const leftPosition = hasMultiple && index === 0 ? '0.25rem' : hasMultiple && index === 1 ? 'calc(50% + 0.125rem)' : '0.25rem'
-                          const rightPosition = hasMultiple && index === 0 ? 'calc(50% + 0.125rem)' : hasMultiple && index === 1 ? '0.25rem' : '0.25rem'
+                          // Calcular posição APENAS quando há múltiplas visitas (lado a lado)
+                          // Quando está sozinha, ocupa 100% da largura
+                          const leftPosition = hasMultiple ? (index === 0 ? '0.25rem' : 'calc(50% + 0.125rem)') : '0.25rem'
+                          const rightPosition = hasMultiple ? (index === 0 ? 'calc(50% + 0.125rem)' : '0.25rem') : '0.25rem'
                           
                           return (
                           <div
@@ -774,16 +777,17 @@ export default function AgendaPage() {
                                 handleVisitClick(visit)
                               }
                             }}
-                            className={`p-1 rounded border cursor-move hover:shadow-md transition-shadow ${
-                              hasMultiple ? 'text-[8px] absolute top-0 z-10' : isInteira ? 'text-xs absolute left-1 right-1 top-0 z-10' : 'text-xs'
+                            className={`p-1 rounded border cursor-move hover:shadow-md transition-shadow absolute top-0 z-10 ${
+                              hasMultiple ? 'text-[8px]' : 'text-xs'
                             } ${getVisitColor(visit)} ${
                               hasConflict ? 'border-2 border-red-500' : ''
                             }`}
-                            style={hasMultiple || isInteira ? {
-                              ...(hasMultiple ? { left: leftPosition, right: rightPosition } : { left: '0.25rem', right: '0.25rem' }),
+                            style={{
+                              left: leftPosition,
+                              right: rightPosition,
                               height: cardHeight ? `${cardHeight}px` : undefined,
                               maxHeight: cardHeight ? `${cardHeight}px` : undefined
-                            } : undefined}
+                            }}
                           >
                             <div className="font-semibold truncate leading-tight">
                               {visit.tipo_encontro === 'pre_encontro' 

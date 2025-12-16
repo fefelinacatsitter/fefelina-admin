@@ -46,7 +46,7 @@ export default function PreEncontroModal({
           horario: formData.horario,
           duracao_minutos: 30, // Pré-encontros sempre têm 30 minutos
           tipo_encontro: 'pre_encontro',
-          tipo_visita: 'inteira', // Valor padrão (não relevante para pré-encontro)
+          tipo_visita: 'meia', // Pré-encontros sempre são "meia" (30min)
           valor: 0, // Sem valor para pré-encontro
           desconto_plataforma: 0,
           status: 'agendada',

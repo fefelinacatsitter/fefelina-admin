@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import { Copy } from 'lucide-react'
 import CatLoader from '../components/CatLoader'
 import ClientCombobox from '../components/ClientCombobox'
 
@@ -373,6 +374,59 @@ export default function ServicesPage() {
       setVisits(data || [])
     } catch (error) {
       console.error('Erro ao buscar visitas:', error)
+    }
+  }
+
+  const copyWhatsAppMessage = async (service: Service) => {
+    try {
+      // Buscar as visitas do serviço
+      const { data: visitsData, error } = await supabase
+        .from('visits')
+        .select('data')
+        .eq('service_id', service.id)
+        .eq('status', 'agendada')
+        .order('data', { ascending: true })
+
+      if (error) throw error
+
+      const visits = visitsData || []
+      
+      // Formatar as datas das visitas
+      const formattedDates = visits.map(visit => {
+        const [year, month, day] = visit.data.split('-')
+        return `• ${day}/${month}/${year}`
+      }).join('\n')
+
+      // Formatar o valor
+      const valorFormatado = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(service.total_a_receber)
+
+      // Criar a mensagem
+      const message = `🐾 Resumo do Serviço – Fefelina Cat Sitter 🐾
+
+👤 Cliente: ${service.clients?.nome || 'Não informado'}
+📍 Período do serviço:
+${formattedDates}
+
+🐱 Total de visitas: ${visits.length} visita${visits.length !== 1 ? 's' : ''}
+💰 Valor total a receber: ${valorFormatado}
+
+🔑 Chave PIX:
+fefelinacatsitter@gmail.com
+
+Peço, por gentileza, que valide as datas informadas acima.
+Após o pagamento, enviar o comprovante.
+Fico à disposição para qualquer ajuste ou dúvida.
+Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
+
+      // Copiar para a área de transferência
+      await navigator.clipboard.writeText(message)
+      toast.success('Mensagem copiada! Cole no WhatsApp 📋')
+    } catch (error) {
+      console.error('Erro ao copiar mensagem:', error)
+      toast.error('Erro ao copiar mensagem')
     }
   }
 
@@ -1454,11 +1508,21 @@ export default function ServicesPage() {
                     Visualização completa do serviço e suas visitas
                   </p>
                 </div>
-                <button onClick={closeDetailsModal} className="text-gray-400 hover:text-gray-600">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => copyWhatsAppMessage(viewingService)}
+                    className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-white border border-green-300 rounded hover:bg-green-50 transition-colors"
+                    title="Copiar mensagem para WhatsApp"
+                  >
+                    <Copy className="w-3 h-3 mr-1" />
+                    WhatsApp
+                  </button>
+                  <button onClick={closeDetailsModal} className="text-gray-400 hover:text-gray-600">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               <div className="px-6 py-4 space-y-4">
@@ -1675,24 +1739,37 @@ export default function ServicesPage() {
                 </div>
 
                 {/* Botões de Ação */}
-                <div className="flex justify-end space-x-2 pt-4 border-t px-6 pb-4">
-                  <button
-                    type="button"
-                    onClick={closeDetailsModal}
-                    className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Fechar
-                  </button>
+                <div className="flex justify-between items-center pt-4 border-t px-6 pb-4">
                   <button
                     type="button"
                     onClick={() => {
-                      closeDetailsModal()
-                      openModal(viewingService)
+                      copyWhatsAppMessage(viewingService)
                     }}
-                    className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors"
+                    className="inline-flex items-center px-3 py-1.5 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-white hover:bg-green-50 transition-colors"
                   >
-                    Editar Serviço
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copiar WhatsApp
                   </button>
+                  
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={closeDetailsModal}
+                      className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Fechar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeDetailsModal()
+                        openModal(viewingService)
+                      }}
+                      className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors"
+                    >
+                      Editar Serviço
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

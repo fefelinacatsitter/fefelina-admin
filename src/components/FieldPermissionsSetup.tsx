@@ -16,7 +16,6 @@ interface FieldPermission {
   field_name: string
   can_read: boolean
   can_write: boolean
-  is_required: boolean
 }
 
 interface TableField {
@@ -168,13 +167,12 @@ export default function FieldPermissionsSetup() {
       ))
     } else {
       // Criar nova permissão
-      const newPerm: Partial<FieldPermission> = {
+      const newPerm = {
         profile_id: selectedProfile,
         table_name: selectedTable,
         field_name: fieldName,
         can_read: permType === 'can_read',
-        can_write: permType === 'can_write',
-        is_required: false
+        can_write: permType === 'can_write'
       }
 
       const { data, error } = await supabase

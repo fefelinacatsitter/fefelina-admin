@@ -6,6 +6,7 @@ import CatLoader from '../components/CatLoader'
 import ShareClientModal from '../components/ShareClientModal'
 import { SharedWithList } from '../components/SharedWithList'
 import { usePermissions } from '../contexts/PermissionsContext'
+import { useFieldMask } from '../hooks/useFieldMask'
 import { Share2, Users } from 'lucide-react'
 
 interface Client {
@@ -75,6 +76,9 @@ export default function ClientProfilePage() {
   const [services, setServices] = useState<Service[]>([])
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
+  
+  // Field-Level Security (FLS)
+  const { maskField, shouldShowField } = useFieldMask('clients')
   
   // Estados para compartilhamento
   const [showShareModal, setShowShareModal] = useState(false)

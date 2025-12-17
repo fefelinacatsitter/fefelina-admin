@@ -1364,8 +1364,8 @@ export default function ClientsPage() {
 
                   {viewingClient.notas && (
                     <div className="mt-3 pt-3 border-t border-gray-200">
-                      <label className="block text-xs font-medium text-gray-700">Notas Internas</label>
-                      <div className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap">
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Notas Internas</label>
+                      <div className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap bg-orange-50 border border-orange-100 rounded-md p-3">
                         {maskField('notas', viewingClient.notas)}
                       </div>
                     </div>

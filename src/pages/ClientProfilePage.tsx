@@ -69,13 +69,17 @@ interface MonthlyStats {
 export default function ClientProfilePage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { userProfile } = usePermissions()
+  const { userProfile, canUpdate, canDelete } = usePermissions()
   
   const [client, setClient] = useState<Client | null>(null)
   const [pets, setPets] = useState<Pet[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
+  
+  // Verificar permissões de clientes
+  const canUpdateClient = canUpdate('clients')
+  const canDeleteClient = canDelete('clients')
   
   // Field-Level Security (FLS)
   const { maskField, shouldShowField } = useFieldMask('clients')
@@ -497,6 +501,12 @@ export default function ClientProfilePage() {
 
   const openEditForm = () => {
     if (!client) return
+    
+    // Verificar se usuário tem permissão de update
+    if (!canUpdateClient) {
+      toast.error('Você não tem permissão para editar clientes')
+      return
+    }
     
     setFormData({
       nome: client.nome,
@@ -984,15 +994,17 @@ export default function ClientProfilePage() {
               </>
             )}
             
-            <button
-              onClick={openEditForm}
-              className="inline-flex items-center px-2 py-1.5 border border-primary-300 rounded-md text-xs font-medium text-primary-700 bg-white hover:bg-primary-50 transition-colors"
-            >
-              <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Editar
-            </button>
+            {canUpdateClient && (
+              <button
+                onClick={openEditForm}
+                className="inline-flex items-center px-2 py-1.5 border border-primary-300 rounded-md text-xs font-medium text-primary-700 bg-white hover:bg-primary-50 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Editar
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1739,30 +1751,32 @@ export default function ClientProfilePage() {
       </div>
 
       {/* Zona de Perigo */}
-      <div className="mt-8 border border-red-200 rounded-lg overflow-hidden">
-        <div className="bg-red-50 px-6 py-3 border-b border-red-200">
-          <h3 className="text-sm font-semibold text-red-900">Zona de Perigo</h3>
-        </div>
-        <div className="bg-white px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-900">Excluir este cliente</h4>
-              <p className="text-sm text-gray-600 mt-1">
-                Uma vez excluído, não há como voltar atrás. Por favor, tenha certeza.
-              </p>
+      {canDeleteClient && (
+        <div className="mt-8 border border-red-200 rounded-lg overflow-hidden">
+          <div className="bg-red-50 px-6 py-3 border-b border-red-200">
+            <h3 className="text-sm font-semibold text-red-900">Zona de Perigo</h3>
+          </div>
+          <div className="bg-white px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-medium text-gray-900">Excluir este cliente</h4>
+                <p className="text-sm text-gray-600 mt-1">
+                  Uma vez excluído, não há como voltar atrás. Por favor, tenha certeza.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="inline-flex items-center justify-center px-4 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 transition-colors flex-shrink-0"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Excluir Cliente
+              </button>
             </div>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center justify-center px-4 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 transition-colors flex-shrink-0"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Excluir Cliente
-            </button>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Modal de Notas */}
       {showNotesModal && (

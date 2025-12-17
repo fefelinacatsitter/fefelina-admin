@@ -9,13 +9,13 @@ interface LayoutProps {
 }
 
 const allNavigation = [
-  { name: 'Dashboard', href: '/', resource: null }, // Sempre visível
+  { name: 'Dashboard', href: '/dashboard', resource: 'dashboard' },
   { name: 'Leads', href: '/leads', resource: 'leads' },
   { name: 'Clientes', href: '/clients', resource: 'clients' },
   { name: 'Pets', href: '/pets', resource: 'pets' },
   { name: 'Serviços', href: '/services', resource: 'services' },
   { name: 'Visitas', href: '/visits', resource: 'visits' },
-  { name: 'Agenda', href: '/agenda', resource: 'visits' },
+  { name: 'Agenda', href: '/agenda', resource: 'agenda' },
   { name: 'Finanças', href: '/finances', resource: 'financeiro' },
   { name: 'Relatórios', href: '/reports', resource: 'relatorios' },
   { name: 'Caixa', href: '/financial', resource: 'financeiro' },
@@ -29,12 +29,10 @@ export default function Layout({ children }: LayoutProps) {
   // Filtrar navegação baseado em permissões
   const navigation = useMemo(() => {
     return allNavigation.filter(item => {
-      // Dashboard sempre visível
-      if (!item.resource) return true
       // Admin vê tudo
       if (isAdmin) return true
-      // Verificar permissão de leitura
-      return canRead(item.resource)
+      // Verificar permissão de leitura para cada recurso
+      return item.resource && canRead(item.resource)
     })
   }, [canRead, isAdmin])
 

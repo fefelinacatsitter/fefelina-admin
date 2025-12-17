@@ -18,6 +18,7 @@ import MyProfilePage from './pages/MyProfilePage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import HomeRedirect from './components/HomeRedirect'
 
 function App() {
   return (
@@ -35,7 +36,18 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
+                  {/* Rota raiz: redireciona para primeira página com acesso */}
+                  <Route path="/" element={<HomeRedirect />} />
+                  
+                  {/* Dashboard como rota dedicada */}
+                  <Route 
+                    path="/dashboard" 
+                    element={
+                      <ProtectedRoute resource="dashboard">
+                        <Dashboard />
+                      </ProtectedRoute>
+                    } 
+                  />
                   
                   <Route 
                     path="/clients" 
@@ -84,7 +96,7 @@ function App() {
                   <Route 
                     path="/agenda" 
                     element={
-                      <ProtectedRoute resource="visits">
+                      <ProtectedRoute resource="agenda">
                         <AgendaPage />
                       </ProtectedRoute>
                     } 

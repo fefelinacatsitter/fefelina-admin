@@ -71,6 +71,14 @@ export default function ClientProfilePage() {
   const navigate = useNavigate()
   const { userProfile, canUpdate, canDelete } = usePermissions()
   
+  // Verificar se é admin - somente admin pode acessar esta página
+  useEffect(() => {
+    if (userProfile && userProfile.profile?.name !== 'Administrador') {
+      toast.error('Acesso negado. Esta página é restrita a administradores.')
+      navigate('/clients')
+    }
+  }, [userProfile, navigate])
+  
   const [client, setClient] = useState<Client | null>(null)
   const [pets, setPets] = useState<Pet[]>([])
   const [services, setServices] = useState<Service[]>([])

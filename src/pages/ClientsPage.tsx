@@ -4,6 +4,7 @@ import { supabase, Client, Pet } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import CatLoader from '../components/CatLoader'
 import { useFieldMask } from '../hooks/useFieldMask'
+import { usePermissions } from '../contexts/PermissionsContext'
 
 // Função para formatar telefone brasileiro
 const formatPhone = (value: string): string => {
@@ -40,6 +41,7 @@ const formatPhone = (value: string): string => {
 export default function ClientsPage() {
   const navigate = useNavigate()
   const { maskField } = useFieldMask('clients')
+  const { userProfile } = usePermissions()
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -51,6 +53,11 @@ export default function ClientsPage() {
   const [sortBy, setSortBy] = useState<'recent_services' | 'alphabetical'>('alphabetical')
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredClients, setFilteredClients] = useState<Client[]>([])
+  
+  // Modal de visualização para não-admins
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [viewingClient, setViewingClient] = useState<Client | null>(null)
+  const [viewingPets, setViewingPets] = useState<Pet[]>([])
   
   // Estados para modal de Pet
   const [showPetModal, setShowPetModal] = useState(false)
@@ -190,6 +197,41 @@ export default function ClientsPage() {
     }
     
     setLoading(false)
+  }
+
+  // Função para lidar com clique no cliente
+  const handleClientClick = async (client: Client) => {
+    const isAdmin = userProfile?.profile?.name === 'Administrador'
+    
+    if (isAdmin) {
+      // Admin vai para a página completa
+      navigate(`/clients/${client.id}`)
+    } else {
+      // Outros perfis abrem a modal de visualização
+      setViewingClient(client)
+      
+      // Buscar pets do cliente
+      try {
+        const { data: petsData, error } = await supabase
+          .from('pets')
+          .select('*')
+          .eq('client_id', client.id)
+        
+        if (error) throw error
+        setViewingPets(petsData || [])
+      } catch (error) {
+        console.error('Erro ao buscar pets:', error)
+        setViewingPets([])
+      }
+      
+      setShowViewModal(true)
+    }
+  }
+
+  const closeViewModal = () => {
+    setShowViewModal(false)
+    setViewingClient(null)
+    setViewingPets([])
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1019,7 +1061,7 @@ export default function ClientsPage() {
           filteredClients.map((client) => (
             <div 
               key={client.id} 
-              onClick={() => navigate(`/clients/${client.id}`)}
+              onClick={() => handleClientClick(client)}
               className="bg-white rounded-lg shadow-sm border p-4 cursor-pointer hover:bg-gray-50 transition-colors"
             >
               <div className="flex justify-between items-start mb-3">
@@ -1106,7 +1148,7 @@ export default function ClientsPage() {
                     filteredClients.map((client) => (
                       <tr 
                         key={client.id} 
-                        onClick={() => navigate(`/clients/${client.id}`)}
+                        onClick={() => handleClientClick(client)}
                         className="hover:bg-gray-50 cursor-pointer transition-colors"
                       >
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
@@ -1230,6 +1272,123 @@ export default function ClientsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Visualização para Não-Admins */}
+      {showViewModal && viewingClient && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+            <div className="flex justify-between items-center mb-4 pb-3 border-b">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Informações do Cliente
+              </h3>
+              <button
+                onClick={closeViewModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Informações Básicas */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Dados do Cliente</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Nome</label>
+                    <div className="text-sm text-gray-900">{viewingClient.nome}</div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Telefone</label>
+                    <div className="text-sm text-gray-900">
+                      {maskField('telefone', viewingClient.telefone || '—')}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                    <div className="text-sm text-gray-900">
+                      {maskField('email', viewingClient.email || '—')}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Valor Diária</label>
+                    <div className="text-sm text-gray-900">
+                      {maskField('valor_diaria', `R$ ${viewingClient.valor_diaria.toFixed(2)}`)}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Valor Duas Visitas</label>
+                    <div className="text-sm text-gray-900">
+                      {maskField('valor_duas_visitas', `R$ ${viewingClient.valor_duas_visitas.toFixed(2)}`)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Endereço Completo</label>
+                  <div className="text-sm text-gray-900">
+                    {maskField('endereco_completo', viewingClient.endereco_completo || '—')}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Veterinário de Confiança</label>
+                  <div className="text-sm text-gray-900">
+                    {maskField('veterinario_confianca', viewingClient.veterinario_confianca || '—')}
+                  </div>
+                </div>
+
+                {viewingClient.observacoes && (
+                  <div className="mt-4">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Observações</label>
+                    <div className="text-sm text-gray-900">
+                      {maskField('observacoes', viewingClient.observacoes)}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Pets */}
+              {viewingPets.length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Pets</h4>
+                  <div className="space-y-3">
+                    {viewingPets.map((pet) => (
+                      <div key={pet.id} className="bg-white rounded-md p-3 border border-gray-200">
+                        <div className="font-medium text-sm text-gray-900 mb-1">{pet.nome}</div>
+                        <div className="text-xs text-gray-600 mb-1">
+                          <span className="font-medium">Característica:</span> {pet.caracteristica || '—'}
+                        </div>
+                        {pet.observacoes && (
+                          <div className="text-xs text-gray-600">
+                            <span className="font-medium">Observações:</span> {pet.observacoes}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Botão Fechar */}
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={closeViewModal}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md text-sm font-medium transition-colors"
+              >
+                Fechar
+              </button>
             </div>
           </div>
         </div>

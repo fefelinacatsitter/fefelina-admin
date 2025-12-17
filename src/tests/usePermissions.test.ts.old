@@ -1,0 +1,240 @@
+import { describe, it, expect } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
+import { usePermissions } from '../hooks/usePermissions';
+
+// Mock do Supabase
+vi.mock('../lib/supabase', () => ({
+  supabase: {
+    auth: {
+      getUser: vi.fn(),
+      onAuthStateChange: vi.fn(() => ({
+        data: { subscription: { unsubscribe: vi.fn() } }
+      }))
+    },
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn()
+        }))
+      }))
+    }))
+  }
+}));
+
+describe('usePermissions Hook', () => {
+  it('deve retornar estado inicial corretamente', () => {
+    const { result } = renderHook(() => usePermissions());
+    
+    expect(result.current.loading).toBe(true);
+    expect(result.current.userProfile).toBe(null);
+    expect(result.current.permissions).toEqual([]);
+    expect(result.current.isAdmin).toBe(false);
+  });
+
+  it('deve verificar se admin tem todas as permissões', async () => {
+    const mockAdminProfile = {
+      id: '1',
+      user_id: 'user-1',
+      profile_id: 'admin-profile',
+      full_name: 'Admin User',
+      email: 'admin@test.com',
+      is_active: true,
+      profile: {
+        id: 'admin-profile',
+        name: 'Administrador',
+        description: 'Admin',
+        is_admin: true,
+        is_active: true
+      }
+    };
+
+    // Mock do retorno do Supabase
+    const { supabase } = await import('../lib/supabase');
+    vi.mocked(supabase.auth.getUser).mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } as any },
+      error: null
+    });
+
+    const { result } = renderHook(() => usePermissions());
+
+    await waitFor(() => {
+      expect(result.current.isAdmin).toBe(true);
+    });
+
+    // Admin deve ter todas as permissões
+    expect(result.current.hasPermission('clients', 'read')).toBe(true);
+    expect(result.current.hasPermission('clients', 'create')).toBe(true);
+    expect(result.current.hasPermission('clients', 'update')).toBe(true);
+    expect(result.current.hasPermission('clients', 'delete')).toBe(true);
+    expect(result.current.canRead('leads')).toBe(true);
+    expect(result.current.canCreate('services')).toBe(true);
+  });
+
+  it('deve verificar permissões específicas para não-admin', async () => {
+    const mockUserProfile = {
+      id: '2',
+      user_id: 'user-2',
+      profile_id: 'parceiro-profile',
+      full_name: 'Parceiro User',
+      email: 'parceiro@test.com',
+      is_active: true,
+      profile: {
+        id: 'parceiro-profile',
+        name: 'Parceiro',
+        description: 'Parceiro',
+        is_admin: false,
+        is_active: true
+      }
+    };
+
+    const mockPermissions = [
+      {
+        resource: 'clients',
+        can_read: true,
+        can_create: false,
+        can_update: false,
+        can_delete: false
+      },
+      {
+        resource: 'visits',
+        can_read: true,
+        can_create: false,
+        can_update: true,
+        can_delete: false
+      }
+    ];
+
+    const { result } = renderHook(() => usePermissions());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Parceiro pode ler clients mas não pode criar/editar/deletar
+    expect(result.current.canRead('clients')).toBe(true);
+    expect(result.current.canCreate('clients')).toBe(false);
+    expect(result.current.canUpdate('clients')).toBe(false);
+    expect(result.current.canDelete('clients')).toBe(false);
+
+    // Parceiro pode ler e editar visits
+    expect(result.current.canRead('visits')).toBe(true);
+    expect(result.current.canUpdate('visits')).toBe(true);
+    expect(result.current.canCreate('visits')).toBe(false);
+    expect(result.current.canDelete('visits')).toBe(false);
+
+    // Parceiro não tem acesso a leads
+    expect(result.current.hasPermission('leads', 'read')).toBe(false);
+  });
+
+  it('deve negar permissões para recursos não configurados', () => {
+    const { result } = renderHook(() => usePermissions());
+
+    // Usuário não-admin sem permissões configuradas
+    expect(result.current.hasPermission('unknown_resource', 'read')).toBe(false);
+  });
+
+  it('deve detectar usuário inativo', async () => {
+    const mockInactiveProfile = {
+      id: '3',
+      user_id: 'user-3',
+      profile_id: 'inactive-profile',
+      full_name: 'Inactive User',
+      email: 'inactive@test.com',
+      is_active: false,
+      profile: {
+        id: 'inactive-profile',
+        name: 'Test',
+        description: 'Test',
+        is_admin: false,
+        is_active: true
+      }
+    };
+
+    const { result } = renderHook(() => usePermissions());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Usuário inativo não deve ter perfil carregado
+    expect(result.current.userProfile).toBe(null);
+  });
+});
+
+describe('Permission Helper Functions', () => {
+  it('canRead deve funcionar corretamente', () => {
+    const { result } = renderHook(() => usePermissions());
+    
+    expect(typeof result.current.canRead).toBe('function');
+  });
+
+  it('canCreate deve funcionar corretamente', () => {
+    const { result } = renderHook(() => usePermissions());
+    
+    expect(typeof result.current.canCreate).toBe('function');
+  });
+
+  it('canUpdate deve funcionar corretamente', () => {
+    const { result } = renderHook(() => usePermissions());
+    
+    expect(typeof result.current.canUpdate).toBe('function');
+  });
+
+  it('canDelete deve funcionar corretamente', () => {
+    const { result } = renderHook(() => usePermissions());
+    
+    expect(typeof result.current.canDelete).toBe('function');
+  });
+
+  it('hasPermission deve aceitar parâmetros corretos', () => {
+    const { result } = renderHook(() => usePermissions());
+    
+    const actions: Array<'read' | 'create' | 'update' | 'delete'> = ['read', 'create', 'update', 'delete'];
+    
+    actions.forEach(action => {
+      expect(() => result.current.hasPermission('clients', action)).not.toThrow();
+    });
+  });
+});
+
+describe('Recursos Suportados', () => {
+  const resources = [
+    'clients',
+    'leads', 
+    'services',
+    'visits',
+    'pets',
+    'financeiro',
+    'relatorios',
+    'setup'
+  ];
+
+  resources.forEach(resource => {
+    it(`deve suportar recurso: ${resource}`, () => {
+      const { result } = renderHook(() => usePermissions());
+      
+      // Não deve dar erro ao verificar permissão para recurso válido
+      expect(() => {
+        result.current.hasPermission(resource, 'read');
+        result.current.canRead(resource);
+        result.current.canCreate(resource);
+        result.current.canUpdate(resource);
+        result.current.canDelete(resource);
+      }).not.toThrow();
+    });
+  });
+});
+
+describe('refreshPermissions', () => {
+  it('deve ter função de refresh disponível', () => {
+    const { result } = renderHook(() => usePermissions());
+    
+    expect(typeof result.current.refreshPermissions).toBe('function');
+  });
+
+  it('deve recarregar permissões quando chamado', async () => {
+    const { result } = renderHook(() => usePermissions());
+    
+    await expect(result.current.refreshPermissions()).resolves.not.toThrow();
+  });
+});

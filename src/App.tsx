@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
+import { PermissionsProvider } from './contexts/PermissionsContext'
 import LoginPage from './pages/LoginPage'
 import Dashboard from './pages/Dashboard'
 import ClientsPage from './pages/ClientsPage'
@@ -12,15 +13,20 @@ import LeadsPage from './pages/LeadsPage'
 import FinancesPage from './pages/FinancesPage'
 import RelatoriosPage from './pages/RelatoriosPage'
 import FinanceiroPage from './pages/FinanceiroPage'
+import SetupPage from './pages/SetupPage'
+import MyProfilePage from './pages/MyProfilePage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
     <Router basename="/fefelina-admin">
+      <PermissionsProvider>
       <Routes>
-        {/* Rota pública - Login */}
+        {/* Rotas públicas */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
         
         {/* Rotas protegidas - Requerem autenticação */}
         <Route
@@ -30,16 +36,106 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
-                  <Route path="/clients" element={<ClientsPage />} />
-                  <Route path="/clients/:id" element={<ClientProfilePage />} />
-                  <Route path="/pets" element={<PetsPage />} />
-                  <Route path="/services" element={<ServicesPage />} />
-                  <Route path="/visits" element={<VisitsPage />} />
-                  <Route path="/agenda" element={<AgendaPage />} />
-                  <Route path="/leads" element={<LeadsPage />} />
-                  <Route path="/finances" element={<FinancesPage />} />
-                  <Route path="/reports" element={<RelatoriosPage />} />
-                  <Route path="/financial" element={<FinanceiroPage />} />
+                  
+                  <Route 
+                    path="/clients" 
+                    element={
+                      <ProtectedRoute resource="clients">
+                        <ClientsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/clients/:id" 
+                    element={
+                      <ProtectedRoute resource="clients">
+                        <ClientProfilePage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/pets" 
+                    element={
+                      <ProtectedRoute resource="pets">
+                        <PetsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/services" 
+                    element={
+                      <ProtectedRoute resource="services">
+                        <ServicesPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/visits" 
+                    element={
+                      <ProtectedRoute resource="visits">
+                        <VisitsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/agenda" 
+                    element={
+                      <ProtectedRoute resource="visits">
+                        <AgendaPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/leads" 
+                    element={
+                      <ProtectedRoute resource="leads">
+                        <LeadsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/finances" 
+                    element={
+                      <ProtectedRoute resource="financeiro">
+                        <FinancesPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/reports" 
+                    element={
+                      <ProtectedRoute resource="relatorios">
+                        <RelatoriosPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/financial" 
+                    element={
+                      <ProtectedRoute resource="financeiro">
+                        <FinanceiroPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/setup" 
+                    element={
+                      <ProtectedRoute resource="setup" requireAdmin>
+                        <SetupPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route path="/profile" element={<MyProfilePage />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>
@@ -82,6 +178,7 @@ function App() {
           },
         }}
       />
+      </PermissionsProvider>
     </Router>
   )
 }

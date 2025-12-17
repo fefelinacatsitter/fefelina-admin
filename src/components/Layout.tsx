@@ -1,29 +1,42 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { useState, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import UserMenu from './UserMenu'
+import { usePermissions } from '../contexts/PermissionsContext'
 
 interface LayoutProps {
   children: React.ReactNode
 }
 
-const navigation = [
-  { name: 'Dashboard', href: '/' },
-  { name: 'Leads', href: '/leads' },
-  { name: 'Clientes', href: '/clients' },
-  { name: 'Pets', href: '/pets' },
-  { name: 'Serviços', href: '/services' },
-  { name: 'Visitas', href: '/visits' },
-  { name: 'Agenda', href: '/agenda' },
-  { name: 'Finanças', href: '/finances' },
-  { name: 'Relatórios', href: '/reports' },
-  { name: 'Caixa', href: '/financial' },
+const allNavigation = [
+  { name: 'Dashboard', href: '/', resource: null }, // Sempre visível
+  { name: 'Leads', href: '/leads', resource: 'leads' },
+  { name: 'Clientes', href: '/clients', resource: 'clients' },
+  { name: 'Pets', href: '/pets', resource: 'pets' },
+  { name: 'Serviços', href: '/services', resource: 'services' },
+  { name: 'Visitas', href: '/visits', resource: 'visits' },
+  { name: 'Agenda', href: '/agenda', resource: 'visits' },
+  { name: 'Finanças', href: '/finances', resource: 'financeiro' },
+  { name: 'Relatórios', href: '/reports', resource: 'relatorios' },
+  { name: 'Caixa', href: '/financial', resource: 'financeiro' },
 ]
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
-  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { canRead, isAdmin } = usePermissions()
+
+  // Filtrar navegação baseado em permissões
+  const navigation = useMemo(() => {
+    return allNavigation.filter(item => {
+      // Dashboard sempre visível
+      if (!item.resource) return true
+      // Admin vê tudo
+      if (isAdmin) return true
+      // Verificar permissão de leitura
+      return canRead(item.resource)
+    })
+  }, [canRead, isAdmin])
 
   // Detectar iPad e tablets (até 1280px para incluir iPad landscape)
   useEffect(() => {
@@ -38,18 +51,6 @@ export default function Layout({ children }: LayoutProps) {
     window.addEventListener('resize', checkIsTablet)
     return () => window.removeEventListener('resize', checkIsTablet)
   }, [])
-
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error('Erro ao fazer logout:', error)
-    }
-    // Limpar qualquer cache local
-    window.localStorage.clear()
-    window.sessionStorage.clear()
-    // Navegar para login
-    navigate('/login', { replace: true })
-  }
 
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">
@@ -101,15 +102,7 @@ export default function Layout({ children }: LayoutProps) {
               </nav>
             </div>
             <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-              <button
-                onClick={handleLogout}
-                className="flex items-center text-secondary-600 hover:text-primary-600 transition-colors duration-200 font-medium"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Sair
-              </button>
+              <UserMenu inSidebar />
             </div>
           </div>
         </div>
@@ -148,15 +141,7 @@ export default function Layout({ children }: LayoutProps) {
               </nav>
             </div>
             <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-              <button
-                onClick={handleLogout}
-                className="flex items-center text-secondary-600 hover:text-primary-600 transition-colors duration-200 font-medium"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Sair
-              </button>
+              <UserMenu inSidebar />
             </div>
           </div>
         </div>
@@ -181,14 +166,7 @@ export default function Layout({ children }: LayoutProps) {
                 />
                 <h1 className="text-base font-bold text-secondary-700">Fefelina Admin</h1>
               </div>
-              <button
-                onClick={handleLogout}
-                className="text-secondary-600 hover:text-primary-600 transition-colors duration-200"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </button>
+              <UserMenu />
             </div>
           </div>
         </div>

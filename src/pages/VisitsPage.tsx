@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import CatLoader from '../components/CatLoader'
+import { useFieldMask } from '../hooks/useFieldMask'
+import { usePermissions } from '../contexts/PermissionsContext'
 
 // Funções auxiliares para validação de data
 const validateDateInput = (value: string): string => {
@@ -110,6 +112,13 @@ interface ClientQuickInfo {
 
 export default function VisitsPage() {
   const navigate = useNavigate()
+  
+  // Field-Level Security e Permissões
+  const { maskField } = useFieldMask('visits')
+  const { canUpdate } = usePermissions()
+  
+  const canUpdateVisit = canUpdate('visits')
+  
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
   const [updatingVisit, setUpdatingVisit] = useState<string | null>(null)
@@ -633,9 +642,9 @@ export default function VisitsPage() {
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${visit.tipo_visita === 'inteira' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>{visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}</span>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center mb-2">
-                  <span className="text-sm font-medium text-gray-900">{formatCurrency(visit.valor)}</span>
+                  <span className="text-sm font-medium text-gray-900">{maskField('valor', formatCurrency(visit.valor))}</span>
                   {visit.desconto_plataforma > 0 && (
-                    <span className="text-xs text-gray-500">Desc: {visit.desconto_plataforma}%</span>
+                    <span className="text-xs text-gray-500">Desc: {maskField('desconto_plataforma', `${visit.desconto_plataforma}%`)}</span>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2 items-center mb-2">
@@ -643,7 +652,7 @@ export default function VisitsPage() {
                   <select
                     value={visit.status}
                     onChange={(e) => updateVisitStatus(visit.id, e.target.value as any)}
-                    disabled={updatingVisit === visit.id}
+                    disabled={updatingVisit === visit.id || !canUpdateVisit}
                     className="text-xs border-0 bg-gray-100 focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="agendada">Agendada</option>
@@ -802,10 +811,10 @@ export default function VisitsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(visit.valor)}
+                        {maskField('valor', formatCurrency(visit.valor))}
                         {visit.desconto_plataforma > 0 && (
                           <div className="text-xs text-gray-500">
-                            Desc: {visit.desconto_plataforma}%
+                            Desc: {maskField('desconto_plataforma', `${visit.desconto_plataforma}%`)}
                           </div>
                         )}
                       </td>
@@ -813,7 +822,7 @@ export default function VisitsPage() {
                         <select
                           value={visit.status}
                           onChange={(e) => updateVisitStatus(visit.id, e.target.value as any)}
-                          disabled={updatingVisit === visit.id}
+                          disabled={updatingVisit === visit.id || !canUpdateVisit}
                           className="text-xs border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value="agendada">Agendada</option>

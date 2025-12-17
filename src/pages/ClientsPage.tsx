@@ -1122,18 +1122,16 @@ export default function ClientsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end gap-2">
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEditForm(client);
-                              }}
-                              className="text-primary-600 hover:text-primary-900"
-                              title="Editar cliente"
-                            >
-                              Editar
-                            </button>
-                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditForm(client);
+                            }}
+                            className="text-primary-600 hover:text-primary-900"
+                            title="Editar cliente"
+                          >
+                            Editar
+                          </button>
                         </td>
                       </tr>
                     ))

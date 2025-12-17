@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, LogOut, Settings, Shield, ChevronDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { usePermissions } from '../hooks/usePermissions';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 interface UserMenuProps {
   inSidebar?: boolean; // Se está no sidebar lateral (abre para cima)
@@ -118,8 +118,7 @@ export default function UserMenu({ inSidebar = false }: UserMenuProps) {
             <button
               onClick={() => {
                 setIsOpen(false);
-                // Futura página de perfil do usuário
-                console.log('Ir para perfil do usuário');
+                navigate('/profile');
               }}
               className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
             >

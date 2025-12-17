@@ -1,9 +1,6 @@
-import { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { Session } from '@supabase/supabase-js'
 import CatLoader from './CatLoader'
-import { usePermissions } from '../hooks/usePermissions'
+import { usePermissions } from '../contexts/PermissionsContext'
 import { AlertCircle, Lock } from 'lucide-react'
 
 interface ProtectedRouteProps {
@@ -19,43 +16,11 @@ export default function ProtectedRoute({
   action = 'read', 
   requireAdmin = false 
 }: ProtectedRouteProps) {
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
   const location = useLocation()
   const { loading: permissionsLoading, isAdmin, hasPermission, userProfile } = usePermissions()
 
-  useEffect(() => {
-    // Verificar sessão atual sempre que a localização mudar
-    const checkSession = async () => {
-      setLoading(true)
-      const { data: { session }, error } = await supabase.auth.getSession()
-      if (error) {
-        console.error('Erro ao verificar sessão:', error)
-        setSession(null)
-      } else {
-        setSession(session)
-      }
-      setLoading(false)
-    }
-
-    checkSession()
-
-    // Escutar mudanças de autenticação
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        setSession(null)
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        setSession(session)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [location.pathname]) // Reverificar quando a rota mudar
-
-  // Mostrar loading enquanto verifica autenticação ou permissões
-  if (loading || permissionsLoading) {
+  // Mostrar loading apenas enquanto carrega permissões (primeira vez)
+  if (permissionsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary-50 via-white to-primary-50">
         <CatLoader size="lg" variant="sleeping" text="Verificando suas credenciais..." />
@@ -63,8 +28,8 @@ export default function ProtectedRoute({
     )
   }
 
-  // Se não está autenticado, redirecionar para login
-  if (!session) {
+  // Se não há userProfile, significa que não está autenticado
+  if (!userProfile) {
     // Salvar URL atual para redirecionar após login
     return <Navigate to="/login" state={{ from: location }} replace />
   }

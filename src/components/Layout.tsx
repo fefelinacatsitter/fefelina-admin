@@ -1,28 +1,42 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import UserMenu from './UserMenu'
+import { usePermissions } from '../contexts/PermissionsContext'
 
 interface LayoutProps {
   children: React.ReactNode
 }
 
-const navigation = [
-  { name: 'Dashboard', href: '/' },
-  { name: 'Leads', href: '/leads' },
-  { name: 'Clientes', href: '/clients' },
-  { name: 'Pets', href: '/pets' },
-  { name: 'Serviços', href: '/services' },
-  { name: 'Visitas', href: '/visits' },
-  { name: 'Agenda', href: '/agenda' },
-  { name: 'Finanças', href: '/finances' },
-  { name: 'Relatórios', href: '/reports' },
-  { name: 'Caixa', href: '/financial' },
+const allNavigation = [
+  { name: 'Dashboard', href: '/', resource: null }, // Sempre visível
+  { name: 'Leads', href: '/leads', resource: 'leads' },
+  { name: 'Clientes', href: '/clients', resource: 'clients' },
+  { name: 'Pets', href: '/pets', resource: 'pets' },
+  { name: 'Serviços', href: '/services', resource: 'services' },
+  { name: 'Visitas', href: '/visits', resource: 'visits' },
+  { name: 'Agenda', href: '/agenda', resource: 'visits' },
+  { name: 'Finanças', href: '/finances', resource: 'financeiro' },
+  { name: 'Relatórios', href: '/reports', resource: 'relatorios' },
+  { name: 'Caixa', href: '/financial', resource: 'financeiro' },
 ]
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { canRead, isAdmin } = usePermissions()
+
+  // Filtrar navegação baseado em permissões
+  const navigation = useMemo(() => {
+    return allNavigation.filter(item => {
+      // Dashboard sempre visível
+      if (!item.resource) return true
+      // Admin vê tudo
+      if (isAdmin) return true
+      // Verificar permissão de leitura
+      return canRead(item.resource)
+    })
+  }, [canRead, isAdmin])
 
   // Detectar iPad e tablets (até 1280px para incluir iPad landscape)
   useEffect(() => {

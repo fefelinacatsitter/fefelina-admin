@@ -69,9 +69,12 @@ export function usePermissions(): UsePermissionsReturn {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadPermissions = async () => {
+  const loadPermissions = async (showLoading = false) => {
     try {
-      setLoading(true);
+      // Apenas mostrar loading quando solicitado (primeira carga ou login/logout)
+      if (showLoading) {
+        setLoading(true);
+      }
 
       // 1. Buscar usuário autenticado
       const { data: { user } } = await supabase.auth.getUser();
@@ -134,16 +137,29 @@ export function usePermissions(): UsePermissionsReturn {
       setUserProfile(null);
       setPermissions([]);
     } finally {
-      setLoading(false);
+      // Sempre desligar loading se estava ligado
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    loadPermissions();
+    // Primeira carga: mostrar loading
+    loadPermissions(true);
 
-    // Listener para mudanças no auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadPermissions();
+    // Listener para mudanças no auth (apenas login/logout reais, não verificações de token)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // Apenas recarregar em mudanças significativas (não em verificações de token)
+      if (event === 'SIGNED_IN') {
+        // Login: mostrar loading
+        loadPermissions(true);
+      } else if (event === 'SIGNED_OUT') {
+        // Logout: limpar dados sem loading (vai redirecionar)
+        setUserProfile(null);
+        setPermissions([]);
+      }
+      // TOKEN_REFRESHED não precisa recarregar, pois os dados não mudaram
     });
 
     return () => {
@@ -184,6 +200,6 @@ export function usePermissions(): UsePermissionsReturn {
     canCreate,
     canUpdate,
     canDelete,
-    refreshPermissions: loadPermissions,
+    refreshPermissions: () => loadPermissions(true),
   };
 }

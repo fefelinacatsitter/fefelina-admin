@@ -41,8 +41,9 @@ const formatPhone = (value: string): string => {
 export default function ClientsPage() {
   const navigate = useNavigate()
   const { maskField } = useFieldMask('clients')
-  const { userProfile, canCreate } = usePermissions()
+  const { userProfile, canCreate, canUpdate } = usePermissions()
   const canCreateClient = canCreate('clients')
+  const canUpdateClient = canUpdate('clients')
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -1169,16 +1170,18 @@ export default function ClientsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditForm(client);
-                            }}
-                            className="text-primary-600 hover:text-primary-900"
-                            title="Editar cliente"
-                          >
-                            Editar
-                          </button>
+                          {canUpdateClient && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditForm(client);
+                              }}
+                              className="text-primary-600 hover:text-primary-900"
+                              title="Editar cliente"
+                            >
+                              Editar
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))

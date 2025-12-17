@@ -36,8 +36,10 @@ interface Permission {
 type Tab = 'users' | 'profiles' | 'permissions' | 'field-permissions';
 
 const RESOURCES = [
+  { key: 'dashboard', label: 'Dashboard' },
   { key: 'clients', label: 'Clientes' },
   { key: 'leads', label: 'Leads' },
+  { key: 'agenda', label: 'Agenda' },
   { key: 'services', label: 'Serviços' },
   { key: 'visits', label: 'Visitas' },
   { key: 'pets', label: 'Pets' },

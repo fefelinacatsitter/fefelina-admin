@@ -121,6 +121,7 @@ const isValidDate = (dateString: string): boolean => {
 export default function ServicesPage() {
   // Field-Level Security e Permissões
   const { maskField } = useFieldMask('services')
+  const { maskField: maskVisitField } = useFieldMask('visits')
   const { canCreate, canUpdate, canDelete } = usePermissions()
   
   const canCreateService = canCreate('services')
@@ -1598,10 +1599,10 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                                   </span>
                                 </td>
                                 <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900">
-                                  {formatCurrency(visit.valor)}
+                                  {maskVisitField('valor', formatCurrency(visit.valor))}
                                 </td>
                                 <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
-                                  {visit.desconto_plataforma}%
+                                  {maskVisitField('desconto_plataforma', `${visit.desconto_plataforma}%`)}
                                 </td>
                                 <td className="px-3 py-2 whitespace-nowrap text-xs">
                                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -1662,11 +1663,11 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                               <div className="flex items-center gap-3">
                                 <div>
                                   <span className="text-gray-500">Valor:</span>
-                                  <span className="ml-1 font-medium text-gray-900">{formatCurrency(visit.valor)}</span>
+                                  <span className="ml-1 font-medium text-gray-900">{maskVisitField('valor', formatCurrency(visit.valor))}</span>
                                 </div>
                                 <div>
                                   <span className="text-gray-500">Desc:</span>
-                                  <span className="ml-1 font-medium text-gray-900">{visit.desconto_plataforma}%</span>
+                                  <span className="ml-1 font-medium text-gray-900">{maskVisitField('desconto_plataforma', `${visit.desconto_plataforma}%`)}</span>
                                 </div>
                               </div>
                             </div>
@@ -1710,16 +1711,18 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                     >
                       Fechar
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        closeDetailsModal()
-                        openModal(viewingService)
-                      }}
-                      className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors"
-                    >
-                      Editar Serviço
-                    </button>
+                    {canUpdateService && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          closeDetailsModal()
+                          openModal(viewingService)
+                        }}
+                        className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors"
+                      >
+                        Editar Serviço
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1743,18 +1746,20 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
               </div>
               
               <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    closeMobileMenu()
-                    openModal(selectedServiceForMenu)
-                  }}
-                  className="w-full inline-flex items-center justify-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Editar Serviço
-                </button>
+                {canUpdateService && (
+                  <button
+                    onClick={() => {
+                      closeMobileMenu()
+                      openModal(selectedServiceForMenu)
+                    }}
+                    className="w-full inline-flex items-center justify-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Editar Serviço
+                  </button>
+                )}
 
                 {selectedServiceForMenu.status_pagamento !== 'pago' && (
                   <button

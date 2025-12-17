@@ -39,7 +39,7 @@ const formatPhone = (value: string): string => {
 
 export default function ClientsPage() {
   const navigate = useNavigate()
-  const { maskField, shouldShowField } = useFieldMask('clients')
+  const { maskField } = useFieldMask('clients')
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -1038,18 +1038,14 @@ export default function ClientsPage() {
               </div>
               
               <div className="space-y-2 text-sm">
-                {shouldShowField('valor_diaria') && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Diária:</span>
-                    <span className="font-medium">{maskField('valor_diaria', `R$ ${client.valor_diaria.toFixed(2)}`)}</span>
-                  </div>
-                )}
-                {shouldShowField('valor_duas_visitas') && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">2 Visitas:</span>
-                    <span className="font-medium">{maskField('valor_duas_visitas', `R$ ${client.valor_duas_visitas.toFixed(2)}`)}</span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Diária:</span>
+                  <span className="font-medium">{maskField('valor_diaria', `R$ ${client.valor_diaria.toFixed(2)}`)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">2 Visitas:</span>
+                  <span className="font-medium">{maskField('valor_duas_visitas', `R$ ${client.valor_duas_visitas.toFixed(2)}`)}</span>
+                </div>
                 <div>
                   <span className="text-gray-600">Endereço:</span>
                   <p className="text-gray-900 mt-1">{client.endereco_completo}</p>
@@ -1077,16 +1073,12 @@ export default function ClientsPage() {
                     <th className="w-[20%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Nome
                     </th>
-                    {shouldShowField('valor_diaria') && (
-                      <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Diária
-                      </th>
-                    )}
-                    {shouldShowField('valor_duas_visitas') && (
-                      <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        2 Visitas
-                      </th>
-                    )}
+                    <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Diária
+                    </th>
+                    <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      2 Visitas
+                    </th>
                     <th className="w-[30%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Endereço
                     </th>
@@ -1120,16 +1112,12 @@ export default function ClientsPage() {
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           {client.nome}
                         </td>
-                        {shouldShowField('valor_diaria') && (
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                            {maskField('valor_diaria', `R$ ${client.valor_diaria.toFixed(2)}`)}
-                          </td>
-                        )}
-                        {shouldShowField('valor_duas_visitas') && (
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                            {maskField('valor_duas_visitas', `R$ ${client.valor_duas_visitas.toFixed(2)}`)}
-                          </td>
-                        )}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                          {maskField('valor_diaria', `R$ ${client.valor_diaria.toFixed(2)}`)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                          {maskField('valor_duas_visitas', `R$ ${client.valor_duas_visitas.toFixed(2)}`)}
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-500">
                           <div className="truncate" title={client.endereco_completo}>
                             {client.endereco_completo}

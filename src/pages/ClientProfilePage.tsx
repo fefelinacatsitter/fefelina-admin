@@ -82,7 +82,8 @@ export default function ClientProfilePage() {
   const canDeleteClient = canDelete('clients')
   
   // Field-Level Security (FLS)
-  const { maskField, shouldShowField } = useFieldMask('clients')
+  const { maskField: maskClientField, shouldShowField } = useFieldMask('clients')
+  const { maskField: maskServiceField } = useFieldMask('services')
   
   // Estados para compartilhamento
   const [showShareModal, setShowShareModal] = useState(false)
@@ -1496,13 +1497,13 @@ export default function ClientProfilePage() {
             {shouldShowField('valor_diaria') && (
               <div>
                 <dt className="text-sm font-medium text-gray-500">Valor Diária</dt>
-                <dd className="mt-1 text-sm text-gray-900">{maskField('valor_diaria', formatCurrency(client.valor_diaria))}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{maskClientField('valor_diaria', formatCurrency(client.valor_diaria))}</dd>
               </div>
             )}
             {shouldShowField('valor_duas_visitas') && (
               <div>
                 <dt className="text-sm font-medium text-gray-500">Valor Duas Visitas</dt>
-                <dd className="mt-1 text-sm text-gray-900">{maskField('valor_duas_visitas', formatCurrency(client.valor_duas_visitas))}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{maskClientField('valor_duas_visitas', formatCurrency(client.valor_duas_visitas))}</dd>
               </div>
             )}
             {client.observacoes && (
@@ -1658,10 +1659,10 @@ export default function ClientProfilePage() {
                       {service.total_visitas}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {formatCurrency(service.total_valor)}
+                      {maskServiceField('total_valor', formatCurrency(service.total_valor))}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-primary-600">
-                      {formatCurrency(service.total_a_receber)}
+                      {maskServiceField('total_a_receber', formatCurrency(service.total_a_receber))}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm">
                       {getPaymentStatusBadge(service.status_pagamento)}

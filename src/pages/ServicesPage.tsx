@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { Copy } from 'lucide-react'
 import CatLoader from '../components/CatLoader'
 import ClientCombobox from '../components/ClientCombobox'
+import { useFieldMask } from '../hooks/useFieldMask'
 
 interface Service {
   id: string
@@ -117,6 +118,9 @@ const isValidDate = (dateString: string): boolean => {
 }
 
 export default function ServicesPage() {
+  // Field-Level Security
+  const { maskField } = useFieldMask('services')
+  
   const [services, setServices] = useState<Service[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
@@ -1027,11 +1031,11 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                     </div>
                     <div className="text-center">
                       <div className="text-gray-500 font-medium mb-0.5 text-xs">Total</div>
-                      <div className="font-semibold text-gray-900 text-sm">{formatCurrency(service.total_valor)}</div>
+                      <div className="font-semibold text-gray-900 text-sm">{maskField('total_valor', formatCurrency(service.total_valor))}</div>
                     </div>
                     <div className="text-center">
                       <div className="text-gray-500 font-medium mb-0.5 text-xs">A Receber</div>
-                      <div className="font-semibold text-primary-600 text-sm">{formatCurrency(service.total_a_receber)}</div>
+                      <div className="font-semibold text-primary-600 text-sm">{maskField('total_a_receber', formatCurrency(service.total_a_receber))}</div>
                     </div>
                   </div>
                   
@@ -1519,11 +1523,11 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                       <div className="text-xs text-gray-600">Total de Visitas</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xl font-bold text-gray-900">{formatCurrency(viewingService.total_valor)}</div>
+                      <div className="text-xl font-bold text-gray-900">{maskField('total_valor', formatCurrency(viewingService.total_valor))}</div>
                       <div className="text-xs text-gray-600">Valor Total</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xl font-bold text-primary-600">{formatCurrency(viewingService.total_a_receber)}</div>
+                      <div className="text-xl font-bold text-primary-600">{maskField('total_a_receber', formatCurrency(viewingService.total_a_receber))}</div>
                       <div className="text-xs text-gray-600">Valor a Receber</div>
                     </div>
                   </div>

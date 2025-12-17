@@ -41,7 +41,8 @@ const formatPhone = (value: string): string => {
 export default function ClientsPage() {
   const navigate = useNavigate()
   const { maskField } = useFieldMask('clients')
-  const { userProfile } = usePermissions()
+  const { userProfile, canCreate } = usePermissions()
+  const canCreateClient = canCreate('clients')
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -563,15 +564,17 @@ export default function ClientsPage() {
           </p>
           <div className="divider-fefelina"></div>
         </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <button
-            type="button"
-            onClick={() => setShowAddForm(true)}
-            className="btn-fefelina"
-          >
-            Adicionar Cliente
-          </button>
-        </div>
+        {canCreateClient && (
+          <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+            <button
+              type="button"
+              onClick={() => setShowAddForm(true)}
+              className="btn-fefelina"
+            >
+              Adicionar Cliente
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modal de Adicionar Cliente */}

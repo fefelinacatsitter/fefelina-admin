@@ -1,0 +1,189 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+
+export interface Permission {
+  resource: string;
+  can_read: boolean;
+  can_create: boolean;
+  can_update: boolean;
+  can_delete: boolean;
+}
+
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  profile_id: string;
+  full_name: string;
+  email: string;
+  avatar_url?: string;
+  phone?: string;
+  is_active: boolean;
+  profile: {
+    id: string;
+    name: string;
+    description: string;
+    is_admin: boolean;
+    is_active: boolean;
+  };
+}
+
+interface UsePermissionsReturn {
+  userProfile: UserProfile | null;
+  permissions: Permission[];
+  loading: boolean;
+  isAdmin: boolean;
+  hasPermission: (resource: string, action: 'read' | 'create' | 'update' | 'delete') => boolean;
+  canRead: (resource: string) => boolean;
+  canCreate: (resource: string) => boolean;
+  canUpdate: (resource: string) => boolean;
+  canDelete: (resource: string) => boolean;
+  refreshPermissions: () => Promise<void>;
+}
+
+/**
+ * Hook para gerenciar permissões do usuário autenticado
+ * 
+ * Recursos disponíveis:
+ * - clients
+ * - leads
+ * - services
+ * - visits
+ * - pets
+ * - financeiro
+ * - relatorios
+ * - setup
+ * 
+ * @example
+ * const { isAdmin, canCreate, canDelete } = usePermissions();
+ * 
+ * if (canCreate('clients')) {
+ *   // Mostrar botão "Novo Cliente"
+ * }
+ * 
+ * if (isAdmin) {
+ *   // Mostrar link para Setup
+ * }
+ */
+export function usePermissions(): UsePermissionsReturn {
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadPermissions = async () => {
+    try {
+      setLoading(true);
+
+      // 1. Buscar usuário autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setUserProfile(null);
+        setPermissions([]);
+        return;
+      }
+
+      // 2. Buscar profile do usuário
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select(`
+          *,
+          profile:profiles (
+            id,
+            name,
+            description,
+            is_admin,
+            is_active
+          )
+        `)
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Erro ao carregar profile:', profileError);
+        setUserProfile(null);
+        setPermissions([]);
+        return;
+      }
+
+      // Verificar se usuário está ativo
+      if (!profile?.is_active || !profile?.profile?.is_active) {
+        console.warn('Usuário ou profile inativo');
+        setUserProfile(null);
+        setPermissions([]);
+        return;
+      }
+
+      setUserProfile(profile as UserProfile);
+
+      // 3. Buscar permissões do profile
+      const { data: perms, error: permsError } = await supabase
+        .from('permissions')
+        .select('resource, can_read, can_create, can_update, can_delete')
+        .eq('profile_id', profile.profile_id);
+
+      if (permsError) {
+        console.error('Erro ao carregar permissões:', permsError);
+        setPermissions([]);
+        return;
+      }
+
+      setPermissions(perms || []);
+
+    } catch (error) {
+      console.error('Erro ao carregar permissões:', error);
+      setUserProfile(null);
+      setPermissions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPermissions();
+
+    // Listener para mudanças no auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      loadPermissions();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Verifica se o usuário é admin
+  const isAdmin = userProfile?.profile?.is_admin ?? false;
+
+  // Função genérica para verificar permissão
+  const hasPermission = (resource: string, action: 'read' | 'create' | 'update' | 'delete'): boolean => {
+    // Admin tem acesso total
+    if (isAdmin) return true;
+
+    // Buscar permissão específica
+    const permission = permissions.find(p => p.resource === resource);
+    if (!permission) return false;
+
+    // Mapear ação para campo
+    const actionField = `can_${action}` as keyof Permission;
+    return permission[actionField] === true;
+  };
+
+  // Atalhos para cada tipo de ação
+  const canRead = (resource: string) => hasPermission(resource, 'read');
+  const canCreate = (resource: string) => hasPermission(resource, 'create');
+  const canUpdate = (resource: string) => hasPermission(resource, 'update');
+  const canDelete = (resource: string) => hasPermission(resource, 'delete');
+
+  return {
+    userProfile,
+    permissions,
+    loading,
+    isAdmin,
+    hasPermission,
+    canRead,
+    canCreate,
+    canUpdate,
+    canDelete,
+    refreshPermissions: loadPermissions,
+  };
+}

@@ -1279,116 +1279,124 @@ export default function ClientsPage() {
 
       {/* Modal de Visualização para Não-Admins */}
       {showViewModal && viewingClient && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
-            <div className="flex justify-between items-center mb-4 pb-3 border-b">
-              <h3 className="text-xl font-semibold text-gray-900">
-                Informações do Cliente
-              </h3>
-              <button
-                onClick={closeViewModal}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 overflow-y-auto pt-16 md:pt-0">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeViewModal}></div>
+            
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+              <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
+                <div>
+                  <h3 className="text-base leading-6 font-medium text-gray-900">
+                    Informações do Cliente
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Visualização dos dados compartilhados
+                  </p>
+                </div>
+                <button onClick={closeViewModal} className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-            <div className="space-y-6">
-              {/* Informações Básicas */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Dados do Cliente</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Nome</label>
-                    <div className="text-sm text-gray-900">{viewingClient.nome}</div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Telefone</label>
-                    <div className="text-sm text-gray-900">
-                      {maskField('telefone', viewingClient.telefone || '—')}
+              <div className="px-6 py-4 space-y-4">
+                {/* Informações Básicas */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Dados do Cliente</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Nome</label>
+                      <div className="mt-0.5 text-sm text-gray-900">{viewingClient.nome}</div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Telefone</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
+                        {maskField('telefone', viewingClient.telefone || '—')}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Email</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
+                        {maskField('email', viewingClient.email || '—')}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Valor Diária</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
+                        {maskField('valor_diaria', `R$ ${viewingClient.valor_diaria.toFixed(2)}`)}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Valor Duas Visitas</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
+                        {maskField('valor_duas_visitas', `R$ ${viewingClient.valor_duas_visitas.toFixed(2)}`)}
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
-                    <div className="text-sm text-gray-900">
-                      {maskField('email', viewingClient.email || '—')}
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <label className="block text-xs font-medium text-gray-700">Endereço Completo</label>
+                    <div className="mt-0.5 text-sm text-gray-900">
+                      {maskField('endereco_completo', viewingClient.endereco_completo || '—')}
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Valor Diária</label>
-                    <div className="text-sm text-gray-900">
-                      {maskField('valor_diaria', `R$ ${viewingClient.valor_diaria.toFixed(2)}`)}
+                  <div className="mt-3">
+                    <label className="block text-xs font-medium text-gray-700">Veterinário de Confiança</label>
+                    <div className="mt-0.5 text-sm text-gray-900">
+                      {maskField('veterinario_confianca', viewingClient.veterinario_confianca || '—')}
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Valor Duas Visitas</label>
-                    <div className="text-sm text-gray-900">
-                      {maskField('valor_duas_visitas', `R$ ${viewingClient.valor_duas_visitas.toFixed(2)}`)}
+                  {viewingClient.observacoes && (
+                    <div className="mt-3">
+                      <label className="block text-xs font-medium text-gray-700">Observações</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
+                        {maskField('observacoes', viewingClient.observacoes)}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                <div className="mt-4">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Endereço Completo</label>
-                  <div className="text-sm text-gray-900">
-                    {maskField('endereco_completo', viewingClient.endereco_completo || '—')}
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Veterinário de Confiança</label>
-                  <div className="text-sm text-gray-900">
-                    {maskField('veterinario_confianca', viewingClient.veterinario_confianca || '—')}
-                  </div>
-                </div>
-
-                {viewingClient.observacoes && (
-                  <div className="mt-4">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Observações</label>
-                    <div className="text-sm text-gray-900">
-                      {maskField('observacoes', viewingClient.observacoes)}
+                {/* Pets */}
+                {viewingPets.length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">
+                      Pets ({viewingPets.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {viewingPets.map((pet) => (
+                        <div key={pet.id} className="bg-white rounded-md p-3 border border-gray-200">
+                          <div className="font-medium text-sm text-gray-900 mb-1.5">{pet.nome}</div>
+                          <div className="text-xs text-gray-600 mb-1">
+                            <span className="font-medium">Característica:</span> {pet.caracteristica || '—'}
+                          </div>
+                          {pet.observacoes && (
+                            <div className="text-xs text-gray-600">
+                              <span className="font-medium">Observações:</span> {pet.observacoes}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Pets */}
-              {viewingPets.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Pets</h4>
-                  <div className="space-y-3">
-                    {viewingPets.map((pet) => (
-                      <div key={pet.id} className="bg-white rounded-md p-3 border border-gray-200">
-                        <div className="font-medium text-sm text-gray-900 mb-1">{pet.nome}</div>
-                        <div className="text-xs text-gray-600 mb-1">
-                          <span className="font-medium">Característica:</span> {pet.caracteristica || '—'}
-                        </div>
-                        {pet.observacoes && (
-                          <div className="text-xs text-gray-600">
-                            <span className="font-medium">Observações:</span> {pet.observacoes}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Botão Fechar */}
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={closeViewModal}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md text-sm font-medium transition-colors"
-              >
-                Fechar
-              </button>
+              {/* Botão Fechar */}
+              <div className="bg-gray-50 px-6 py-3 flex justify-end border-t border-gray-200">
+                <button
+                  onClick={closeViewModal}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
           </div>
         </div>

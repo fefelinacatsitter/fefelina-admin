@@ -58,6 +58,13 @@ export function useFieldPermissions(tableName: string): UseFieldPermissionsRetur
         return
       }
 
+      // Validar se userProfile existe
+      if (!userProfile?.profile_id) {
+        setPermissions([])
+        setLoading(false)
+        return
+      }
+
       // Buscar permissões do perfil do usuário para esta tabela
       const { data, error } = await supabase
         .from('field_permissions')

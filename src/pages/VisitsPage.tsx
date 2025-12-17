@@ -115,11 +115,9 @@ export default function VisitsPage() {
   
   // Field-Level Security e Permissões
   const { maskField } = useFieldMask('visits')
-  const { canCreate, canUpdate, canDelete } = usePermissions()
+  const { canUpdate } = usePermissions()
   
-  const canCreateVisit = canCreate('visits')
   const canUpdateVisit = canUpdate('visits')
-  const canDeleteVisit = canDelete('visits')
   
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)

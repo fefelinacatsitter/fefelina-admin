@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Shield, Eye, EyeOff, Edit3, Lock, Save, RefreshCw } from 'lucide-react'
+import { Shield, Eye, EyeOff, Edit3, Lock, RefreshCw } from 'lucide-react'
 
 interface Profile {
   id: string

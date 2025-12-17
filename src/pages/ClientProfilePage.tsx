@@ -1481,14 +1481,18 @@ export default function ClientProfilePage() {
               <dt className="text-sm font-medium text-gray-500">Veterinário de Confiança</dt>
               <dd className="mt-1 text-sm text-gray-900">{client.veterinario_confianca || 'Não informado'}</dd>
             </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Valor Diária</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(client.valor_diaria)}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Valor Duas Visitas</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(client.valor_duas_visitas)}</dd>
-            </div>
+            {shouldShowField('valor_diaria') && (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Valor Diária</dt>
+                <dd className="mt-1 text-sm text-gray-900">{maskField('valor_diaria', formatCurrency(client.valor_diaria))}</dd>
+              </div>
+            )}
+            {shouldShowField('valor_duas_visitas') && (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Valor Duas Visitas</dt>
+                <dd className="mt-1 text-sm text-gray-900">{maskField('valor_duas_visitas', formatCurrency(client.valor_duas_visitas))}</dd>
+              </div>
+            )}
             {client.observacoes && (
               <div>
                 <dt className="text-sm font-medium text-gray-500">Observações</dt>
@@ -1957,43 +1961,49 @@ export default function ClientProfilePage() {
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Telefone</label>
-                    <input
-                      type="text"
-                      name="telefone"
-                      value={formData.telefone}
-                      onChange={handleInputChange}
-                      placeholder="+55(47)99999-9999"
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
+                  {shouldShowField('telefone') && (
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Telefone</label>
+                      <input
+                        type="text"
+                        name="telefone"
+                        value={formData.telefone}
+                        onChange={handleInputChange}
+                        placeholder="+55(47)99999-9999"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                    </div>
+                  )}
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor Diária (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="valor_diaria"
-                      value={formData.valor_diaria}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
+                  {shouldShowField('valor_diaria') && (
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor Diária (R$)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="valor_diaria"
+                        value={formData.valor_diaria}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                    </div>
+                  )}
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor 2 Visitas (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="valor_duas_visitas"
-                      value={formData.valor_duas_visitas}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
+                  {shouldShowField('valor_duas_visitas') && (
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor 2 Visitas (R$)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="valor_duas_visitas"
+                        value={formData.valor_duas_visitas}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Veterinário de Confiança</label>

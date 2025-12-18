@@ -34,6 +34,19 @@ export default function LoginPage() {
 
       if (data.session) {
         toast.success('Login realizado com sucesso!')
+        
+        // Verificar se é primeiro login (senha ainda não foi trocada)
+        // Usuário criado recentemente (menos de 5 minutos) e nunca fez login
+        const userCreatedAt = new Date(data.user.created_at);
+        const now = new Date();
+        const minutesSinceCreation = (now.getTime() - userCreatedAt.getTime()) / 1000 / 60;
+        
+        // Se conta foi criada há menos de 5 minutos, considerar primeiro login
+        if (minutesSinceCreation < 5) {
+          navigate('/change-password?firstLogin=true', { replace: true });
+          return;
+        }
+        
         // Redirecionar para a página que tentou acessar ou para home
         navigate(from, { replace: true })
       }

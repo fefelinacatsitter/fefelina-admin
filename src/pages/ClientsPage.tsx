@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { supabase, Client, Pet } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import CatLoader from '../components/CatLoader'
+import { useFieldMask } from '../hooks/useFieldMask'
+import { usePermissions } from '../contexts/PermissionsContext'
 
 // Função para formatar telefone brasileiro
 const formatPhone = (value: string): string => {
@@ -38,6 +40,10 @@ const formatPhone = (value: string): string => {
 
 export default function ClientsPage() {
   const navigate = useNavigate()
+  const { maskField } = useFieldMask('clients')
+  const { userProfile, canCreate, canUpdate } = usePermissions()
+  const canCreateClient = canCreate('clients')
+  const canUpdateClient = canUpdate('clients')
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -49,6 +55,11 @@ export default function ClientsPage() {
   const [sortBy, setSortBy] = useState<'recent_services' | 'alphabetical'>('alphabetical')
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredClients, setFilteredClients] = useState<Client[]>([])
+  
+  // Modal de visualização para não-admins
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [viewingClient, setViewingClient] = useState<Client | null>(null)
+  const [viewingPets, setViewingPets] = useState<Pet[]>([])
   
   // Estados para modal de Pet
   const [showPetModal, setShowPetModal] = useState(false)
@@ -188,6 +199,41 @@ export default function ClientsPage() {
     }
     
     setLoading(false)
+  }
+
+  // Função para lidar com clique no cliente
+  const handleClientClick = async (client: Client) => {
+    const isAdmin = userProfile?.profile?.name === 'Administrador'
+    
+    if (isAdmin) {
+      // Admin vai para a página completa
+      navigate(`/clients/${client.id}`)
+    } else {
+      // Outros perfis abrem a modal de visualização
+      setViewingClient(client)
+      
+      // Buscar pets do cliente
+      try {
+        const { data: petsData, error } = await supabase
+          .from('pets')
+          .select('*')
+          .eq('client_id', client.id)
+        
+        if (error) throw error
+        setViewingPets(petsData || [])
+      } catch (error) {
+        console.error('Erro ao buscar pets:', error)
+        setViewingPets([])
+      }
+      
+      setShowViewModal(true)
+    }
+  }
+
+  const closeViewModal = () => {
+    setShowViewModal(false)
+    setViewingClient(null)
+    setViewingPets([])
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -519,15 +565,17 @@ export default function ClientsPage() {
           </p>
           <div className="divider-fefelina"></div>
         </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <button
-            type="button"
-            onClick={() => setShowAddForm(true)}
-            className="btn-fefelina"
-          >
-            Adicionar Cliente
-          </button>
-        </div>
+        {canCreateClient && (
+          <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+            <button
+              type="button"
+              onClick={() => setShowAddForm(true)}
+              className="btn-fefelina"
+            >
+              Adicionar Cliente
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modal de Adicionar Cliente */}
@@ -1017,7 +1065,7 @@ export default function ClientsPage() {
           filteredClients.map((client) => (
             <div 
               key={client.id} 
-              onClick={() => navigate(`/clients/${client.id}`)}
+              onClick={() => handleClientClick(client)}
               className="bg-white rounded-lg shadow-sm border p-4 cursor-pointer hover:bg-gray-50 transition-colors"
             >
               <div className="flex justify-between items-start mb-3">
@@ -1038,11 +1086,11 @@ export default function ClientsPage() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Diária:</span>
-                  <span className="font-medium">R$ {client.valor_diaria.toFixed(2)}</span>
+                  <span className="font-medium">{maskField('valor_diaria', `R$ ${client.valor_diaria.toFixed(2)}`)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">2 Visitas:</span>
-                  <span className="font-medium">R$ {client.valor_duas_visitas.toFixed(2)}</span>
+                  <span className="font-medium">{maskField('valor_duas_visitas', `R$ ${client.valor_duas_visitas.toFixed(2)}`)}</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Endereço:</span>
@@ -1104,17 +1152,17 @@ export default function ClientsPage() {
                     filteredClients.map((client) => (
                       <tr 
                         key={client.id} 
-                        onClick={() => navigate(`/clients/${client.id}`)}
+                        onClick={() => handleClientClick(client)}
                         className="hover:bg-gray-50 cursor-pointer transition-colors"
                       >
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           {client.nome}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                          R$ {client.valor_diaria.toFixed(2)}
+                          {maskField('valor_diaria', `R$ ${client.valor_diaria.toFixed(2)}`)}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                          R$ {client.valor_duas_visitas.toFixed(2)}
+                          {maskField('valor_duas_visitas', `R$ ${client.valor_duas_visitas.toFixed(2)}`)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500">
                           <div className="truncate" title={client.endereco_completo}>
@@ -1122,7 +1170,7 @@ export default function ClientsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end gap-2">
+                          {canUpdateClient && (
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1133,7 +1181,7 @@ export default function ClientsPage() {
                             >
                               Editar
                             </button>
-                          </div>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -1230,6 +1278,140 @@ export default function ClientsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Visualização para Não-Admins */}
+      {showViewModal && viewingClient && (
+        <div className="fixed inset-0 z-50 overflow-y-auto pt-16 md:pt-0">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeViewModal}></div>
+            
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+              <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
+                <div>
+                  <h3 className="text-base leading-6 font-medium text-gray-900">
+                    Informações do Cliente
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Visualização dos dados compartilhados
+                  </p>
+                </div>
+                <button onClick={closeViewModal} className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="px-6 py-4 space-y-4">
+                {/* Informações Básicas */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Dados do Cliente</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Nome</label>
+                      <div className="mt-0.5 text-sm text-gray-900">{viewingClient.nome}</div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Telefone</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
+                        {maskField('telefone', viewingClient.telefone || '—')}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Email</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
+                        {maskField('email', viewingClient.email || '—')}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Valor Diária</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
+                        {maskField('valor_diaria', `R$ ${viewingClient.valor_diaria.toFixed(2)}`)}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Valor Duas Visitas</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
+                        {maskField('valor_duas_visitas', `R$ ${viewingClient.valor_duas_visitas.toFixed(2)}`)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <label className="block text-xs font-medium text-gray-700">Endereço Completo</label>
+                    <div className="mt-0.5 text-sm text-gray-900">
+                      {maskField('endereco_completo', viewingClient.endereco_completo || '—')}
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <label className="block text-xs font-medium text-gray-700">Veterinário de Confiança</label>
+                    <div className="mt-0.5 text-sm text-gray-900">
+                      {maskField('veterinario_confianca', viewingClient.veterinario_confianca || '—')}
+                    </div>
+                  </div>
+
+                  {viewingClient.observacoes && (
+                    <div className="mt-3">
+                      <label className="block text-xs font-medium text-gray-700">Observações</label>
+                      <div className="mt-0.5 text-sm text-gray-900">
+                        {maskField('observacoes', viewingClient.observacoes)}
+                      </div>
+                    </div>
+                  )}
+
+                  {viewingClient.notas && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Notas Internas</label>
+                      <div className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap bg-orange-50 border border-orange-100 rounded-md p-3">
+                        {maskField('notas', viewingClient.notas)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pets */}
+                {viewingPets.length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">
+                      Pets ({viewingPets.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {viewingPets.map((pet) => (
+                        <div key={pet.id} className="bg-white rounded-md p-3 border border-gray-200">
+                          <div className="font-medium text-sm text-gray-900 mb-1.5">{pet.nome}</div>
+                          <div className="text-xs text-gray-600 mb-1">
+                            <span className="font-medium">Característica:</span> {pet.caracteristica || '—'}
+                          </div>
+                          {pet.observacoes && (
+                            <div className="text-xs text-gray-600">
+                              <span className="font-medium">Observações:</span> {pet.observacoes}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Botão Fechar */}
+              <div className="bg-gray-50 px-6 py-3 flex justify-end border-t border-gray-200">
+                <button
+                  onClick={closeViewModal}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
           </div>
         </div>

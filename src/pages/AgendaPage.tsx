@@ -459,8 +459,9 @@ export default function AgendaPage() {
   const handleDeletePreEncontro = async () => {
     if (!cardContextMenu) return
 
+    const nomeContato = cardContextMenu.visit.leads?.nome || cardContextMenu.visit.clients?.nome || 'esta pessoa'
     const confirmDelete = window.confirm(
-      `Deseja realmente cancelar o pré-encontro com ${cardContextMenu.visit.leads?.nome || 'este lead'}?`
+      `Deseja realmente cancelar o pré-encontro com ${nomeContato}?`
     )
 
     if (!confirmDelete) {
@@ -626,7 +627,7 @@ export default function AgendaPage() {
                         >
                             <div className="font-semibold truncate leading-tight">
                               {visit.tipo_encontro === 'pre_encontro' 
-                                ? `🤝 ${visit.leads?.nome || 'Lead não identificado'}` 
+                                ? `🤝 ${visit.leads?.nome || visit.clients?.nome || 'Não identificado'}` 
                                 : visit.clients?.nome || 'Cliente não identificado'}
                             </div>
                             {!hasConflict && !hasMultipleVisits && (
@@ -791,7 +792,7 @@ export default function AgendaPage() {
                           >
                             <div className="font-semibold truncate leading-tight">
                               {visit.tipo_encontro === 'pre_encontro' 
-                                ? `🤝 ${visit.leads?.nome || 'Lead não identificado'}` 
+                                ? `🤝 ${visit.leads?.nome || visit.clients?.nome || 'Não identificado'}` 
                                 : visit.clients?.nome || 'Cliente não identificado'}
                             </div>
                             {!hasConflict && !hasMultipleVisits && (

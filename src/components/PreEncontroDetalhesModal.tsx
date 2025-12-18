@@ -9,6 +9,13 @@ interface Lead {
   status: string
 }
 
+interface Client {
+  id?: string
+  nome: string
+  telefone?: string | null
+  endereco_completo?: string | null
+}
+
 interface Visit {
   id: string
   data: string
@@ -18,6 +25,8 @@ interface Visit {
   observacoes?: string
   leads?: Lead | null
   lead_id?: string | null
+  clients?: Client | null
+  client_id?: string | null
 }
 
 interface PreEncontroDetalhesModalProps {
@@ -55,6 +64,12 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
     return `${horasFim.toString().padStart(2, '0')}:${minutosFim.toString().padStart(2, '0')}`
   }
 
+  // Determinar se é lead ou cliente
+  const isLead = !!visit.lead_id && !!visit.leads
+  const isClient = !!visit.client_id && !!visit.clients
+  const contactName = isLead ? visit.leads?.nome : visit.clients?.nome
+  const contactPhone = isLead ? visit.leads?.telefone : visit.clients?.telefone
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -62,7 +77,7 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
         <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
           <div className="flex-1">
             <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-              Pré-Encontro com Lead
+              Pré-Encontro {isClient ? 'com Cliente' : 'com Lead'}
             </h2>
             <p className="text-xs text-gray-600 mt-0.5 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
@@ -79,11 +94,11 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
 
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {/* Informações do Lead - 2 colunas */}
+          {/* Informações do Lead ou Cliente - 2 colunas */}
           <div className="bg-primary-50 border border-primary-200 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-primary-900 uppercase mb-3 flex items-center gap-2">
               <User className="w-4 h-4" />
-              Lead
+              {isClient ? 'Cliente' : 'Lead'}
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
@@ -91,37 +106,50 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
                   Nome
                 </label>
                 <p className="text-base font-semibold text-primary-900">
-                  {visit.leads?.nome || 'Lead não identificado'}
+                  {contactName || 'Não identificado'}
                 </p>
               </div>
               
-              {visit.leads?.telefone && (
+              {contactPhone && (
                 <div>
                   <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
                     <Phone className="w-3 h-3 inline mr-1" />
                     Telefone
                   </label>
                   <a 
-                    href={`https://wa.me/${visit.leads.telefone.replace(/\D/g, '')}`}
+                    href={`https://wa.me/${contactPhone.replace(/\D/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
                   >
-                    {visit.leads.telefone}
+                    {contactPhone}
                   </a>
                 </div>
               )}
 
-              <div>
-                <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
-                  Status do Lead
-                </label>
-                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                  statusColors[visit.leads?.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
-                }`}>
-                  {statusLabels[visit.leads?.status as keyof typeof statusLabels] || visit.leads?.status}
-                </span>
-              </div>
+              {isLead && visit.leads?.status && (
+                <div>
+                  <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
+                    Status do Lead
+                  </label>
+                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                    statusColors[visit.leads.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {statusLabels[visit.leads.status as keyof typeof statusLabels] || visit.leads.status}
+                  </span>
+                </div>
+              )}
+              
+              {isClient && (
+                <div>
+                  <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
+                    Tipo
+                  </label>
+                  <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                    Cliente Cadastrado
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -171,8 +199,9 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
           {/* Info sobre pré-encontro */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-xs text-blue-800">
-              <span className="font-semibold">💡 Dica:</span> Este é um pré-encontro com um lead. 
-              Use este tempo para conhecer o cliente em potencial e apresentar seus serviços.
+              <span className="font-semibold">💡 Dica:</span> {isClient 
+                ? 'Este é um pré-encontro com um cliente que já fechou serviço. Use este tempo para conhecer o cliente e os gatinhos dele pessoalmente.'
+                : 'Este é um pré-encontro com um lead. Use este tempo para conhecer o cliente em potencial e apresentar seus serviços.'}
             </p>
           </div>
         </div>

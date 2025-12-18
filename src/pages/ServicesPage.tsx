@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, ServiceTask } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import { Copy } from 'lucide-react'
 import CatLoader from '../components/CatLoader'
 import ClientCombobox from '../components/ClientCombobox'
+import KeyManagementSection, { KeyTaskData } from '../components/KeyManagementSection'
 import { useFieldMask } from '../hooks/useFieldMask'
 import { usePermissions } from '../contexts/PermissionsContext'
 
@@ -35,6 +36,7 @@ interface Visit {
   valor: number
   status: 'agendada' | 'realizada' | 'cancelada'
   desconto_plataforma: number
+  responsavel?: 'fernanda' | 'andre' | null
 }
 
 interface Client {
@@ -171,6 +173,10 @@ export default function ServicesPage() {
 
   // States para múltiplas visitas
   const [multiVisitDays, setMultiVisitDays] = useState(1);
+  
+  // Estado para tarefas de chave
+  const [keyTasks, setKeyTasks] = useState<KeyTaskData | null>(null)
+  const [viewingServiceTasks, setViewingServiceTasks] = useState<ServiceTask[]>([])
 
   useEffect(() => {
     fetchServices()
@@ -346,7 +352,7 @@ export default function ServicesPage() {
     return { totalVisitas, totalValor, totalAReceber }
   }
 
-  const openModal = (service?: Service) => {
+  const openModal = async (service?: Service) => {
     if (service) {
       setEditingService(service)
       setFormData({
@@ -357,6 +363,44 @@ export default function ServicesPage() {
       })
       setSelectedClient(clients.find(c => c.id === service.client_id) || null)
       fetchVisitsForService(service.id)
+      
+      // Buscar tarefas de chave existentes
+      try {
+        const { data: tasksData, error } = await supabase
+          .from('service_tasks')
+          .select('*')
+          .eq('service_id', service.id)
+          .order('tipo', { ascending: true }) // buscar_chave vem antes de devolver_chave
+
+        if (error) throw error
+        
+        if (tasksData && tasksData.length > 0) {
+          const buscarTask = tasksData.find(t => t.tipo === 'buscar_chave')
+          const devolverTask = tasksData.find(t => t.tipo === 'devolver_chave')
+          
+          if (buscarTask || devolverTask) {
+            setKeyTasks({
+              buscarChave: {
+                data: buscarTask?.data_prevista || '',
+                horario: buscarTask?.horario_previsto?.substring(0, 5) || '',
+                local: buscarTask?.local_encontro || ''
+              },
+              devolverChave: {
+                data: devolverTask?.data_prevista || '',
+                horario: devolverTask?.horario_previsto?.substring(0, 5) || '',
+                local: devolverTask?.local_encontro || ''
+              }
+            })
+          } else {
+            setKeyTasks(null)
+          }
+        } else {
+          setKeyTasks(null)
+        }
+      } catch (error) {
+        console.error('Erro ao buscar tarefas de chave:', error)
+        setKeyTasks(null)
+      }
     } else {
       setEditingService(null)
       setFormData({
@@ -367,6 +411,7 @@ export default function ServicesPage() {
       })
       setVisits([])
       setSelectedClient(null)
+      setKeyTasks(null)
     }
     setShowModal(true)
   }
@@ -375,7 +420,7 @@ export default function ServicesPage() {
     try {
       const { data, error } = await supabase
         .from('visits')
-        .select('id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, client_id, created_at')
+        .select('id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, client_id, responsavel, created_at')
         .eq('service_id', serviceId)
         .order('data', { ascending: true })
 
@@ -554,7 +599,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
         savedService = data
       }
 
-      // Inserir visitas com o desconto atualizado
+      // Inserir visitas preservando campos importantes
       const visitsToInsert = visits.map(visit => {
         // Remove o ID para permitir que o banco gere novos IDs
         const { id, ...visitWithoutId } = visit
@@ -562,8 +607,10 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
           ...visitWithoutId,
           service_id: savedService.id,
           client_id: formData.client_id,
-          // Atualiza o desconto da plataforma com o valor padrão do serviço
-          desconto_plataforma: formData.desconto_plataforma_default
+          // Preserva o desconto individual da visita (se tiver) ou usa o padrão
+          desconto_plataforma: visit.desconto_plataforma ?? formData.desconto_plataforma_default,
+          // Preserva o responsavel (fernanda/andre) se existir
+          responsavel: visit.responsavel || null
         }
       })
       
@@ -573,6 +620,46 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
           .insert(visitsToInsert)
         
         if (visitsError) throw visitsError
+      }
+
+      // Gerenciar tarefas de chave
+      if (editingService) {
+        // Deletar tarefas antigas ao editar
+        await supabase
+          .from('service_tasks')
+          .delete()
+          .eq('service_id', editingService.id)
+      }
+
+      // Criar tarefas de chave se foram configuradas
+      if (keyTasks) {
+        const tasksToInsert = [
+          {
+            service_id: savedService.id,
+            tipo: 'buscar_chave' as const,
+            data_prevista: keyTasks.buscarChave.data,
+            horario_previsto: keyTasks.buscarChave.horario + ':00',
+            local_encontro: keyTasks.buscarChave.local,
+            status: 'pendente' as const
+          },
+          {
+            service_id: savedService.id,
+            tipo: 'devolver_chave' as const,
+            data_prevista: keyTasks.devolverChave.data,
+            horario_previsto: keyTasks.devolverChave.horario + ':00',
+            local_encontro: keyTasks.devolverChave.local,
+            status: 'pendente' as const
+          }
+        ]
+
+        const { error: tasksError } = await supabase
+          .from('service_tasks')
+          .insert(tasksToInsert)
+
+        if (tasksError) {
+          console.error('Erro ao criar tarefas de chave:', tasksError)
+          toast.error(editingService ? 'Serviço atualizado, mas erro ao atualizar tarefas de chave' : 'Serviço criado, mas erro ao criar tarefas de chave')
+        }
       }
 
       toast.success(
@@ -679,6 +766,19 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
 
       if (error) throw error
       setViewingVisits(visitsData || [])
+
+      // Buscar tarefas de chave do serviço
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('service_tasks')
+        .select('*')
+        .eq('service_id', service.id)
+        .order('data_prevista', { ascending: true })
+
+      if (tasksError) {
+        console.error('Erro ao buscar tarefas:', tasksError)
+      } else {
+        setViewingServiceTasks(tasksData || [])
+      }
     } catch (error: any) {
       console.error('Erro ao buscar visitas do serviço:', error)
       toast.error(`Erro ao buscar detalhes: ${error.message}`)
@@ -691,6 +791,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
     setShowDetailsModal(false)
     setViewingService(null)
     setViewingVisits([])
+    setViewingServiceTasks([])
     setLoadingDetails(false)
   }
 
@@ -1192,6 +1293,24 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                   </div>
                 </div>
 
+                {/* Gerenciamento de Chaves (somente se houver visitas com datas) */}
+                {visits.length > 0 && visits.some(v => v.data) && (() => {
+                  const dates = visits.map(v => v.data).filter(d => d).sort()
+                  const dataInicio = dates[0]
+                  const dataFim = dates[dates.length - 1]
+                  
+                  return dataInicio && dataFim ? (
+                    <div className="mt-4">
+                      <KeyManagementSection
+                        dataInicio={dataInicio}
+                        dataFim={dataFim}
+                        onKeyTasksChange={setKeyTasks}
+                        initialValues={keyTasks}
+                      />
+                    </div>
+                  ) : null
+                })()}
+
                 {/* Seção de Visitas */}
                 <div className="border-t pt-3">
                   <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-3 gap-2">
@@ -1543,6 +1662,124 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                     </div>
                   </div>
                 </div>
+
+                {/* Tarefas de Chaves - Versão Compacta com Checkbox */}
+                {viewingServiceTasks.length > 0 && (
+                  <div className="bg-amber-50 rounded-lg p-2 border border-amber-200">
+                    <h4 className="text-xs font-medium text-gray-900 mb-1.5 flex items-center gap-1.5">
+                      <span className="text-sm">🔑</span>
+                      <span>Tarefas de Chaves</span>
+                    </h4>
+                    <div className="space-y-1">
+                      {viewingServiceTasks.map((task) => {
+                        const isBuscar = task.tipo === 'buscar_chave'
+                        const isConcluido = task.status === 'concluido'
+                        const statusColors = {
+                          pendente: 'bg-yellow-100 text-yellow-800',
+                          agendado_cliente: 'bg-blue-100 text-blue-800',
+                          concluido: 'bg-green-100 text-green-800',
+                          cancelado: 'bg-gray-100 text-gray-800'
+                        }
+                        const statusLabels = {
+                          pendente: 'Pendente',
+                          agendado_cliente: 'Agendado',
+                          concluido: 'Concluído',
+                          cancelado: 'Cancelado'
+                        }
+                        
+                        const handleToggleComplete = async (e: React.ChangeEvent<HTMLInputElement>) => {
+                          const isChecked = e.target.checked
+                          try {
+                            const { error } = await supabase
+                              .from('service_tasks')
+                              .update({
+                                status: isChecked ? 'concluido' : 'pendente',
+                                concluido_em: isChecked ? new Date().toISOString() : null
+                              })
+                              .eq('id', task.id)
+
+                            if (error) throw error
+                            
+                            toast.success(isChecked ? 'Tarefa marcada como concluída!' : 'Tarefa marcada como pendente!')
+                            // Recarregar tarefas
+                            const { data: tasksData } = await supabase
+                              .from('service_tasks')
+                              .select('*')
+                              .eq('service_id', task.service_id)
+                              .order('data_prevista', { ascending: true })
+                            
+                            if (tasksData) {
+                              setViewingServiceTasks(tasksData)
+                            }
+                          } catch (error: any) {
+                            console.error('Erro ao atualizar tarefa:', error)
+                            toast.error('Erro ao atualizar tarefa')
+                          }
+                        }
+                        
+                        return (
+                          <div
+                            key={task.id}
+                            className={`p-1.5 rounded border text-[11px] transition-all ${
+                              isConcluido 
+                                ? 'bg-gray-50 border-gray-300 opacity-60' 
+                                : isBuscar
+                                ? 'bg-yellow-50 border-yellow-300'
+                                : 'bg-green-50 border-green-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {/* Checkbox */}
+                              <input
+                                type="checkbox"
+                                checked={isConcluido}
+                                onChange={handleToggleComplete}
+                                className="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-2 focus:ring-green-500 cursor-pointer flex-shrink-0"
+                                title={isConcluido ? 'Marcar como pendente' : 'Marcar como concluído'}
+                              />
+                              
+                              {/* Ícone e Tipo */}
+                              <div className="flex items-center gap-1 min-w-[70px]">
+                                <span className="text-sm">{isBuscar ? '🔑' : '🔓'}</span>
+                                <span className="font-semibold text-gray-900">
+                                  {isBuscar ? 'Buscar' : 'Devolver'}
+                                </span>
+                              </div>
+                              
+                              {/* Status Badge */}
+                              <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium flex-shrink-0 ${statusColors[task.status as keyof typeof statusColors]}`}>
+                                {statusLabels[task.status as keyof typeof statusLabels]}
+                              </span>
+                              
+                              {/* Data e Horário */}
+                              <div className="flex items-center gap-1 text-gray-700 min-w-[90px]">
+                                <span>📅</span>
+                                <span>{new Date(task.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+                                <span className="font-medium">{task.horario_previsto?.substring(0, 5)}</span>
+                              </div>
+                              
+                              {/* Local */}
+                              {task.local_encontro && (
+                                <div className="flex items-center gap-1 text-gray-700 flex-1 min-w-0">
+                                  <span className="flex-shrink-0">📍</span>
+                                  <span className="truncate">{task.local_encontro}</span>
+                                </div>
+                              )}
+                              
+                              {/* Observações - quebra linha se necessário */}
+                              {task.observacoes && (
+                                <div className="flex items-center gap-1 text-gray-600 italic w-full mt-1">
+                                  <span className="flex-shrink-0">💬</span>
+                                  <span className="truncate">{task.observacoes}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Lista de Visitas */}
                 <div>

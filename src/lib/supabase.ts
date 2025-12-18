@@ -95,21 +95,6 @@ export interface Lead {
   updated_at: string
 }
 
-export interface ServiceTask {
-  id: string
-  service_id: string
-  tipo: 'buscar_chave' | 'devolver_chave'
-  data_prevista: string
-  horario_previsto: string
-  local_encontro?: string | null
-  observacoes?: string | null
-  status: 'pendente' | 'agendado_cliente' | 'concluido' | 'cancelado'
-  concluido_em?: string | null
-  concluido_por?: string | null
-  created_at: string
-  updated_at: string
-}
-
 export interface CaixaMovimento {
   id: string
   data: string

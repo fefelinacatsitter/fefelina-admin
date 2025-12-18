@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase, Visit as VisitType, ServiceTask } from '../lib/supabase'
+import { supabase, Visit as VisitType } from '../lib/supabase'
 import { format, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
@@ -7,7 +7,6 @@ import toast from 'react-hot-toast'
 import PreEncontroAgendaModal from '../components/PreEncontroAgendaModal'
 import PreEncontroDetalhesModal from '../components/PreEncontroDetalhesModal'
 import ContextMenu from '../components/ContextMenu'
-import TaskDetailModal from '../components/TaskDetailModal'
 
 interface Visit extends VisitType {
   clients?: {
@@ -25,19 +24,10 @@ interface Visit extends VisitType {
   }
 }
 
-interface ServiceTaskWithClient extends ServiceTask {
-  services?: {
-    clients?: {
-      nome: string
-    }
-  }
-}
-
 type ViewMode = 'day' | 'week'
 
 export default function AgendaPage() {
   const [visits, setVisits] = useState<Visit[]>([])
-  const [serviceTasks, setServiceTasks] = useState<ServiceTaskWithClient[]>([])
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('week')
@@ -55,9 +45,6 @@ export default function AgendaPage() {
   // Estados para menu de contexto
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; date: string; time: string } | null>(null)
   const [cardContextMenu, setCardContextMenu] = useState<{ x: number; y: number; visit: Visit } | null>(null)
-  
-  // Estados para modal de tarefas
-  const [selectedTask, setSelectedTask] = useState<ServiceTaskWithClient | null>(null)
 
   // Gerar array de horários com meias horas (6h às 22h)
   const timeSlots = Array.from({ length: 17 }, (_, i) => {
@@ -67,38 +54,6 @@ export default function AgendaPage() {
       { time: `${hour.toString().padStart(2, '0')}:30`, isHalf: true }
     ]
   }).flat()
-
-  // Helper para obter tarefas de um dia específico
-  const getTasksForDay = (day: Date) => {
-    return serviceTasks.filter(task => 
-      isSameDay(parseISO(task.data_prevista), day)
-    )
-  }
-
-  // Helper para verificar se um horário pertence a um slot
-  // Ex: 19:15 pertence ao slot 19:00 (19:00-19:29)
-  // Ex: 19:45 pertence ao slot 19:30 (19:30-19:59)
-  const belongsToSlot = (horario: string, slotTime: string): boolean => {
-    if (!horario) return false
-    
-    const [slotHour, slotMinute] = slotTime.split(':').map(Number)
-    const [hora, minuto] = horario.substring(0, 5).split(':').map(Number)
-    
-    // Mesmo horário exato
-    if (hora === slotHour && minuto === slotMinute) return true
-    
-    // Se o slot for :00, aceita de :00 até :29
-    if (slotMinute === 0) {
-      return hora === slotHour && minuto >= 0 && minuto <= 29
-    }
-    
-    // Se o slot for :30, aceita de :30 até :59
-    if (slotMinute === 30) {
-      return hora === slotHour && minuto >= 30 && minuto <= 59
-    }
-    
-    return false
-  }
 
   // Forçar modo dia no mobile e iPad (tablet)
   useEffect(() => {
@@ -154,7 +109,6 @@ export default function AgendaPage() {
         endDate = endOfDay(currentDate)
       }
 
-      // Buscar visitas
       const { data, error } = await supabase
         .from('visits')
         .select(`
@@ -173,29 +127,6 @@ export default function AgendaPage() {
       
       // Mostrar todas as visitas (incluindo pré-encontros)
       setVisits(data || [])
-
-      // Buscar tarefas de chaves
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('service_tasks')
-        .select(`
-          *,
-          services (
-            data_inicio,
-            data_fim,
-            clients (nome)
-          )
-        `)
-        .gte('data_prevista', format(startDate, 'yyyy-MM-dd'))
-        .lte('data_prevista', format(endDate, 'yyyy-MM-dd'))
-        .neq('status', 'cancelado')
-        .order('data_prevista', { ascending: true })
-        .order('horario_previsto', { ascending: true })
-
-      if (tasksError) {
-        console.error('Erro ao buscar tarefas:', tasksError)
-      } else {
-        setServiceTasks(tasksData || [])
-      }
     } catch (error) {
       console.error('Erro ao buscar visitas:', error)
     } finally {
@@ -577,8 +508,6 @@ export default function AgendaPage() {
 
   const renderDayView = () => {
     const hasVisitsOnDay = visits.some(visit => isSameDay(parseISO(visit.data), currentDate))
-    const tasksForDay = getTasksForDay(currentDate)
-    const hasTasks = tasksForDay.length > 0
     
     return (
       <div className="flex-1 overflow-auto">
@@ -598,13 +527,6 @@ export default function AgendaPage() {
                 {hasVisitsOnDay && (
                   <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#7f50c6' }}></div>
                 )}
-                {/* Badge de tarefas de chave */}
-                {hasTasks && (
-                  <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
-                    <span>🔑</span>
-                    <span>{tasksForDay.length} {tasksForDay.length === 1 ? 'tarefa de chave' : 'tarefas de chave'}</span>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -616,11 +538,6 @@ export default function AgendaPage() {
               const hasVisits = visitsAtTime.length > 0
               const hasMultipleVisits = visitsAtTime.length === 2
               const hasConflict = visitsAtTime.length > 2 // Warning apenas para 3+ visitas
-              
-              // Tarefas que pertencem a este slot (considera intervalo de 30 minutos)
-              const tasksAtTime = tasksForDay.filter(task => 
-                task.horario_previsto && belongsToSlot(task.horario_previsto, slot.time)
-              )
               
               return (
                 <div 
@@ -654,46 +571,6 @@ export default function AgendaPage() {
                         ⚠️ Conflito
                       </div>
                     )}
-                    
-                    {/* Linhas de tarefas de chave - camada acima de tudo com position absolute */}
-                    {tasksAtTime.length > 0 && (
-                      <div className="relative z-40 mb-1 space-y-1 pointer-events-none">
-                        {tasksAtTime.map(task => {
-                          const isBuscar = task.tipo === 'buscar_chave'
-                          const isConcluido = task.status === 'concluido'
-                          const clientName = task.services?.clients?.nome || 'Cliente não identificado'
-                          
-                          return (
-                            <div
-                              key={task.id}
-                              onClick={() => setSelectedTask(task)}
-                              className={`pointer-events-auto px-2 py-1.5 rounded-md border text-xs font-medium cursor-pointer hover:shadow-md transition-shadow shadow-sm ${
-                                isConcluido 
-                                  ? 'bg-gray-50 border-gray-300 text-gray-500 line-through' 
-                                  : isBuscar
-                                  ? 'bg-yellow-50 border-yellow-300 text-yellow-800'
-                                  : 'bg-green-50 border-green-300 text-green-800'
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <span>{isBuscar ? '🔑' : '🔓'}</span>
-                                <span className="font-semibold">{task.horario_previsto?.substring(0, 5)}</span>
-                                <span>-</span>
-                                <span>{isBuscar ? 'Buscar chave' : 'Devolver chave'}</span>
-                                <span className="text-gray-600">({clientName})</span>
-                              </div>
-                              {task.local_encontro && (
-                                <div className="text-[10px] mt-0.5 opacity-75">
-                                  📍 {task.local_encontro}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                    
-                    {/* Container para visitas - múltiplas visitas ficam lado a lado em posição absoluta */}
                     {/* Container para visitas - múltiplas visitas ficam lado a lado em posição absoluta */}
                     {visitsAtTime
                       .sort((a, b) => {
@@ -789,8 +666,6 @@ export default function AgendaPage() {
               {weekDays.map(day => {
                 const isToday = isSameDay(day, new Date())
                 const hasVisitsOnDay = visits.some(visit => isSameDay(parseISO(visit.data), day))
-                const tasksForDay = getTasksForDay(day)
-                const hasTasks = tasksForDay.length > 0
                 
                 return (
                   <div
@@ -811,12 +686,6 @@ export default function AgendaPage() {
                     {/* Indicador de visitas no dia */}
                     {hasVisitsOnDay && (
                       <div className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: '#7f50c6' }}></div>
-                    )}
-                    {/* Badge de tarefas */}
-                    {hasTasks && (
-                      <div className="mt-1 text-[10px] text-amber-600 font-medium">
-                        🔑 {tasksForDay.length}
-                      </div>
                     )}
                   </div>
                 )
@@ -848,12 +717,6 @@ export default function AgendaPage() {
                   const isToday = isSameDay(day, new Date())
                   const hasMultipleVisits = visitsAtTime.length === 2
                   const hasConflict = visitsAtTime.length > 2 // Warning apenas para 3+ visitas
-                  
-                  // Tarefas que pertencem a este slot (considera intervalo de 30 minutos)
-                  const tasksForDay = getTasksForDay(day)
-                  const tasksAtTime = tasksForDay.filter(task => 
-                    task.horario_previsto && belongsToSlot(task.horario_previsto, slot.time)
-                  )
 
                   return (
                     <div
@@ -874,34 +737,6 @@ export default function AgendaPage() {
                           ⚠️
                         </div>
                       )}
-                      
-                      {/* Linhas de tarefas de chave - camada acima com container isolado */}
-                      {tasksAtTime.length > 0 && (
-                        <div className="relative z-40 mb-0.5 space-y-0.5 pointer-events-none">
-                          {tasksAtTime.map(task => {
-                            const isBuscar = task.tipo === 'buscar_chave'
-                            const isConcluido = task.status === 'concluido'
-                            
-                            return (
-                              <div
-                                key={task.id}
-                                onClick={() => setSelectedTask(task)}
-                                className={`pointer-events-auto px-1 py-0.5 rounded text-[9px] font-medium cursor-pointer hover:shadow-sm shadow-sm ${
-                                  isConcluido 
-                                    ? 'bg-gray-100 text-gray-400 line-through' 
-                                    : isBuscar
-                                    ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
-                                    : 'bg-green-100 text-green-700 border border-green-300'
-                                }`}
-                                title={`${isBuscar ? 'Buscar' : 'Devolver'} chave - ${task.services?.clients?.nome || 'Cliente'}`}
-                              >
-                                {isBuscar ? '🔑' : '🔓'} {task.horario_previsto?.substring(0, 5)}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                      
                       {/* Container para visitas - múltiplas visitas ficam lado a lado em posição absoluta */}
                       {visitsAtTime
                         .sort((a, b) => {
@@ -1284,18 +1119,6 @@ export default function AgendaPage() {
             }] : [])
           ]}
           onClose={() => setCardContextMenu(null)}
-        />
-      )}
-
-      {/* Modal de Detalhes da Tarefa */}
-      {selectedTask && (
-        <TaskDetailModal
-          task={selectedTask}
-          onClose={() => setSelectedTask(null)}
-          onUpdate={() => {
-            fetchVisits()
-            setSelectedTask(null)
-          }}
         />
       )}
     </div>

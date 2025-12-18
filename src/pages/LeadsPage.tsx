@@ -527,7 +527,8 @@ export default function LeadsPage() {
           veterinario_confianca: 'Não informado',
           valor_diaria: valorDiaria,
           valor_duas_visitas: valorDuasVisitas,
-          observacoes: leadToConvert.observacoes || null
+          observacoes: leadToConvert.observacoes || null,
+          notas: leadToConvert.observacoes || null  // Migra observações da lead para notas do cliente
         })
         .select()
         .single()

@@ -161,7 +161,7 @@ export default function AgendaPage() {
           *,
           clients (nome, endereco_completo),
           services (nome_servico),
-          leads (id, nome, telefone, status)
+          leads (id, nome, telefone, endereco, status)
         `)
         .gte('data', format(startDate, 'yyyy-MM-dd'))
         .lte('data', format(endDate, 'yyyy-MM-dd'))

@@ -6,6 +6,7 @@ interface Lead {
   id: string
   nome: string
   telefone?: string | null
+  endereco?: string | null
   status: string
 }
 
@@ -34,26 +35,6 @@ interface PreEncontroDetalhesModalProps {
   onClose: () => void
 }
 
-const statusColors = {
-  novo: 'bg-blue-100 text-blue-800',
-  aguardando_resposta: 'bg-yellow-100 text-yellow-800',
-  respondeu: 'bg-green-100 text-green-800',
-  em_negociacao: 'bg-purple-100 text-purple-800',
-  convertido: 'bg-emerald-100 text-emerald-800',
-  perdido: 'bg-red-100 text-red-800',
-  sem_interesse: 'bg-gray-100 text-gray-800'
-}
-
-const statusLabels = {
-  novo: 'Novo',
-  aguardando_resposta: 'Aguardando Resposta',
-  respondeu: 'Respondeu',
-  em_negociacao: 'Em Negociação',
-  convertido: 'Convertido',
-  perdido: 'Perdido',
-  sem_interesse: 'Sem Interesse'
-}
-
 export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontroDetalhesModalProps) {
   const calcularHorarioFim = () => {
     const [horas, minutos] = visit.horario.split(':').map(Number)
@@ -69,6 +50,7 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
   const isClient = !!visit.client_id && !!visit.clients
   const contactName = isLead ? visit.leads?.nome : visit.clients?.nome
   const contactPhone = isLead ? visit.leads?.telefone : visit.clients?.telefone
+  const contactAddress = isLead ? visit.leads?.endereco : visit.clients?.endereco_completo
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -101,43 +83,58 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
               {isClient ? 'Cliente' : 'Lead'}
             </h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
-                  Nome
-                </label>
-                <p className="text-base font-semibold text-primary-900">
-                  {contactName || 'Não identificado'}
-                </p>
-              </div>
-              
-              {contactPhone && (
-                <div>
-                  <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
-                    <Phone className="w-3 h-3 inline mr-1" />
-                    Telefone
-                  </label>
-                  <a 
-                    href={`https://wa.me/${contactPhone.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
-                  >
-                    {contactPhone}
-                  </a>
-                </div>
-              )}
-
-              {isLead && visit.leads?.status && (
-                <div>
-                  <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
-                    Status do Lead
-                  </label>
-                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                    statusColors[visit.leads.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {statusLabels[visit.leads.status as keyof typeof statusLabels] || visit.leads.status}
-                  </span>
-                </div>
+              {/* Nome e Endereço lado a lado para Lead */}
+              {isLead ? (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
+                      Nome
+                    </label>
+                    <p className="text-base font-semibold text-primary-900">
+                      {contactName || 'Não identificado'}
+                    </p>
+                  </div>
+                  
+                  {contactAddress && (
+                    <div>
+                      <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
+                        Endereço
+                      </label>
+                      <p className="text-sm font-medium text-primary-900">
+                        {contactAddress}
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Para Cliente: Nome completo + Telefone */}
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
+                      Nome
+                    </label>
+                    <p className="text-base font-semibold text-primary-900">
+                      {contactName || 'Não identificado'}
+                    </p>
+                  </div>
+                  
+                  {contactPhone && (
+                    <div>
+                      <label className="text-xs font-medium text-primary-700 uppercase block mb-1">
+                        <Phone className="w-3 h-3 inline mr-1" />
+                        Telefone
+                      </label>
+                      <a 
+                        href={`https://wa.me/${contactPhone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
+                      >
+                        {contactPhone}
+                      </a>
+                    </div>
+                  )}
+                </>
               )}
               
               {isClient && (

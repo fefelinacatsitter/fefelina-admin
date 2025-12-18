@@ -267,7 +267,7 @@ export default function PreEncontroAgendaModal({
                       {leads
                         .filter(lead => 
                           lead.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          lead.telefone?.toLowerCase().includes(searchTerm.toLowerCase())
+                          lead.endereco?.toLowerCase().includes(searchTerm.toLowerCase())
                         )
                         .map((lead) => (
                           <button
@@ -284,13 +284,13 @@ export default function PreEncontroAgendaModal({
                           >
                             <span className="text-sm font-medium">{lead.nome}</span>
                             <span className="text-xs text-gray-500">
-                              {lead.telefone || 'Sem telefone'}
+                              {lead.endereco || 'Sem endereço'}
                             </span>
                           </button>
                         ))}
                       {leads.filter(lead => 
                         lead.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        lead.telefone?.toLowerCase().includes(searchTerm.toLowerCase())
+                        lead.endereco?.toLowerCase().includes(searchTerm.toLowerCase())
                       ).length === 0 && (
                         <div className="px-3 py-4 text-center text-sm text-gray-500">
                           Nenhum lead encontrado

@@ -430,9 +430,47 @@ Após o pagamento, enviar o comprovante.
 Fico à disposição para qualquer ajuste ou dúvida.
 Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
 
-      // Copiar para a área de transferência
-      await navigator.clipboard.writeText(message)
-      toast.success('Mensagem copiada! Cole no WhatsApp 📋')
+      // Tentar copiar usando clipboard API moderna
+      let copied = false
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(message)
+          copied = true
+        } catch (clipboardError) {
+          console.warn('Clipboard API falhou, tentando fallback:', clipboardError)
+        }
+      }
+      
+      // Fallback para dispositivos que não suportam clipboard API (iOS Safari, etc)
+      if (!copied) {
+        const textArea = document.createElement('textarea')
+        textArea.value = message
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        textArea.style.top = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        
+        try {
+          const successful = document.execCommand('copy')
+          if (successful) {
+            copied = true
+          }
+        } catch (execError) {
+          console.error('execCommand falhou:', execError)
+        }
+        
+        document.body.removeChild(textArea)
+      }
+      
+      if (copied) {
+        toast.success('Mensagem copiada! Cole no WhatsApp 📋')
+      } else {
+        // Se ambos os métodos falharem, mostrar a mensagem para o usuário copiar manualmente
+        toast.error('Não foi possível copiar automaticamente. Por favor, copie manualmente.')
+      }
     } catch (error) {
       console.error('Erro ao copiar mensagem:', error)
       toast.error('Erro ao copiar mensagem')

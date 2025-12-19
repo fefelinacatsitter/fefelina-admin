@@ -53,6 +53,41 @@ function formatCurrency(value) {
   }).format(value)
 }
 
+// Função para obter informações do cliente baseado no tipo de visita
+function getVisitClientInfo(visit) {
+  let clientName = 'Cliente não identificado'
+  let clientAddress = 'Endereço não cadastrado'
+  let visitTitle = ''
+  
+  if (visit.tipo_encontro === 'task') {
+    // Task: mostrar título + cliente do serviço
+    visitTitle = visit.titulo || 'Task sem título'
+    if (visit.services?.clients) {
+      // Cliente vem de dentro do serviço
+      const serviceClient = Array.isArray(visit.services.clients) 
+        ? visit.services.clients[0] 
+        : visit.services.clients
+      clientName = serviceClient?.nome || 'Cliente não identificado'
+      clientAddress = serviceClient?.endereco_completo || 'Endereço não cadastrado'
+    }
+  } else if (visit.tipo_encontro === 'pre_encontro') {
+    // Pré-encontro: mostrar lead ou cliente
+    if (visit.leads) {
+      clientName = visit.leads.nome || 'Lead não identificado'
+      clientAddress = 'Pré-Encontro (Lead)'
+    } else if (visit.clients) {
+      clientName = visit.clients.nome || 'Cliente não identificado'
+      clientAddress = visit.clients.endereco_completo || 'Endereço não cadastrado'
+    }
+  } else {
+    // Visita normal: cliente direto
+    clientName = visit.clients?.nome || 'Cliente não identificado'
+    clientAddress = visit.clients?.endereco_completo || 'Endereço não cadastrado'
+  }
+  
+  return { clientName, clientAddress, visitTitle }
+}
+
 // Função para buscar visitas do dia
 async function fetchTodayVisits() {
   const today = getTodaySaoPaulo()
@@ -79,7 +114,8 @@ async function fetchTodayVisits() {
     .select(`
       *,
       clients (nome, endereco_completo),
-      services (nome_servico)
+      services (nome_servico, clients (nome, endereco_completo)),
+      leads (nome)
     `)
     .eq('data', today)
     .in('status', ['agendada', 'realizada'])
@@ -115,14 +151,31 @@ function generateEmailHTML(visits, date) {
   const visitasInteiras = visits.filter(v => v.tipo_visita === 'inteira').length
   const visitasMeia = visits.filter(v => v.tipo_visita === 'meia').length
 
-  const visitasHTML = visits.map((visit, index) => `
-    <tr style="background-color: ${index % 2 === 0 ? '#f9fafb' : '#ffffff'};">
+  const visitasHTML = visits.map((visit, index) => {
+    const { clientName, clientAddress, visitTitle } = getVisitClientInfo(visit)
+    
+    // Definir cor de fundo baseado no tipo de encontro
+    let rowColor = index % 2 === 0 ? '#f9fafb' : '#ffffff'
+    if (visit.tipo_encontro === 'task') {
+      rowColor = index % 2 === 0 ? '#eff6ff' : '#dbeafe' // Azul claro para tasks
+    } else if (visit.tipo_encontro === 'pre_encontro') {
+      rowColor = index % 2 === 0 ? '#f3e8ff' : '#e9d5ff' // Roxo claro para pré-encontros
+    }
+    
+    return `
+    <tr style="background-color: ${rowColor};">
       <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
         <strong style="color: #7f50c6;">${formatTime(visit.horario)}</strong>
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-        <strong>${visit.clients?.nome || 'Cliente não identificado'}</strong><br>
-        <small style="color: #6b7280;">${visit.clients?.endereco_completo || 'Endereço não cadastrado'}</small>
+        ${visit.tipo_encontro === 'task' ? `
+          <div style="display: inline-block; padding: 2px 8px; background-color: #3b82f6; color: white; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 4px;">📋 TASK</div><br>
+          <strong style="color: #1e40af;">${visitTitle}</strong><br>
+        ` : visit.tipo_encontro === 'pre_encontro' ? `
+          <div style="display: inline-block; padding: 2px 8px; background-color: #8b5cf6; color: white; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 4px;">🤝 PRÉ-ENCONTRO</div><br>
+        ` : ''}
+        <strong>${clientName}</strong><br>
+        <small style="color: #6b7280;">${clientAddress}</small>
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">
         <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; ${
@@ -146,7 +199,8 @@ function generateEmailHTML(visits, date) {
         <strong style="color: #059669;">${formatCurrency(visit.valor - visit.desconto_plataforma)}</strong>
       </td>
     </tr>
-  `).join('')
+    `
+  }).join('')
 
   return `
     <!DOCTYPE html>

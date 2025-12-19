@@ -446,12 +446,22 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
       if (!copied) {
         const textArea = document.createElement('textarea')
         textArea.value = message
-        textArea.style.position = 'fixed'
-        textArea.style.left = '-999999px'
-        textArea.style.top = '-999999px'
+        
+        // iOS Safari precisa que o elemento seja visível e editável
+        textArea.style.position = 'absolute'
+        textArea.style.left = '0'
+        textArea.style.top = '0'
+        textArea.style.opacity = '0'
+        textArea.style.pointerEvents = 'none'
+        textArea.style.width = '1px'
+        textArea.style.height = '1px'
+        textArea.setAttribute('readonly', '')
+        
         document.body.appendChild(textArea)
+        
+        // iOS Safari requer que o elemento esteja focado
         textArea.focus()
-        textArea.select()
+        textArea.setSelectionRange(0, message.length)
         
         try {
           const successful = document.execCommand('copy')

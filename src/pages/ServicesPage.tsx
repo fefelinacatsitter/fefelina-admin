@@ -375,12 +375,18 @@ export default function ServicesPage() {
     try {
       const { data, error } = await supabase
         .from('visits')
-        .select('id, service_id, data, horario, tipo_visita, valor, status, desconto_plataforma, client_id, created_at')
+        .select('id, service_id, data, horario, tipo_visita, tipo_encontro, valor, status, desconto_plataforma, client_id, created_at')
         .eq('service_id', serviceId)
         .order('data', { ascending: true })
 
       if (error) throw error
-      setVisits(data || [])
+      
+      // Filtrar apenas visitas de serviço (excluir task e pre_encontro)
+      const filteredVisits = (data || []).filter(visit => 
+        visit.tipo_encontro !== 'task' && visit.tipo_encontro !== 'pre_encontro'
+      )
+      
+      setVisits(filteredVisits)
     } catch (error) {
       console.error('Erro ao buscar visitas:', error)
     }
@@ -388,17 +394,20 @@ export default function ServicesPage() {
 
   const copyWhatsAppMessage = async (service: Service) => {
     try {
-      // Buscar as visitas do serviço
+      // Buscar as visitas do serviço (apenas visitas de serviço, não tasks ou pré-encontros)
       const { data: visitsData, error } = await supabase
         .from('visits')
-        .select('data')
+        .select('data, tipo_encontro')
         .eq('service_id', service.id)
         .eq('status', 'agendada')
         .order('data', { ascending: true })
 
       if (error) throw error
 
-      const visits = visitsData || []
+      // Filtrar apenas visitas de serviço (excluir task e pre_encontro)
+      const visits = (visitsData || []).filter(visit => 
+        visit.tipo_encontro !== 'task' && visit.tipo_encontro !== 'pre_encontro'
+      )
       
       // Formatar as datas das visitas
       const formattedDates = visits.map(visit => {
@@ -726,7 +735,13 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
         .order('data', { ascending: true })
 
       if (error) throw error
-      setViewingVisits(visitsData || [])
+      
+      // Filtrar apenas visitas de serviço (excluir task e pre_encontro)
+      const filteredVisits = (visitsData || []).filter(visit => 
+        visit.tipo_encontro !== 'task' && visit.tipo_encontro !== 'pre_encontro'
+      )
+      
+      setViewingVisits(filteredVisits)
     } catch (error: any) {
       console.error('Erro ao buscar visitas do serviço:', error)
       toast.error(`Erro ao buscar detalhes: ${error.message}`)
@@ -1578,7 +1593,9 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                   <h4 className="text-sm font-medium text-gray-900 mb-3">Resumo Financeiro</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="text-center">
-                      <div className="text-xl font-bold text-gray-900">{viewingService.total_visitas}</div>
+                      <div className="text-xl font-bold text-gray-900">
+                        {viewingVisits.filter(v => v.status !== 'cancelada').length}
+                      </div>
                       <div className="text-xs text-gray-600">Total de Visitas</div>
                     </div>
                     <div className="text-center">

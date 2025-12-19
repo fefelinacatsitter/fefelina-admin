@@ -56,16 +56,17 @@ export interface Service {
 
 export interface Visit {
   id: string
-  service_id?: string | null // Nullable para pré-encontros
+  service_id?: string | null // Nullable para pré-encontros e tasks
   lead_id?: string | null // ID do lead para pré-encontros
-  client_id?: string // Opcional para pré-encontros
+  client_id?: string // Opcional para pré-encontros e tasks
   data: string
   horario: string
-  duracao_minutos?: number // Duração em minutos (padrão 30 para pré-encontros)
+  duracao_minutos?: number // Duração em minutos (padrão 30 para pré-encontros e tasks)
   valor: number
   status: 'agendada' | 'realizada' | 'cancelada'
   tipo_visita: 'inteira' | 'meia'
-  tipo_encontro: 'pre_encontro' | 'visita_servico' // Novo campo
+  tipo_encontro: 'pre_encontro' | 'visita_servico' | 'task' // Novo tipo: task
+  titulo?: string | null // Título da task (obrigatório quando tipo_encontro = 'task')
   responsavel?: 'fernanda' | 'andre' | null // Responsável pela visita (fernanda=roxo, andre=laranja)
   desconto_plataforma: number
   observacoes?: string
@@ -77,6 +78,13 @@ export interface Visit {
     nome: string
     telefone: string | null
     status: string
+  }
+  services?: {
+    id: string
+    nome_servico: string | null
+    clients: {
+      nome: string
+    }
   }
 }
 

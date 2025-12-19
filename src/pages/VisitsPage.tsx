@@ -88,7 +88,8 @@ interface Visit {
   data: string
   horario: string
   tipo_visita: 'inteira' | 'meia'
-  tipo_encontro?: 'pre_encontro' | 'visita_servico'
+  tipo_encontro?: 'pre_encontro' | 'visita_servico' | 'task'
+  titulo?: string | null
   valor: number
   status: 'agendada' | 'realizada' | 'cancelada'
   desconto_plataforma: number
@@ -167,7 +168,7 @@ export default function VisitsPage() {
       let query = supabase
         .from('visits')
         .select(`
-          id, service_id, lead_id, data, horario, tipo_visita, tipo_encontro, valor, status, desconto_plataforma, observacoes, client_id, created_at,
+          id, service_id, lead_id, data, horario, tipo_visita, tipo_encontro, titulo, valor, status, desconto_plataforma, observacoes, client_id, created_at,
           clients (nome),
           services (nome_servico),
           leads (nome)
@@ -553,11 +554,27 @@ export default function VisitsPage() {
           {/* Mobile: Cards */}
           <div className="block md:hidden space-y-4">
             {getSortedVisits().map((visit, index, array) => (
-              <div key={visit.id} className={`border rounded-lg p-4 shadow-sm ${visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50 border-purple-200' : 'bg-white'}`}>
+              <div key={visit.id} className={`border rounded-lg p-4 shadow-sm ${
+                visit.tipo_encontro === 'task' ? 'bg-blue-50 border-blue-200' : 
+                visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50 border-purple-200' : 
+                'bg-white'
+              }`}>
                 <div className="flex justify-between items-center mb-2">
                   <div>
                     <div className="font-semibold text-primary-700 text-base">{formatDate(visit.data)} <span className="text-xs text-gray-500">{visit.horario}</span></div>
-                    {visit.tipo_encontro === 'pre_encontro' ? (
+                    {visit.tipo_encontro === 'task' ? (
+                      <>
+                        <div className="text-sm font-medium text-blue-700 flex items-center gap-1.5">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                          </svg>
+                          Task: {visit.titulo || 'Sem título'}
+                        </div>
+                        <div className="text-xs text-blue-600 mt-0.5">
+                          {visit.services?.nome_servico ? `Serviço: ${visit.services.nome_servico}` : 'Sem serviço vinculado'}
+                        </div>
+                      </>
+                    ) : visit.tipo_encontro === 'pre_encontro' ? (
                       <>
                         <div className="text-sm font-medium text-purple-700 flex items-center gap-1.5">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -703,7 +720,11 @@ export default function VisitsPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {getSortedVisits().map((visit, index, array) => (
-                    <tr key={visit.id} className={`${visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50' : 'hover:bg-gray-50'}`}>
+                    <tr key={visit.id} className={`${
+                      visit.tipo_encontro === 'task' ? 'bg-blue-50' : 
+                      visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50' : 
+                      'hover:bg-gray-50'
+                    }`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
                           {formatDate(visit.data)}
@@ -713,7 +734,24 @@ export default function VisitsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {visit.tipo_encontro === 'pre_encontro' ? (
+                        {visit.tipo_encontro === 'task' ? (
+                          <div>
+                            <div className="text-sm font-medium text-blue-700 flex items-center gap-1.5">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                              </svg>
+                              Task: {visit.titulo || 'Sem título'}
+                            </div>
+                            <div className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-200 text-blue-800">
+                                Task
+                              </span>
+                              {visit.services?.nome_servico && (
+                                <span className="text-gray-600">· {visit.services.nome_servico}</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : visit.tipo_encontro === 'pre_encontro' ? (
                           <div>
                             <div className="text-sm font-medium text-purple-700 flex items-center gap-1.5">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -6,15 +6,13 @@ import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PreEncontroAgendaModal from '../components/PreEncontroAgendaModal'
 import PreEncontroDetalhesModal from '../components/PreEncontroDetalhesModal'
+import TaskModal from '../components/TaskModal'
 import ContextMenu from '../components/ContextMenu'
 
 interface Visit extends VisitType {
   clients?: {
     nome: string
     endereco_completo?: string
-  } | null
-  services?: {
-    nome_servico?: string
   } | null
   leads?: {
     id: string
@@ -41,6 +39,11 @@ export default function AgendaPage() {
   // Estados para pré-encontros
   const [showPreEncontroModal, setShowPreEncontroModal] = useState(false)
   const [contextMenuData, setContextMenuData] = useState<{ date: string; time: string } | null>(null)
+  
+  // Estados para tasks
+  const [showTaskModal, setShowTaskModal] = useState(false)
+  const [taskModalData, setTaskModalData] = useState<{ date: string; time: string } | null>(null)
+  const [editingTask, setEditingTask] = useState<Visit | null>(null)
   
   // Estados para menu de contexto
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; date: string; time: string } | null>(null)
@@ -171,6 +174,13 @@ export default function AgendaPage() {
       return visit.status === 'realizada'
         ? 'bg-orange-50 border-orange-300 text-orange-700 opacity-75'
         : 'bg-orange-100 border-orange-400 text-orange-900'
+    }
+    
+    // Tasks em azul escuro (sem responsável atribuído)
+    if (visit.tipo_encontro === 'task') {
+      return visit.status === 'realizada'
+        ? 'bg-blue-50 border-blue-300 text-blue-700 opacity-75'
+        : 'bg-blue-100 border-blue-400 text-blue-900'
     }
     
     // Pré-encontros em azul claro (sem responsável atribuído)
@@ -445,6 +455,17 @@ export default function AgendaPage() {
     }
   }
 
+  const handleCreateTask = () => {
+    if (contextMenu) {
+      setTaskModalData({
+        date: contextMenu.date,
+        time: contextMenu.time
+      })
+      setShowTaskModal(true)
+      setContextMenu(null)
+    }
+  }
+
   const handleCardContextMenu = (e: React.MouseEvent, visit: Visit) => {
     e.preventDefault()
     e.stopPropagation() // Evitar que abra o menu do slot
@@ -483,6 +504,36 @@ export default function AgendaPage() {
     } catch (error) {
       console.error('Erro ao cancelar pré-encontro:', error)
       toast.error('Erro ao cancelar pré-encontro')
+    }
+  }
+
+  const handleDeleteTask = async () => {
+    if (!cardContextMenu) return
+
+    const titulo = cardContextMenu.visit.titulo || 'esta task'
+    const confirmDelete = window.confirm(
+      `Deseja realmente excluir a task "${titulo}"?`
+    )
+
+    if (!confirmDelete) {
+      setCardContextMenu(null)
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('visits')
+        .delete()
+        .eq('id', cardContextMenu.visit.id)
+
+      if (error) throw error
+
+      toast.success('Task excluída com sucesso!')
+      await fetchVisits()
+      setCardContextMenu(null)
+    } catch (error) {
+      console.error('Erro ao excluir task:', error)
+      toast.error('Erro ao excluir task')
     }
   }
 
@@ -626,19 +677,23 @@ export default function AgendaPage() {
                           }}
                         >
                             <div className="font-semibold truncate leading-tight">
-                              {visit.tipo_encontro === 'pre_encontro' 
-                                ? `🤝 ${visit.leads?.nome || visit.clients?.nome || 'Não identificado'}` 
-                                : visit.clients?.nome || 'Cliente não identificado'}
+                              {visit.tipo_encontro === 'task'
+                                ? `📋 ${visit.titulo || 'Task sem título'}`
+                                : visit.tipo_encontro === 'pre_encontro' 
+                                  ? `🤝 ${visit.leads?.nome || visit.clients?.nome || 'Não identificado'}` 
+                                  : visit.clients?.nome || 'Cliente não identificado'}
                             </div>
                             {!hasConflict && !hasMultipleVisits && (
                               <div className="truncate opacity-90 leading-tight mt-0.5">
-                                {visit.tipo_encontro === 'pre_encontro'
-                                  ? 'Pré-Encontro'
-                                  : visit.services?.nome_servico || 'Serviço não identificado'}
+                                {visit.tipo_encontro === 'task'
+                                  ? visit.services?.nome_servico || 'Serviço não vinculado'
+                                  : visit.tipo_encontro === 'pre_encontro'
+                                    ? 'Pré-Encontro'
+                                    : visit.services?.nome_servico || 'Serviço não identificado'}
                               </div>
                             )}
                             <div className="opacity-75 mt-0.5 leading-tight">
-                              {visit.horario.substring(0, 5)} • {visit.tipo_encontro === 'pre_encontro' ? '30min' : visit.tipo_visita === 'inteira' ? '1h' : '30min'}
+                              {visit.horario.substring(0, 5)} • {visit.tipo_encontro === 'pre_encontro' || visit.tipo_encontro === 'task' ? '30min' : visit.tipo_visita === 'inteira' ? '1h' : '30min'}
                             </div>
                           </div>
                         )
@@ -791,13 +846,15 @@ export default function AgendaPage() {
                             }}
                           >
                             <div className="font-semibold truncate leading-tight">
-                              {visit.tipo_encontro === 'pre_encontro' 
-                                ? `🤝 ${visit.leads?.nome || visit.clients?.nome || 'Não identificado'}` 
-                                : visit.clients?.nome || 'Cliente não identificado'}
+                              {visit.tipo_encontro === 'task'
+                                ? `📋 ${visit.titulo || 'Task'}`
+                                : visit.tipo_encontro === 'pre_encontro' 
+                                  ? `🤝 ${visit.leads?.nome || visit.clients?.nome || 'Não identificado'}` 
+                                  : visit.clients?.nome || 'Cliente não identificado'}
                             </div>
                             {!hasConflict && !hasMultipleVisits && (
                               <div className="truncate text-[9px] opacity-75 leading-tight mt-0.5">
-                                {visit.tipo_encontro === 'pre_encontro' ? '30min' : visit.tipo_visita === 'inteira' ? '1h' : '30min'}
+                                {visit.tipo_encontro === 'pre_encontro' || visit.tipo_encontro === 'task' ? '30min' : visit.tipo_visita === 'inteira' ? '1h' : '30min'}
                               </div>
                             )}
                           </div>
@@ -918,12 +975,24 @@ export default function AgendaPage() {
         </>
       )}
 
-      {/* Modal de detalhes - Pré-Encontro ou Visita Normal */}
+      {/* Modal de detalhes - Pré-Encontro, Task ou Visita Normal */}
       {showModal && selectedVisit && (
         selectedVisit.tipo_encontro === 'pre_encontro' ? (
           <PreEncontroDetalhesModal
             visit={selectedVisit}
             onClose={() => setShowModal(false)}
+          />
+        ) : selectedVisit.tipo_encontro === 'task' ? (
+          <TaskModal
+            isOpen={true}
+            initialDate={selectedVisit.data}
+            initialTime={selectedVisit.horario}
+            editingTask={selectedVisit}
+            onClose={() => setShowModal(false)}
+            onSuccess={() => {
+              fetchVisits()
+              setShowModal(false)
+            }}
           />
         ) : (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1053,6 +1122,12 @@ export default function AgendaPage() {
               onClick: handleCreatePreEncontro,
               color: 'text-cyan-700'
             },
+            {
+              label: 'Criar Task',
+              icon: '📋',
+              onClick: handleCreateTask,
+              color: 'text-blue-700'
+            },
             // Futuras opções podem ser adicionadas aqui:
             // {
             //   label: 'Criar Visita Rápida',
@@ -1085,6 +1160,27 @@ export default function AgendaPage() {
         />
       )}
 
+      {/* Modal de Task */}
+      {showTaskModal && (
+        <TaskModal
+          isOpen={showTaskModal}
+          initialDate={taskModalData?.date}
+          initialTime={taskModalData?.time}
+          onClose={() => {
+            setShowTaskModal(false)
+            setTaskModalData(null)
+            setEditingTask(null)
+          }}
+          onSuccess={() => {
+            fetchVisits()
+            setShowTaskModal(false)
+            setTaskModalData(null)
+            setEditingTask(null)
+          }}
+          editingTask={editingTask}
+        />
+      )}
+
       {/* Menu de contexto do card (pré-encontros e atribuição) */}
       {cardContextMenu && (
         <ContextMenu
@@ -1110,11 +1206,17 @@ export default function AgendaPage() {
               onClick: () => handleAssignResponsavel(cardContextMenu.visit.id, null),
               color: 'text-gray-700'
             },
-            // Separador visual (apenas se for pré-encontro)
+            // Opções de exclusão específicas por tipo
             ...(cardContextMenu.visit.tipo_encontro === 'pre_encontro' ? [{
               label: 'Cancelar Pré-Encontro',
               icon: '🗑️',
               onClick: handleDeletePreEncontro,
+              color: 'text-red-600'
+            }] : []),
+            ...(cardContextMenu.visit.tipo_encontro === 'task' ? [{
+              label: 'Excluir Task',
+              icon: '🗑️',
+              onClick: handleDeleteTask,
               color: 'text-red-600'
             }] : [])
           ]}

@@ -995,16 +995,16 @@ export default function AgendaPage() {
             }}
           />
         ) : (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 md:p-6">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] md:max-h-[90vh] overflow-y-auto mt-16 md:mt-0">
               {/* Header da modal com gradiente */}
-              <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-start">
+              <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-4 md:px-6 py-3 flex justify-between items-start">
                 <div>
-                  <h2 className="text-base font-semibold text-gray-900">
+                  <h2 className="text-sm md:text-base font-semibold text-gray-900">
                     Detalhes da Visita
                   </h2>
                   <p className="text-xs text-gray-600 mt-0.5">
-                    {format(parseISO(selectedVisit.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    {format(parseISO(selectedVisit.data), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
                   </p>
                 </div>
                 <button
@@ -1018,77 +1018,84 @@ export default function AgendaPage() {
               </div>
 
               {/* Conteúdo da modal */}
-              <div className="px-6 py-4 space-y-6">
-                {/* Informações da visita */}
-                <div className="grid grid-cols-2 gap-4">
+              <div className="px-4 md:px-6 py-4 space-y-4">
+                {/* Linha 1: Cliente | Horário */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Cliente</label>
-                    <p className="text-base font-medium text-gray-900 mt-1">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cliente</label>
+                    <p className="text-sm md:text-base font-medium text-gray-900 mt-1">
                       {selectedVisit.clients?.nome || 'Não identificado'}
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Status</label>
-                    <p className="mt-1">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                        selectedVisit.status === 'agendada' ? 'bg-blue-100 text-blue-800' :
-                        selectedVisit.status === 'realizada' ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {selectedVisit.status === 'agendada' ? 'Agendada' :
-                         selectedVisit.status === 'realizada' ? 'Realizada' : 'Cancelada'}
-                      </span>
-                    </p>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Horário</label>
+                    <input
+                      type="time"
+                      defaultValue={selectedVisit.horario.substring(0, 5)}
+                      onBlur={async (e) => {
+                        const newTime = e.target.value + ':00'
+                        if (newTime !== selectedVisit.horario) {
+                          try {
+                            const { error } = await supabase
+                              .from('visits')
+                              .update({ horario: newTime })
+                              .eq('id', selectedVisit.id)
+                            
+                            if (error) throw error
+                            toast.success('Horário atualizado!')
+                            await fetchVisits()
+                          } catch (error) {
+                            console.error('Erro ao atualizar horário:', error)
+                            toast.error('Erro ao atualizar horário')
+                            e.target.value = selectedVisit.horario.substring(0, 5)
+                          }
+                        }
+                      }}
+                      className="w-full text-sm md:text-base font-medium text-gray-900 mt-1 border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* Linha 2: Tipo de Visita | Valor da Visita */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Horário</label>
-                    <p className="text-base font-medium text-gray-900 mt-1">
-                      {selectedVisit.horario.substring(0, 5)}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Tipo de Visita</label>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tipo de Visita</label>
                     <p className="mt-1">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                      <span className={`inline-flex px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${
                         selectedVisit.tipo_visita === 'inteira' 
                           ? 'bg-blue-100 text-blue-800' 
                           : 'bg-orange-100 text-orange-800'
                       }`}>
-                        {selectedVisit.tipo_visita === 'inteira' ? 'Visita Inteira' : 'Meia Visita'}
+                        {selectedVisit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
                       </span>
                     </p>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Valor da Visita</label>
-                    <p className="text-base font-medium text-gray-900 mt-1">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Valor da Visita</label>
+                    <p className="text-sm md:text-base font-medium text-gray-900 mt-1">
                       R$ {selectedVisit.valor.toFixed(2)}
                     </p>
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Desconto Plataforma</label>
-                    <p className="text-base font-medium text-gray-900 mt-1">
-                      {selectedVisit.desconto_plataforma}%
-                    </p>
-                  </div>
                 </div>
 
-                <div className="border-t border-gray-200 pt-4">
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Valor a Receber</label>
-                  <p className="text-xl font-bold text-green-600 mt-1">
+                {/* Valor a Receber */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <label className="text-xs font-semibold text-green-700 uppercase tracking-wide">Valor a Receber</label>
+                  <p className="text-xl md:text-2xl font-bold text-green-600 mt-1">
                     R$ {(selectedVisit.valor * (1 - selectedVisit.desconto_plataforma / 100)).toFixed(2)}
                   </p>
+                  {selectedVisit.desconto_plataforma > 0 && (
+                    <p className="text-xs text-green-600 mt-1">
+                      Desconto: {selectedVisit.desconto_plataforma}%
+                    </p>
+                  )}
                 </div>
 
+                {/* Endereço */}
                 {selectedVisit.clients?.endereco_completo && (
                   <div className="border-t border-gray-200 pt-4">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Endereço do Cliente</label>
-                    <p className="text-base font-medium text-gray-900 mt-1">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Endereço</label>
+                    <p className="text-sm md:text-base text-gray-700 leading-relaxed">
                       {selectedVisit.clients.endereco_completo}
                     </p>
                   </div>
@@ -1096,10 +1103,10 @@ export default function AgendaPage() {
               </div>
 
               {/* Footer da modal */}
-              <div className="sticky bottom-0 bg-gray-50 px-6 py-4 border-t border-gray-200">
+              <div className="sticky bottom-0 bg-gray-50 px-4 md:px-6 py-3 border-t border-gray-200">
                 <button
                   onClick={() => setShowModal(false)}
-                  className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                  className="w-full px-4 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium text-sm md:text-base"
                 >
                   Fechar
                 </button>

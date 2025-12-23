@@ -20,6 +20,7 @@ interface Visit extends VisitType {
     telefone: string | null
     status: string
   }
+  isLastVisit?: boolean
 }
 
 type ViewMode = 'day' | 'week'
@@ -117,7 +118,7 @@ export default function AgendaPage() {
         .select(`
           *,
           clients (nome, endereco_completo),
-          services (nome_servico),
+          services (nome_servico, total_visitas),
           leads (id, nome, telefone, endereco, status)
         `)
         .gte('data', format(startDate, 'yyyy-MM-dd'))
@@ -128,8 +129,60 @@ export default function AgendaPage() {
 
       if (error) throw error
       
-      // Mostrar todas as visitas (incluindo pré-encontros)
-      setVisits(data || [])
+      const visitsData = data || []
+
+      // Identificar a última visita de cada serviço
+      // Precisamos buscar TODAS as visitas de cada serviço para identificar corretamente a última
+      const serviceIds = new Set<string>()
+      visitsData.forEach(visit => {
+        if (visit.service_id && visit.tipo_encontro === 'visita_servico') {
+          serviceIds.add(visit.service_id)
+        }
+      })
+
+      // Buscar todas as visitas de cada serviço
+      if (serviceIds.size > 0) {
+        const { data: allServiceVisits, error: serviceError } = await supabase
+          .from('visits')
+          .select('id, service_id, data, horario, status')
+          .in('service_id', Array.from(serviceIds))
+          .eq('tipo_encontro', 'visita_servico')
+          .in('status', ['agendada', 'realizada'])
+
+        if (!serviceError && allServiceVisits) {
+          // Agrupar por serviço
+          const visitsByService = new Map<string, typeof allServiceVisits>()
+          
+          allServiceVisits.forEach(visit => {
+            if (!visitsByService.has(visit.service_id!)) {
+              visitsByService.set(visit.service_id!, [])
+            }
+            visitsByService.get(visit.service_id!)!.push(visit)
+          })
+
+          // Marcar a última visita de cada serviço
+          visitsByService.forEach((serviceVisits) => {
+            // Ordenar por data e horário para encontrar a última
+            const sortedVisits = serviceVisits.sort((a, b) => {
+              if (a.data === b.data) {
+                return a.horario.localeCompare(b.horario)
+              }
+              return a.data.localeCompare(b.data)
+            })
+
+            // A última visita é a que tem data/horário mais recente
+            const lastVisitId = sortedVisits[sortedVisits.length - 1].id
+            
+            // Marcar a visita correspondente em visitsData
+            const visitToMark = visitsData.find(v => v.id === lastVisitId)
+            if (visitToMark) {
+              (visitToMark as any).isLastVisit = true
+            }
+          })
+        }
+      }
+
+      setVisits(visitsData)
     } catch (error) {
       console.error('Erro ao buscar visitas:', error)
     } finally {
@@ -668,6 +721,8 @@ export default function AgendaPage() {
                             hasMultiple ? 'text-[10px]' : 'text-xs'
                           } ${getVisitColor(visit)} ${
                             hasConflict ? 'border-2 border-red-500' : ''
+                          } ${
+                            visit.isLastVisit ? 'border-l-4 border-l-orange-500' : ''
                           }`}
                           style={{
                             left: leftPosition,
@@ -676,12 +731,15 @@ export default function AgendaPage() {
                             maxHeight: cardHeight ? `${cardHeight}px` : undefined
                           }}
                         >
-                            <div className="font-semibold truncate leading-tight">
-                              {visit.tipo_encontro === 'task'
-                                ? `📋 ${visit.titulo || 'Task sem título'}`
-                                : visit.tipo_encontro === 'pre_encontro' 
-                                  ? `🤝 ${visit.leads?.nome || visit.clients?.nome || 'Não identificado'}` 
-                                  : visit.clients?.nome || 'Cliente não identificado'}
+                            <div className="font-semibold truncate leading-tight flex items-center gap-1">
+                              {visit.isLastVisit && <span className="text-base" title="Última visita do serviço">🏁</span>}
+                              <span className="truncate">
+                                {visit.tipo_encontro === 'task'
+                                  ? `📋 ${visit.titulo || 'Task sem título'}`
+                                  : visit.tipo_encontro === 'pre_encontro' 
+                                    ? `🤝 ${visit.leads?.nome || visit.clients?.nome || 'Não identificado'}` 
+                                    : visit.clients?.nome || 'Cliente não identificado'}
+                              </span>
                             </div>
                             {!hasConflict && !hasMultipleVisits && (
                               <div className="truncate opacity-90 leading-tight mt-0.5">
@@ -837,6 +895,8 @@ export default function AgendaPage() {
                               hasMultiple ? 'text-[8px]' : 'text-xs'
                             } ${getVisitColor(visit)} ${
                               hasConflict ? 'border-2 border-red-500' : ''
+                            } ${
+                              visit.isLastVisit ? 'border-l-4 border-l-orange-500' : ''
                             }`}
                             style={{
                               left: leftPosition,
@@ -845,12 +905,15 @@ export default function AgendaPage() {
                               maxHeight: cardHeight ? `${cardHeight}px` : undefined
                             }}
                           >
-                            <div className="font-semibold truncate leading-tight">
-                              {visit.tipo_encontro === 'task'
-                                ? `📋 ${visit.titulo || 'Task'}`
-                                : visit.tipo_encontro === 'pre_encontro' 
-                                  ? `🤝 ${visit.leads?.nome || visit.clients?.nome || 'Não identificado'}` 
-                                  : visit.clients?.nome || 'Cliente não identificado'}
+                            <div className="font-semibold truncate leading-tight flex items-center gap-0.5">
+                              {visit.isLastVisit && <span className="text-xs" title="Última visita do serviço">🏁</span>}
+                              <span className="truncate">
+                                {visit.tipo_encontro === 'task'
+                                  ? `📋 ${visit.titulo || 'Task'}`
+                                  : visit.tipo_encontro === 'pre_encontro' 
+                                    ? `🤝 ${visit.leads?.nome || visit.clients?.nome || 'Não identificado'}` 
+                                    : visit.clients?.nome || 'Cliente não identificado'}
+                              </span>
                             </div>
                             {!hasConflict && !hasMultipleVisits && (
                               <div className="truncate text-[9px] opacity-75 leading-tight mt-0.5">

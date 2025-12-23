@@ -99,10 +99,12 @@ interface Visit {
   } | null
   services: {
     nome_servico?: string
+    total_visitas?: number
   } | null
   leads?: {
     nome: string
   } | null
+  isLastVisit?: boolean
 }
 
 interface ClientQuickInfo {
@@ -170,7 +172,7 @@ export default function VisitsPage() {
         .select(`
           id, service_id, lead_id, data, horario, tipo_visita, tipo_encontro, titulo, valor, status, desconto_plataforma, observacoes, client_id, created_at,
           clients (nome),
-          services (nome_servico),
+          services (nome_servico, total_visitas),
           leads (nome)
         `)
         .order('data', { ascending: true })
@@ -224,12 +226,65 @@ export default function VisitsPage() {
 
       if (error) throw error
       
-      setVisits((data || []).map(visit => ({
+      const visitsData = (data || []).map(visit => ({
         ...visit,
         clients: Array.isArray(visit.clients) ? visit.clients[0] : visit.clients,
         services: Array.isArray(visit.services) ? visit.services[0] : visit.services,
         leads: Array.isArray(visit.leads) ? visit.leads[0] : visit.leads
-      })))
+      }))
+
+      // Identificar a última visita de cada serviço
+      // Precisamos buscar TODAS as visitas de cada serviço para identificar corretamente a última
+      const serviceIds = new Set<string>()
+      visitsData.forEach(visit => {
+        if (visit.service_id && visit.tipo_encontro === 'visita_servico') {
+          serviceIds.add(visit.service_id)
+        }
+      })
+
+      // Buscar todas as visitas de cada serviço
+      if (serviceIds.size > 0) {
+        const { data: allServiceVisits, error: serviceError } = await supabase
+          .from('visits')
+          .select('id, service_id, data, horario, status')
+          .in('service_id', Array.from(serviceIds))
+          .eq('tipo_encontro', 'visita_servico')
+          .in('status', ['agendada', 'realizada'])
+
+        if (!serviceError && allServiceVisits) {
+          // Agrupar por serviço
+          const visitsByService = new Map<string, typeof allServiceVisits>()
+          
+          allServiceVisits.forEach(visit => {
+            if (!visitsByService.has(visit.service_id!)) {
+              visitsByService.set(visit.service_id!, [])
+            }
+            visitsByService.get(visit.service_id!)!.push(visit)
+          })
+
+          // Marcar a última visita de cada serviço
+          visitsByService.forEach((serviceVisits) => {
+            // Ordenar por data e horário para encontrar a última
+            const sortedVisits = serviceVisits.sort((a, b) => {
+              if (a.data === b.data) {
+                return a.horario.localeCompare(b.horario)
+              }
+              return a.data.localeCompare(b.data)
+            })
+
+            // A última visita é a que tem data/horário mais recente
+            const lastVisitId = sortedVisits[sortedVisits.length - 1].id
+            
+            // Marcar a visita correspondente em visitsData
+            const visitToMark = visitsData.find(v => v.id === lastVisitId)
+            if (visitToMark) {
+              (visitToMark as any).isLastVisit = true
+            }
+          })
+        }
+      }
+
+      setVisits(visitsData)
     } catch (error) {
       console.error('Erro ao buscar visitas:', error)
     } finally {
@@ -555,13 +610,19 @@ export default function VisitsPage() {
           <div className="block md:hidden space-y-4">
             {getSortedVisits().map((visit, index, array) => (
               <div key={visit.id} className={`border rounded-lg p-4 shadow-sm ${
+                visit.isLastVisit ? 'border-l-4 border-l-orange-400 bg-orange-50/30' :
                 visit.tipo_encontro === 'task' ? 'bg-blue-50 border-blue-200' : 
                 visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50 border-purple-200' : 
                 'bg-white'
               }`}>
                 <div className="flex justify-between items-center mb-2">
                   <div>
-                    <div className="font-semibold text-primary-700 text-base">{formatDate(visit.data)} <span className="text-xs text-gray-500">{visit.horario}</span></div>
+                    <div className="font-semibold text-primary-700 text-base flex items-center gap-1.5">
+                      {formatDate(visit.data)} <span className="text-xs text-gray-500">{visit.horario}</span>
+                      {visit.isLastVisit && (
+                        <span className="text-sm" title="Última visita do serviço">🏁</span>
+                      )}
+                    </div>
                     {visit.tipo_encontro === 'task' ? (
                       <>
                         <div className="text-sm font-medium text-blue-700 flex items-center gap-1.5">
@@ -656,7 +717,14 @@ export default function VisitsPage() {
                       </>
                     )}
                   </div>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${visit.tipo_visita === 'inteira' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>{visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}</span>
+                  <div className="flex flex-col gap-1.5 items-end">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${visit.tipo_visita === 'inteira' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>{visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}</span>
+                    {visit.isLastVisit && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                        🏁 Última
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center mb-2">
                   <span className="text-sm font-medium text-gray-900">{maskField('valor', formatCurrency(visit.valor))}</span>
@@ -721,13 +789,17 @@ export default function VisitsPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {getSortedVisits().map((visit, index, array) => (
                     <tr key={visit.id} className={`${
+                      visit.isLastVisit ? 'border-l-4 border-l-orange-400 bg-orange-50/20' :
                       visit.tipo_encontro === 'task' ? 'bg-blue-50' : 
                       visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50' : 
                       'hover:bg-gray-50'
                     }`}>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
                           {formatDate(visit.data)}
+                          {visit.isLastVisit && (
+                            <span className="text-base" title="Última visita do serviço">🏁</span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-500">
                           {visit.horario}
@@ -842,11 +914,18 @@ export default function VisitsPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          visit.tipo_visita === 'inteira' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                        }`}>
-                          {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            visit.tipo_visita === 'inteira' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          }`}>
+                            {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
+                          </span>
+                          {visit.isLastVisit && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                              🏁 Última
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {maskField('valor', formatCurrency(visit.valor))}

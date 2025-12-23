@@ -279,38 +279,54 @@ export default function SetupPage() {
       }
       if (!authData.user) throw new Error('Usuário não foi criado no auth');
 
-      // 2. Criar user_profile
+      // 2. Criar user_profile usando função segura
       console.log('Criando user_profile para:', authData.user.id);
       
       const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          user_id: authData.user.id,
-          profile_id: newUserForm.profile_id,
-          full_name: newUserForm.full_name,
-          email: newUserForm.email,
-          phone: newUserForm.phone || null,
-          is_active: true
-        })
-        .select();
+        .rpc('create_user_profile', {
+          p_user_id: authData.user.id,
+          p_profile_id: newUserForm.profile_id,
+          p_full_name: newUserForm.full_name,
+          p_email: newUserForm.email,
+          p_phone: newUserForm.phone || null
+        });
 
       if (profileError) {
         console.error('Erro ao criar user_profile:', profileError);
         
-        // Verificar se é erro de RLS (403/policy violation)
-        if (profileError.message.includes('row-level security') || profileError.message.includes('policy')) {
+        // Tentar limpar o usuário órfão do auth se falhou
+        try {
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          console.log('Usuário órfão removido do auth');
+        } catch (cleanupError) {
+          console.warn('Não foi possível remover usuário órfão:', cleanupError);
+        }
+        
+        // Mensagens de erro específicas
+        if (profileError.message?.includes('apenas administradores')) {
           throw new Error(
-            '❌ PERMISSÃO NEGADA: Você precisa executar o script SQL no Supabase!\n\n' +
-            '📋 PASSOS:\n' +
-            '1. Abra o Supabase Dashboard\n' +
-            '2. Vá em "SQL Editor" → "New Query"\n' +
-            '3. Cole o conteúdo do arquivo ENABLE-USER-CREATION.sql\n' +
-            '4. Clique em "Run" para executar\n\n' +
-            '💡 Este script cria a permissão para admins criarem usuários.'
+            '❌ ACESSO NEGADO!\n\n' +
+            'Você não tem permissão de administrador.\n\n' +
+            '📋 Verifique:\n' +
+            '1. Se você está logado como administrador\n' +
+            '2. Se executou o script SECURE-USER-CREATION.sql\n' +
+            '3. Se fez logout/login após executar o script'
           );
         }
         
-        throw new Error(`Erro ao criar perfil do usuário: ${profileError.message}`);
+        if (profileError.message?.includes('function') || profileError.code === '42883') {
+          throw new Error(
+            '❌ FUNÇÃO NÃO ENCONTRADA!\n\n' +
+            '📋 Execute o script SQL:\n' +
+            '1. Abra o Supabase SQL Editor\n' +
+            '2. Cole TODO o conteúdo do arquivo SECURE-USER-CREATION.sql\n' +
+            '3. Clique em "Run"\n' +
+            '4. Faça logout e login novamente\n\n' +
+            `Erro técnico: ${profileError.message}`
+          );
+        }
+        
+        throw new Error(`Erro ao criar perfil: ${profileError.message}`);
       }
 
       console.log('User_profile criado com sucesso:', profileData);

@@ -32,6 +32,7 @@ interface Visit {
   data: string
   horario: string
   tipo_visita: 'inteira' | 'meia'
+  tipo_encontro?: string
   valor: number
   status: 'agendada' | 'realizada' | 'cancelada'
   desconto_plataforma: number

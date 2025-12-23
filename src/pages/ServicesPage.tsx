@@ -397,7 +397,7 @@ export default function ServicesPage() {
       // Buscar as visitas do serviço (apenas visitas de serviço, não tasks ou pré-encontros)
       const { data: visitsData, error } = await supabase
         .from('visits')
-        .select('data, tipo_encontro')
+        .select('data, tipo_encontro, tipo_visita')
         .eq('service_id', service.id)
         .eq('status', 'agendada')
         .order('data', { ascending: true })
@@ -409,10 +409,11 @@ export default function ServicesPage() {
         visit.tipo_encontro !== 'task' && visit.tipo_encontro !== 'pre_encontro'
       )
       
-      // Formatar as datas das visitas
+      // Formatar as datas das visitas com o tipo (meia/inteira)
       const formattedDates = visits.map(visit => {
         const [year, month, day] = visit.data.split('-')
-        return `• ${day}/${month}/${year}`
+        const tipoVisita = visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'
+        return `• ${day}/${month}/${year} - ${tipoVisita}`
       }).join('\n')
 
       // Formatar o valor

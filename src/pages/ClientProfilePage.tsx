@@ -847,6 +847,7 @@ export default function ClientProfilePage() {
         data: visit.data,
         horario: visit.horario,
         tipo_visita: visit.tipo_visita,
+        tipo_encontro: 'visita_servico',
         valor: visit.valor,
         status: visit.status,
         desconto_plataforma: visit.desconto_plataforma,

@@ -311,6 +311,7 @@ export default function ServicesPage() {
       data: '',
       horario: '09:00',
       tipo_visita: 'inteira',
+      tipo_encontro: 'visita_servico',
       valor: calculateVisitValue(selectedClient, 'inteira'),
       status: 'agendada',
       desconto_plataforma: formData.desconto_plataforma_default
@@ -620,6 +621,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
           ...visitWithoutId,
           service_id: savedService.id,
           client_id: formData.client_id,
+          tipo_encontro: 'visita_servico',
           // Atualiza o desconto da plataforma com o valor padrão do serviço
           desconto_plataforma: formData.desconto_plataforma_default
         }

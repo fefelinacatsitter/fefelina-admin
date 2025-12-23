@@ -436,14 +436,37 @@ export default function FinanceiroPage() {
 
       {/* Modal de Novo/Editar Lançamento */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                {editingMovimento ? 'Editar Lançamento' : 'Novo Lançamento'}
-              </h3>
-              
-              <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 md:p-6">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] md:max-h-[90vh] overflow-y-auto mt-16 md:mt-0">
+            {/* Header da modal com gradiente */}
+            <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-4 md:px-6 py-3 flex justify-between items-start">
+              <div>
+                <h2 className="text-sm md:text-base font-semibold text-gray-900">
+                  {editingMovimento ? 'Editar Lançamento' : 'Novo Lançamento'}
+                </h2>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  {editingMovimento ? 'Atualize as informações do lançamento' : 'Registre uma nova movimentação financeira'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsModalOpen(false)
+                  setEditingMovimento(null)
+                  setFormData({ data: '', valor: '', tipo: 'receitas_servicos', descricao: '' })
+                  setHabilitarDespesa(false)
+                  setPercentualDespesa('10')
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Conteúdo da modal */}
+            <div className="px-4 md:px-6 py-4">
+              <form id="lancamento-form" onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Data</label>
                   <input
@@ -561,26 +584,31 @@ export default function FinanceiroPage() {
                     placeholder="Descrição do lançamento..."
                   />
                 </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsModalOpen(false)
-                      setEditingMovimento(null)
-                      setFormData({ data: '', valor: '', tipo: 'receitas_servicos', descricao: '' })
-                      setHabilitarDespesa(false)
-                      setPercentualDespesa('10')
-                    }}
-                    className="btn-secondary-fefelina"
-                  >
-                    Cancelar
-                  </button>
-                  <button type="submit" className="btn-fefelina">
-                    {editingMovimento ? 'Atualizar' : 'Salvar'}
-                  </button>
-                </div>
               </form>
+            </div>
+
+            {/* Footer da modal */}
+            <div className="sticky bottom-0 bg-gray-50 px-4 md:px-6 py-3 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false)
+                  setEditingMovimento(null)
+                  setFormData({ data: '', valor: '', tipo: 'receitas_servicos', descricao: '' })
+                  setHabilitarDespesa(false)
+                  setPercentualDespesa('10')
+                }}
+                className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm md:text-base"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit"
+                form="lancamento-form"
+                className="px-4 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium text-sm md:text-base"
+              >
+                {editingMovimento ? 'Atualizar' : 'Salvar'}
+              </button>
             </div>
           </div>
         </div>

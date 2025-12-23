@@ -19,6 +19,10 @@ export default function FinanceiroPage() {
     tipo: 'receitas_servicos' as CaixaMovimento['tipo'],
     descricao: ''
   })
+  
+  // Estados para despesa automática
+  const [habilitarDespesa, setHabilitarDespesa] = useState(false)
+  const [percentualDespesa, setPercentualDespesa] = useState('10')
 
   const tiposMovimento = [
     { value: 'receitas_servicos', label: 'Receitas - Serviços', color: 'text-green-600', categoria: 'receita' },
@@ -170,17 +174,39 @@ export default function FinanceiroPage() {
         
         if (error) throw error
       } else {
+        // Inserir lançamento principal
         const { error } = await supabase
           .from('caixa_movimentos')
           .insert([movimentoData])
         
         if (error) throw error
+
+        // Se for Receitas - Serviços e despesa estiver habilitada, criar lançamento de despesa
+        if (formData.tipo === 'receitas_servicos' && habilitarDespesa) {
+          const percentual = parseFloat(percentualDespesa) || 10
+          const valorDespesa = (valor * percentual) / 100
+
+          const despesaData = {
+            data: formData.data,
+            tipo: 'despesas_servicos' as CaixaMovimento['tipo'],
+            valor: -Math.abs(valorDespesa), // Despesa é negativa
+            descricao: `Despesa de serviço (${percentual}% de ${formatCurrency(valor)})${formData.descricao ? ` - ${formData.descricao}` : ''}`
+          }
+
+          const { error: despesaError } = await supabase
+            .from('caixa_movimentos')
+            .insert([despesaData])
+
+          if (despesaError) throw despesaError
+        }
       }
 
       setIsModalOpen(false)
       setEditingMovimento(null)
       setFormData({ data: '', valor: '', tipo: 'receitas_servicos', descricao: '' })
-      fetchMovimentos()
+      setHabilitarDespesa(false)
+      setPercentualDespesa('10')
+      fetchMovimentos(true)
     } catch (error) {
       console.error('Erro ao salvar movimento:', error)
       alert('Erro ao salvar movimento')
@@ -469,6 +495,62 @@ export default function FinanceiroPage() {
                   </p>
                 </div>
 
+                {/* Checkbox de despesa automática - apenas para Receitas - Serviços e não em modo edição */}
+                {formData.tipo === 'receitas_servicos' && !editingMovimento && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="flex items-center mb-3">
+                      <input
+                        type="checkbox"
+                        id="habilitarDespesa"
+                        checked={habilitarDespesa}
+                        onChange={(e) => setHabilitarDespesa(e.target.checked)}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="habilitarDespesa" className="ml-2 block text-sm font-medium text-gray-700">
+                        Gerar despesa de serviço automaticamente?
+                      </label>
+                    </div>
+
+                    {habilitarDespesa && (
+                      <div className="ml-6 space-y-3 bg-gray-50 p-3 rounded-md">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Percentual (%)
+                            </label>
+                            <input
+                              type="number"
+                              value={percentualDespesa}
+                              onChange={(e) => setPercentualDespesa(e.target.value)}
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                              placeholder="10"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Valor da Despesa
+                            </label>
+                            <div className="px-2 py-1.5 text-sm bg-red-50 border border-red-200 rounded-md text-red-700 font-medium">
+                              {(() => {
+                                const valorReceita = parseValueFromInput(formData.valor)
+                                const percentual = parseFloat(percentualDespesa) || 0
+                                const valorDespesa = (valorReceita * percentual) / 100
+                                return formatCurrency(valorDespesa)
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Um lançamento adicional de "Despesas - Serviços" será criado automaticamente com o valor calculado.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Descrição</label>
                   <textarea
@@ -487,6 +569,8 @@ export default function FinanceiroPage() {
                       setIsModalOpen(false)
                       setEditingMovimento(null)
                       setFormData({ data: '', valor: '', tipo: 'receitas_servicos', descricao: '' })
+                      setHabilitarDespesa(false)
+                      setPercentualDespesa('10')
                     }}
                     className="btn-secondary-fefelina"
                   >

@@ -191,6 +191,28 @@ export default function SetupPage() {
     }
   };
 
+  const sendMagicLink = async (userEmail: string, userName: string) => {
+    if (!confirm(`Enviar link de acesso para ${userEmail}?\n\nO usuário receberá um email com link para fazer login.`)) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+
+      if (error) throw error;
+      
+      showMessage('success', `Link de acesso enviado para ${userName} (${userEmail})`);
+    } catch (error: any) {
+      console.error('Erro ao enviar magic link:', error);
+      showMessage('error', error.message || 'Erro ao enviar link de acesso');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const updatePermission = async (
     profileId: string,
     resource: string,
@@ -553,33 +575,51 @@ export default function SetupPage() {
                               {new Date(user.created_at).toLocaleDateString('pt-BR')}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              {userProfile?.id === user.id && user.is_active ? (
-                                <span className="inline-flex items-center px-3 py-1 text-sm text-gray-400 italic">
-                                  Sua conta
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => toggleUserActive(user.id, user.is_active)}
-                                  disabled={saving}
-                                  className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                                    user.is_active
-                                      ? 'text-red-600 hover:bg-red-50'
-                                      : 'text-green-600 hover:bg-green-50'
-                                  } disabled:opacity-50`}
-                                >
-                                  {user.is_active ? (
-                                    <>
-                                      <X className="w-4 h-4 mr-1" />
-                                      Desativar
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Check className="w-4 h-4 mr-1" />
-                                      Ativar
-                                    </>
-                                  )}
-                                </button>
-                              )}
+                              <div className="flex items-center justify-end gap-2">
+                                {/* Botão Magic Link - Disponível para todos exceto você mesmo */}
+                                {userProfile?.id !== user.id && (
+                                  <button
+                                    onClick={() => sendMagicLink(user.email, user.full_name)}
+                                    disabled={saving}
+                                    className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                                    title="Enviar link de acesso por email"
+                                  >
+                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                    Enviar Acesso
+                                  </button>
+                                )}
+                                
+                                {/* Botão Ativar/Desativar */}
+                                {userProfile?.id === user.id && user.is_active ? (
+                                  <span className="inline-flex items-center px-3 py-1 text-sm text-gray-400 italic">
+                                    Sua conta
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => toggleUserActive(user.id, user.is_active)}
+                                    disabled={saving}
+                                    className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                                      user.is_active
+                                        ? 'text-red-600 hover:bg-red-50'
+                                        : 'text-green-600 hover:bg-green-50'
+                                    } disabled:opacity-50`}
+                                  >
+                                    {user.is_active ? (
+                                      <>
+                                        <X className="w-4 h-4 mr-1" />
+                                        Desativar
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Check className="w-4 h-4 mr-1" />
+                                        Ativar
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}

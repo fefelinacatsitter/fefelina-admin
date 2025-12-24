@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { X, Users, AlertCircle } from 'lucide-react';
+import { X, Users, AlertCircle, AlertTriangle } from 'lucide-react';
 import { useSharing, SharedWith } from '../hooks/useSharing';
+import { supabase } from '../lib/supabase';
 
 interface SharedWithListProps {
   clientId: string;
@@ -27,14 +28,60 @@ export const SharedWithList: React.FC<SharedWithListProps> = ({
   };
 
   const handleUnshare = async (userId: string, userName: string) => {
-    if (!confirm(`Deseja realmente remover o compartilhamento com ${userName}?`)) {
-      return;
-    }
-
-    setUnsharing(userId);
+    // Verificar se há serviços/visitas assignadas para este usuário neste cliente
     try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Verificar serviços futuros ou em andamento
+      const { data: services, error: servicesError } = await supabase
+        .from('services')
+        .select('id, nome_servico, data_inicio, data_fim')
+        .eq('client_id', clientId)
+        .eq('assigned_user_id', userId)
+        .gte('data_fim', today)
+        .order('data_inicio');
+
+      if (servicesError) throw servicesError;
+
+      // Verificar visitas futuras
+      const { data: visits, error: visitsError } = await supabase
+        .from('visits')
+        .select('id, data')
+        .eq('client_id', clientId)
+        .eq('assigned_user_id', userId)
+        .gte('data', today)
+        .order('data');
+
+      if (visitsError) throw visitsError;
+
+      // Montar mensagem de confirmação
+      let confirmMessage = `Deseja realmente remover o compartilhamento com ${userName}?`;
+      
+      if (services && services.length > 0) {
+        confirmMessage += `\n\n⚠️ ATENÇÃO: Este parceiro tem ${services.length} serviço(s) ativo(s) para este cliente:`;
+        services.slice(0, 3).forEach((s: any) => {
+          confirmMessage += `\n• ${s.nome_servico || 'Serviço'} (${new Date(s.data_inicio).toLocaleDateString('pt-BR')} - ${new Date(s.data_fim).toLocaleDateString('pt-BR')})`;
+        });
+        if (services.length > 3) {
+          confirmMessage += `\n... e mais ${services.length - 3} serviço(s)`;
+        }
+      }
+
+      if (visits && visits.length > 0) {
+        confirmMessage += `\n\n⚠️ Este parceiro tem ${visits.length} visita(s) futura(s) para este cliente.`;
+      }
+
+      if ((services && services.length > 0) || (visits && visits.length > 0)) {
+        confirmMessage += '\n\n❌ Ao remover o compartilhamento, este parceiro perderá acesso imediato a todos os dados deste cliente.';
+        confirmMessage += '\n\n💡 Considere reassignar os serviços/visitas antes de remover o compartilhamento.';
+      }
+
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+
+      setUnsharing(userId);
       await unshareClient({ clientId, sharedWithUserId: userId });
-      // Remove from local state
       setSharedWithList(prev => prev.filter(item => item.shared_with_user_id !== userId));
       onUnshare?.(userId);
     } catch (err) {

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import CatLoader from '../components/CatLoader'
 import { useFieldMask } from '../hooks/useFieldMask'
 import { usePermissions } from '../contexts/PermissionsContext'
+import Avatar from '../components/Avatar'
 
 // Funções auxiliares para validação de data
 const validateDateInput = (value: string): string => {
@@ -94,6 +95,7 @@ interface Visit {
   status: 'agendada' | 'realizada' | 'cancelada'
   desconto_plataforma: number
   observacoes?: string
+  assigned_user_id?: string | null
   clients: {
     nome: string
   } | null
@@ -118,7 +120,7 @@ export default function VisitsPage() {
   
   // Field-Level Security e Permissões
   const { maskField } = useFieldMask('visits')
-  const { canUpdate } = usePermissions()
+  const { canUpdate, isAdmin, userProfile } = usePermissions()
   
   const canUpdateVisit = canUpdate('visits')
   
@@ -132,6 +134,11 @@ export default function VisitsPage() {
   const [filterStartDate, setFilterStartDate] = useState('')
   const [filterEndDate, setFilterEndDate] = useState('')
   
+  // Estados para filtro por usuário (parceiro)
+  const [filterByUser, setFilterByUser] = useState<string>('todos')
+  const [users, setUsers] = useState<{id: string, full_name: string, email: string, avatar_url?: string}[]>([])
+  const [usersMap, setUsersMap] = useState<Record<string, {full_name: string, avatar_url?: string}>>({})
+  
   // Estados para tooltip de cliente
   const [hoveredVisitId, setHoveredVisitId] = useState<string | null>(null)
   const [clientsQuickInfo, setClientsQuickInfo] = useState<Record<string, ClientQuickInfo>>({})
@@ -140,7 +147,10 @@ export default function VisitsPage() {
   useEffect(() => {
     fetchVisits()
     checkFutureVisits()
-  }, [selectedFilter, filterStartDate, filterEndDate])
+    if (isAdmin) {
+      fetchUsers()
+    }
+  }, [selectedFilter, filterStartDate, filterEndDate, filterByUser])
 
   const checkFutureVisits = async () => {
     try {
@@ -170,7 +180,7 @@ export default function VisitsPage() {
       let query = supabase
         .from('visits')
         .select(`
-          id, service_id, lead_id, data, horario, tipo_visita, tipo_encontro, titulo, valor, status, desconto_plataforma, observacoes, client_id, created_at,
+          id, service_id, lead_id, data, horario, tipo_visita, tipo_encontro, titulo, valor, status, desconto_plataforma, observacoes, client_id, created_at, assigned_user_id,
           clients (nome),
           services (nome_servico, total_visitas),
           leads (nome)
@@ -220,6 +230,11 @@ export default function VisitsPage() {
 
       if (filterEndDate) {
         query = query.lte('data', filterEndDate)
+      }
+
+      // Aplicar filtro por usuário/parceiro (apenas para admin)
+      if (isAdmin && filterByUser !== 'todos') {
+        query = query.eq('assigned_user_id', filterByUser)
       }
 
       const { data, error } = await query
@@ -289,6 +304,40 @@ export default function VisitsPage() {
       console.error('Erro ao buscar visitas:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, email, avatar_url')
+        .eq('is_active', true)
+        .order('full_name', { ascending: true })
+
+      if (error) throw error
+      
+      const usersData = (data || []).map(user => ({
+        id: user.user_id,
+        full_name: user.full_name,
+        email: user.email,
+        avatar_url: user.avatar_url
+      }))
+      
+      setUsers(usersData)
+      
+      // Criar mapa para acesso rápido pelo ID
+      const map: Record<string, {full_name: string, avatar_url?: string}> = {}
+      usersData.forEach(user => {
+        map[user.id] = {
+          full_name: user.full_name,
+          avatar_url: user.avatar_url
+        }
+      })
+      setUsersMap(map)
+    } catch (error) {
+      console.error('Erro ao carregar usuários:', error)
+      toast.error('Erro ao carregar lista de parceiros')
     }
   }
 
@@ -492,6 +541,29 @@ export default function VisitsPage() {
             Todas
           </button>
         </div>
+
+        {/* Filtro por parceiro (apenas admin) */}
+        {isAdmin && users.length > 1 && (
+          <div className="mt-4">
+            <label htmlFor="filter-by-user" className="block text-sm font-medium text-gray-700 mb-2">
+              Filtrar por parceiro
+            </label>
+            <select
+              id="filter-by-user"
+              value={filterByUser}
+              onChange={(e) => setFilterByUser(e.target.value)}
+              className="block w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="todos">Todos os parceiros</option>
+              {userProfile && (
+                <option value={userProfile.user_id}>{userProfile.full_name} (Você)</option>
+              )}
+              {users.filter(u => u.id !== userProfile?.user_id).map(user => (
+                <option key={user.id} value={user.id}>{user.full_name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         
         {/* Filtros por data */}
         {(selectedFilter === 'realizadas' || selectedFilter === 'todas') && (
@@ -745,6 +817,22 @@ export default function VisitsPage() {
                     <option value="cancelada">Cancelada</option>
                   </select>
                 </div>
+                {visit.assigned_user_id && usersMap[visit.assigned_user_id] && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-medium text-gray-700">Responsável:</span>
+                    <div className="flex items-center gap-2">
+                      <Avatar
+                        avatarId={usersMap[visit.assigned_user_id].avatar_url}
+                        name={usersMap[visit.assigned_user_id].full_name}
+                        size="xs"
+                        className="border border-gray-200"
+                      />
+                      <span className="text-xs text-gray-600">
+                        {usersMap[visit.assigned_user_id].full_name}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-2 mt-2">
                   {visit.status === 'agendada' && (
                     <button
@@ -779,6 +867,9 @@ export default function VisitsPage() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Responsável
                     </th>
 
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -946,6 +1037,26 @@ export default function VisitsPage() {
                           <option value="realizada">Realizada</option>
                           <option value="cancelada">Cancelada</option>
                         </select>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        {visit.assigned_user_id && usersMap[visit.assigned_user_id] ? (
+                          <div className="group relative inline-flex items-center justify-center">
+                            <Avatar
+                              avatarId={usersMap[visit.assigned_user_id].avatar_url}
+                              name={usersMap[visit.assigned_user_id].full_name}
+                              size="sm"
+                              className="border-2 border-gray-200"
+                            />
+                            <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 whitespace-nowrap">
+                              <div className="bg-gray-900 text-white text-xs rounded py-1 px-2">
+                                {usersMap[visit.assigned_user_id].full_name}
+                              </div>
+                              <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Phone, Shield, Calendar, Save, AlertCircle, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { usePermissions } from '../contexts/PermissionsContext';
+import Avatar from '../components/Avatar';
+import AvatarSelector from '../components/AvatarSelector';
 
 export default function MyProfilePage() {
   const { userProfile, refreshPermissions } = usePermissions();
@@ -9,7 +11,7 @@ export default function MyProfilePage() {
     full_name: '',
     email: '',
     phone: '',
-    avatar_url: '',
+    avatar_url: '', // Agora será usado para armazenar o avatar_id
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -21,7 +23,7 @@ export default function MyProfilePage() {
         full_name: userProfile.full_name || '',
         email: userProfile.email || '',
         phone: userProfile.phone || '',
-        avatar_url: userProfile.avatar_url || '',
+        avatar_url: userProfile.avatar_url || 'cat-orange', // Default avatar
       });
       setLoading(false);
     }
@@ -74,15 +76,6 @@ export default function MyProfilePage() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   if (loading) {
@@ -145,16 +138,13 @@ export default function MyProfilePage() {
           <div className="bg-white rounded-lg shadow-fefelina p-6 sticky top-6">
             {/* Avatar */}
             <div className="text-center mb-6">
-              <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-3xl shadow-lg">
-                {userProfile.avatar_url ? (
-                  <img
-                    src={userProfile.avatar_url}
-                    alt={userProfile.full_name}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <span>{getInitials(userProfile.full_name)}</span>
-                )}
+              <div className="flex justify-center">
+                <Avatar 
+                  avatarId={userProfile.avatar_url} 
+                  name={userProfile.full_name}
+                  size="xl"
+                  className="shadow-lg"
+                />
               </div>
               <h2 className="mt-4 text-xl font-semibold text-gray-900">
                 {userProfile.full_name}
@@ -260,20 +250,14 @@ export default function MyProfilePage() {
                 />
               </div>
 
-              {/* Avatar URL */}
+              {/* Avatar Selector */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  URL da Foto de Perfil (opcional)
-                </label>
-                <input
-                  type="url"
-                  value={formData.avatar_url}
-                  onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-                  className="input-fefelina"
-                  placeholder="https://exemplo.com/foto.jpg"
+                <AvatarSelector
+                  selectedId={formData.avatar_url || null}
+                  onSelect={(avatarId) => setFormData({ ...formData, avatar_url: avatarId })}
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Cole a URL de uma imagem hospedada na internet
+                <p className="mt-2 text-xs text-gray-500">
+                  Escolha um avatar que representa você
                 </p>
               </div>
 

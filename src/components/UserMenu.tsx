@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, LogOut, Settings, Shield, ChevronDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { usePermissions } from '../contexts/PermissionsContext';
+import Avatar from './Avatar';
 
 interface UserMenuProps {
   inSidebar?: boolean; // Se está no sidebar lateral (abre para cima)
@@ -45,15 +46,6 @@ export default function UserMenu({ inSidebar = false }: UserMenuProps) {
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   if (!userProfile) return null;
 
   return (
@@ -64,17 +56,12 @@ export default function UserMenu({ inSidebar = false }: UserMenuProps) {
         className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors duration-150"
       >
         {/* Avatar */}
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold shadow-sm">
-          {userProfile.avatar_url ? (
-            <img
-              src={userProfile.avatar_url}
-              alt={userProfile.full_name}
-              className="w-full h-full rounded-full object-cover"
-            />
-          ) : (
-            <span className="text-sm">{getInitials(userProfile.full_name)}</span>
-          )}
-        </div>
+        <Avatar 
+          avatarId={userProfile.avatar_url} 
+          name={userProfile.full_name}
+          size="md"
+          className="shadow-sm"
+        />
 
         {/* Info do Usuário */}
         <div className="hidden md:block text-left">

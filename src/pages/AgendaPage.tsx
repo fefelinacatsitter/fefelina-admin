@@ -8,6 +8,8 @@ import PreEncontroAgendaModal from '../components/PreEncontroAgendaModal'
 import PreEncontroDetalhesModal from '../components/PreEncontroDetalhesModal'
 import TaskModal from '../components/TaskModal'
 import ContextMenu from '../components/ContextMenu'
+import { usePermissions } from '../contexts/PermissionsContext'
+import Avatar from '../components/Avatar'
 
 interface Visit extends VisitType {
   clients?: {
@@ -26,6 +28,8 @@ interface Visit extends VisitType {
 type ViewMode = 'day' | 'week'
 
 export default function AgendaPage() {
+  const { isAdmin, userProfile } = usePermissions()
+  
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -36,6 +40,11 @@ export default function AgendaPage() {
   const [scrollPosition, setScrollPosition] = useState(0)
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
   const [isDraggingTouch, setIsDraggingTouch] = useState(false)
+  
+  // Estados para filtro por responsável
+  const [filterByUser, setFilterByUser] = useState<string>('my-agenda')
+  const [users, setUsers] = useState<{id: string, full_name: string, email: string, avatar_url?: string, is_admin: boolean}[]>([])
+  const [usersMap, setUsersMap] = useState<Record<string, {full_name: string, avatar_url?: string}>>({})
   
   // Estados para pré-encontros
   const [showPreEncontroModal, setShowPreEncontroModal] = useState(false)
@@ -85,7 +94,10 @@ export default function AgendaPage() {
 
   useEffect(() => {
     fetchVisits()
-  }, [currentDate, viewMode])
+    if (isAdmin) {
+      fetchUsers()
+    }
+  }, [currentDate, viewMode, filterByUser])
 
   // Restaurar scroll após carregar visitas
   useEffect(() => {
@@ -97,6 +109,49 @@ export default function AgendaPage() {
       }
     }
   }, [loading, scrollPosition])
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, email, avatar_url, profile_id')
+        .eq('is_active', true)
+        .order('full_name')
+
+      if (error) throw error
+      
+      // Buscar perfis para identificar admins
+      const profileIds = (data || []).map(u => u.profile_id)
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, is_admin')
+        .in('id', profileIds)
+      
+      const profilesMap = new Map(profiles?.map(p => [p.id, p.is_admin]) || [])
+      
+      const usersData = (data || []).map(user => ({
+        id: user.user_id,
+        full_name: user.full_name,
+        email: user.email,
+        avatar_url: user.avatar_url,
+        is_admin: profilesMap.get(user.profile_id) || false
+      }))
+      
+      setUsers(usersData)
+      
+      // Criar mapa para acesso rápido pelo ID
+      const map: Record<string, {full_name: string, avatar_url?: string}> = {}
+      usersData.forEach(user => {
+        map[user.id] = {
+          full_name: user.full_name,
+          avatar_url: user.avatar_url
+        }
+      })
+      setUsersMap(map)
+    } catch (error) {
+      console.error('Erro ao carregar usuários:', error)
+    }
+  }
 
   const fetchVisits = async () => {
     try {
@@ -113,7 +168,7 @@ export default function AgendaPage() {
         endDate = endOfDay(currentDate)
       }
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('visits')
         .select(`
           *,
@@ -126,6 +181,26 @@ export default function AgendaPage() {
         .in('status', ['agendada', 'realizada'])
         .order('data', { ascending: true })
         .order('horario', { ascending: true })
+
+      // Aplicar filtro por responsável
+      if (filterByUser === 'all-admins') {
+        // Buscar apenas visitas de usuários admin
+        const adminUserIds = users.filter(u => u.is_admin).map(u => u.id)
+        if (adminUserIds.length > 0) {
+          query = query.in('assigned_user_id', adminUserIds)
+        }
+      } else if (filterByUser === 'my-agenda') {
+        // Minha agenda: apenas visitas atribuídas ao usuário atual
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          query = query.eq('assigned_user_id', user.id)
+        }
+      } else {
+        // Filtrar por usuário específico selecionado no dropdown
+        query = query.eq('assigned_user_id', filterByUser)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       
@@ -914,6 +989,21 @@ export default function AgendaPage() {
                                     ? `🤝 ${visit.leads?.nome || visit.clients?.nome || 'Não identificado'}` 
                                     : visit.clients?.nome || 'Cliente não identificado'}
                               </span>
+                              {visit.assigned_user_id && usersMap[visit.assigned_user_id] && (
+                                <div className="group relative inline-flex items-center ml-0.5 flex-shrink-0">
+                                  <Avatar
+                                    avatarId={usersMap[visit.assigned_user_id].avatar_url}
+                                    name={usersMap[visit.assigned_user_id].full_name}
+                                    size="2xs"
+                                    className="border border-gray-300"
+                                  />
+                                  <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-20 whitespace-nowrap pointer-events-none">
+                                    <div className="bg-gray-900 text-white text-[10px] rounded py-0.5 px-1.5">
+                                      {usersMap[visit.assigned_user_id].full_name}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             {!hasConflict && !hasMultipleVisits && (
                               <div className="truncate text-[9px] opacity-75 leading-tight mt-0.5">
@@ -948,6 +1038,33 @@ export default function AgendaPage() {
             <div className="divider-fefelina"></div>
           </div>
         </div>
+
+        {/* Filtro por responsável - Obrigatório para admin */}
+        {isAdmin && users.length > 0 && (
+          <div className="mb-4">
+            <label htmlFor="filter-by-user-agenda" className="block text-sm font-medium text-gray-700 mb-2">
+              Visualizar agenda de:
+            </label>
+            <select
+              id="filter-by-user-agenda"
+              value={filterByUser}
+              onChange={(e) => setFilterByUser(e.target.value)}
+              className="block w-full md:w-80 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="my-agenda">Minha agenda</option>
+              {users.filter(u => u.is_admin).length > 1 && (
+                <option value="all-admins">Todos admins ({users.filter(u => u.is_admin).map(u => u.full_name.split(' ')[0]).join(' + ')})</option>
+              )}
+              {users.filter(u => !u.is_admin).length > 0 && (
+                <optgroup label="Parceiros">
+                  {users.filter(u => !u.is_admin).map(user => (
+                    <option key={user.id} value={user.id}>{user.full_name}</option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </div>
+        )}
 
         {/* Navegação e controles */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

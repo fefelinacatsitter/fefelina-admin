@@ -47,7 +47,11 @@ export default function ShareClientModal({
       ...user,
       profile: Array.isArray(user.profile) ? user.profile[0] : user.profile
     }));
-    setUsers(formattedUsers as User[]);
+    
+    // Filtrar apenas parceiros (não admins) - admins já têm acesso total
+    const nonAdminUsers = formattedUsers.filter((user: User) => user.profile?.is_admin !== true);
+    
+    setUsers(nonAdminUsers as User[]);
   };
 
   const handleShare = async () => {

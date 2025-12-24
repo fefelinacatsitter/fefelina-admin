@@ -50,6 +50,7 @@ export interface Service {
   total_visitas: number
   total_valor: number
   total_a_receber: number
+  assigned_user_id?: string | null // ID do usuário responsável (FK para auth.users)
   created_at: string
   updated_at: string
 }
@@ -68,6 +69,7 @@ export interface Visit {
   tipo_encontro: 'pre_encontro' | 'visita_servico' | 'task' // Novo tipo: task
   titulo?: string | null // Título da task (obrigatório quando tipo_encontro = 'task')
   responsavel?: 'fernanda' | 'andre' | null // Responsável pela visita (fernanda=roxo, andre=laranja)
+  assigned_user_id?: string | null // ID do usuário responsável (FK para auth.users)
   desconto_plataforma: number
   observacoes?: string
   created_at: string

@@ -6,6 +6,7 @@ import CatLoader from '../components/CatLoader'
 import ClientCombobox from '../components/ClientCombobox'
 import { useFieldMask } from '../hooks/useFieldMask'
 import { usePermissions } from '../contexts/PermissionsContext'
+import Avatar from '../components/Avatar'
 
 interface Service {
   id: string
@@ -19,10 +20,15 @@ interface Service {
   total_valor: number
   total_a_receber: number
   created_at: string
+  assigned_user_id?: string
   clients?: {
     nome: string
     valor_diaria: number
     valor_duas_visitas: number
+  }
+  assigned_user?: {
+    full_name: string
+    email: string
   }
 }
 
@@ -123,7 +129,7 @@ export default function ServicesPage() {
   // Field-Level Security e Permissões
   const { maskField } = useFieldMask('services')
   const { maskField: maskVisitField } = useFieldMask('visits')
-  const { canCreate, canUpdate, canDelete } = usePermissions()
+  const { canCreate, canUpdate, canDelete, userProfile } = usePermissions()
   
   const canCreateService = canCreate('services')
   const canUpdateService = canUpdate('services')
@@ -131,6 +137,9 @@ export default function ServicesPage() {
   
   const [services, setServices] = useState<Service[]>([])
   const [clients, setClients] = useState<Client[]>([])
+  const [users, setUsers] = useState<{id: string, full_name: string, email: string, avatar_url?: string}[]>([])
+  const [usersMap, setUsersMap] = useState<Record<string, {full_name: string, avatar_url?: string}>>({})
+  const [filteredUsers, setFilteredUsers] = useState<{id: string, full_name: string, email: string, avatar_url?: string}[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [updating, setUpdating] = useState(false)
@@ -163,11 +172,13 @@ export default function ServicesPage() {
     client_id: string
     status_pagamento: 'pendente' | 'pendente_plataforma' | 'pago_parcialmente' | 'pago'
     desconto_plataforma_default: number
+    assigned_user_id: string
   }>({
     nome_servico: '',
     client_id: '',
     status_pagamento: 'pendente',
-    desconto_plataforma_default: 0
+    desconto_plataforma_default: 0,
+    assigned_user_id: ''
   })
 
   // States para múltiplas visitas
@@ -176,7 +187,26 @@ export default function ServicesPage() {
   useEffect(() => {
     fetchServices()
     fetchClients()
+    fetchUsers()
   }, [selectedFilter, filterStartDate, filterEndDate])
+
+  // Atualizar usuários disponíveis quando cliente selecionado mudar
+  useEffect(() => {
+    const updateAvailableUsers = async () => {
+      if (formData.client_id && users.length > 0) {
+        const available = await getAvailableUsers(formData.client_id)
+        setFilteredUsers(available)
+        
+        // Se o usuário selecionado não tem acesso ao cliente, resetar para atual
+        if (formData.assigned_user_id && !available.find(u => u.id === formData.assigned_user_id)) {
+          setFormData(prev => ({ ...prev, assigned_user_id: userProfile?.user_id || '' }))
+        }
+      } else {
+        setFilteredUsers(users)
+      }
+    }
+    updateAvailableUsers()
+  }, [formData.client_id, users])
 
   const fetchServices = async () => {
     try {
@@ -266,6 +296,23 @@ export default function ServicesPage() {
         )
       }
       
+      // Buscar dados dos usuários assignados
+      const userIds = [...new Set(filteredServices.map(s => s.assigned_user_id).filter(Boolean))]
+      if (userIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from('user_profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', userIds)
+        
+        // Mapear usuários para os serviços
+        filteredServices = filteredServices.map(service => ({
+          ...service,
+          assigned_user: service.assigned_user_id 
+            ? usersData?.find(u => u.user_id === service.assigned_user_id)
+            : null
+        }))
+      }
+      
       setServices(filteredServices)
     } catch (error) {
       console.error('Erro ao buscar serviços:', error)
@@ -298,6 +345,80 @@ export default function ServicesPage() {
       setClients(data || [])
     } catch (error) {
       console.error('Erro ao buscar clientes:', error)
+    }
+  }
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, email, avatar_url')
+        .eq('is_active', true)
+        .order('full_name')
+
+      if (error) throw error
+      
+      const usersData = data?.map(u => ({ 
+        id: u.user_id, 
+        full_name: u.full_name, 
+        email: u.email,
+        avatar_url: u.avatar_url
+      })) || []
+      
+      setUsers(usersData)
+      
+      // Criar mapa para acesso rápido pelo ID
+      const map: Record<string, {full_name: string, avatar_url?: string}> = {}
+      usersData.forEach(user => {
+        map[user.id] = {
+          full_name: user.full_name,
+          avatar_url: user.avatar_url
+        }
+      })
+      setUsersMap(map)
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error)
+    }
+  }
+
+  // Filtrar usuários que têm acesso ao cliente selecionado
+  const getAvailableUsers = async (clientId: string) => {
+    if (!clientId) return users
+
+    try {
+      // Buscar compartilhamentos deste cliente
+      const { data: shares, error } = await supabase
+        .from('record_sharing')
+        .select('shared_with_user_id')
+        .eq('record_id', clientId)
+        .eq('record_type', 'client')
+
+      if (error) throw error
+
+      const sharedUserIds = new Set(shares?.map(s => s.shared_with_user_id) || [])
+      
+      // Buscar quais usuários são admin
+      const { data: userProfiles } = await supabase
+        .from('user_profiles')
+        .select('user_id, profile:profiles!inner(is_admin)')
+        .eq('is_active', true)
+      
+      const adminUserIds = new Set(
+        userProfiles
+          ?.filter(up => {
+            const profile = Array.isArray(up.profile) ? up.profile[0] : up.profile
+            return profile?.is_admin === true
+          })
+          .map(up => up.user_id) || []
+      )
+      
+      // Retornar: TODOS os admins + parceiros que têm compartilhamento
+      return users.filter(user => {
+        return adminUserIds.has(user.id) || sharedUserIds.has(user.id)
+      })
+    } catch (error) {
+      console.error('Erro ao verificar compartilhamentos:', error)
+      return users
     }
   }
 
@@ -355,7 +476,8 @@ export default function ServicesPage() {
         nome_servico: service.nome_servico || '',
         client_id: service.client_id,
         status_pagamento: service.status_pagamento || 'pendente',
-        desconto_plataforma_default: service.desconto_plataforma_default
+        desconto_plataforma_default: service.desconto_plataforma_default,
+        assigned_user_id: service.assigned_user_id || ''
       })
       setSelectedClient(clients.find(c => c.id === service.client_id) || null)
       fetchVisitsForService(service.id)
@@ -365,7 +487,8 @@ export default function ServicesPage() {
         nome_servico: '',
         client_id: '',
         status_pagamento: 'pendente',
-        desconto_plataforma_default: 0
+        desconto_plataforma_default: 0,
+        assigned_user_id: ''
       })
       setVisits([])
       setSelectedClient(null)
@@ -506,7 +629,8 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
       nome_servico: '',
       client_id: '',
       status_pagamento: 'pendente',
-      desconto_plataforma_default: 0
+      desconto_plataforma_default: 0,
+      assigned_user_id: ''
     })
     setVisits([])
     setSelectedClient(null)
@@ -582,7 +706,8 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
         data_fim: dataFim,
         total_visitas: totalVisitas,
         total_valor: totalValor,
-        total_a_receber: totalAReceber
+        total_a_receber: totalAReceber,
+        assigned_user_id: formData.assigned_user_id || null // Trigger do banco usa auth.uid() se null
       }
 
       let savedService: any
@@ -1096,6 +1221,25 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                       <span className="font-medium">{service.clients?.nome}</span>
                       <span className="text-gray-400">•</span>
                       <span className="text-gray-500">{formatDate(service.data_inicio)} - {formatDate(service.data_fim)}</span>
+                      {service.assigned_user_id && usersMap[service.assigned_user_id] && (
+                        <>
+                          <span className="text-gray-400">•</span>
+                          <div className="group relative inline-flex items-center gap-1">
+                            <Avatar
+                              avatarId={usersMap[service.assigned_user_id].avatar_url}
+                              name={usersMap[service.assigned_user_id].full_name}
+                              size="xs"
+                              className="border border-gray-200"
+                            />
+                            <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 whitespace-nowrap">
+                              <div className="bg-gray-900 text-white text-xs rounded py-1 px-2">
+                                Responsável: {usersMap[service.assigned_user_id].full_name}
+                              </div>
+                              <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                   
@@ -1216,6 +1360,45 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                       placeholder="Digite para buscar cliente..."
                       required={true}
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Responsável
+                    </label>
+                    <select
+                      value={formData.assigned_user_id || userProfile?.user_id || ''}
+                      onChange={(e) => setFormData({ ...formData, assigned_user_id: e.target.value })}
+                      className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      disabled={!formData.client_id}
+                    >
+                      {!formData.client_id && (
+                        <option value="">Selecione um cliente primeiro</option>
+                      )}
+                      {userProfile && filteredUsers.find(u => u.id === userProfile.user_id) && (
+                        <option value={userProfile.user_id}>
+                          {userProfile.full_name} (Você)
+                        </option>
+                      )}
+                      {filteredUsers.filter(u => u.id !== userProfile?.user_id).map(user => (
+                        <option key={user.id} value={user.id}>
+                          {user.full_name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.client_id ? (
+                        filteredUsers.length < users.length ? (
+                          <span className="text-amber-600">
+                            ⚠️ Mostrando apenas parceiros com acesso a este cliente
+                          </span>
+                        ) : (
+                          'Parceiro responsável pelas visitas'
+                        )
+                      ) : (
+                        'Selecione um cliente para escolher o responsável'
+                      )}
+                    </p>
                   </div>
 
                   <div>

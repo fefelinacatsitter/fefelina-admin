@@ -1,4 +1,4 @@
-import { getAvatar, getInitials } from '../lib/avatars'
+import { getAvatar } from '../lib/avatars'
 
 interface AvatarProps {
   avatarId?: string | null

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Users, AlertCircle, AlertTriangle } from 'lucide-react';
+import { X, Users, AlertCircle } from 'lucide-react';
 import { useSharing, SharedWith } from '../hooks/useSharing';
 import { supabase } from '../lib/supabase';
 

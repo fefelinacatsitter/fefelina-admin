@@ -18,7 +18,6 @@ const sizeClasses = {
 
 export default function Avatar({ avatarId, name, size = 'md', className = '' }: AvatarProps) {
   const avatar = getAvatar(avatarId)
-  const initials = getInitials(name)
 
   return (
     <div

@@ -28,7 +28,7 @@ interface Visit extends VisitType {
 type ViewMode = 'day' | 'week'
 
 export default function AgendaPage() {
-  const { isAdmin, userProfile } = usePermissions()
+  const { isAdmin } = usePermissions()
   
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)

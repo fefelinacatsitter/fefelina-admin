@@ -374,6 +374,19 @@ export default function AgendaPage() {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
+    
+    // Verificar se está tentando mover para outro dia
+    if (draggingVisit) {
+      const target = e.currentTarget as HTMLElement
+      const targetDay = target.getAttribute('data-day')
+      
+      if (targetDay && draggingVisit.data !== targetDay) {
+        // Indicar que o drop não é permitido
+        e.dataTransfer.dropEffect = 'none'
+        return
+      }
+    }
+    
     e.dataTransfer.dropEffect = 'move'
   }
 
@@ -529,6 +542,13 @@ export default function AgendaPage() {
     const newDate = format(day, 'yyyy-MM-dd')
     const newTime = timeSlot
 
+    // VALIDAÇÃO: Não permitir mover para outro dia
+    if (draggingVisit.data !== newDate) {
+      toast.error('Não é permitido mover visitas para outro dia. Apenas troque os horários no mesmo dia.')
+      setDraggingVisit(null)
+      return
+    }
+
     // Não fazer nada se soltar no mesmo lugar
     if (draggingVisit.data === newDate && draggingVisit.horario.substring(0, 5) === newTime) {
       setDraggingVisit(null)
@@ -552,7 +572,7 @@ export default function AgendaPage() {
 
       if (error) throw error
 
-      toast.success('Visita reagendada com sucesso!')
+      toast.success('Horário alterado com sucesso!')
       await fetchVisits() // Recarregar visitas
     } catch (error) {
       console.error('Erro ao reagendar visita:', error)
@@ -742,8 +762,8 @@ export default function AgendaPage() {
                     data-time={slot.time}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, currentDate, slot.time)}
-                    onContextMenu={(e) => handleContextMenu(e, currentDate, slot.time)}
-                    title="Clique com botão direito para ver opções"
+                    onContextMenu={isAdmin ? (e) => handleContextMenu(e, currentDate, slot.time) : undefined}
+                    title={isAdmin ? "Clique com botão direito para ver opções" : ""}
                   >
                     {hasConflict && (
                       <div className="absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded-bl z-20">
@@ -785,7 +805,7 @@ export default function AgendaPage() {
                           onTouchMove={handleTouchMove}
                           onTouchEnd={handleTouchEnd}
                           onTouchCancel={handleTouchCancel}
-                          onContextMenu={(e) => handleCardContextMenu(e, visit)}
+                          onContextMenu={isAdmin ? (e) => handleCardContextMenu(e, visit) : undefined}
                           onClick={() => {
                             // Só abre modal se não estiver arrastando
                             if (!draggingVisit && !isDraggingTouch) {
@@ -917,8 +937,8 @@ export default function AgendaPage() {
                       data-time={slot.time}
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, day, slot.time)}
-                      onContextMenu={(e) => handleContextMenu(e, day, slot.time)}
-                      title="Clique com botão direito para ver opções"
+                      onContextMenu={isAdmin ? (e) => handleContextMenu(e, day, slot.time) : undefined}
+                      title={isAdmin ? "Clique com botão direito para ver opções" : ""}
                     >
                       {hasConflict && (
                         <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] px-1 rounded-bl z-20">
@@ -960,7 +980,7 @@ export default function AgendaPage() {
                             onTouchMove={handleTouchMove}
                             onTouchEnd={handleTouchEnd}
                             onTouchCancel={handleTouchCancel}
-                            onContextMenu={(e) => handleCardContextMenu(e, visit)}
+                            onContextMenu={isAdmin ? (e) => handleCardContextMenu(e, visit) : undefined}
                             onClick={() => {
                               if (!draggingVisit && !isDraggingTouch) {
                                 handleVisitClick(visit)

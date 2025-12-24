@@ -261,12 +261,15 @@ export default function SetupPage() {
       // Senha padrão
       const defaultPassword = 'Fefelina2024!';
 
-      // 1. Criar usuário no auth (sem confirmação de email)
+      // Salvar sessão do admin antes de criar novo usuário
+      const { data: { session: adminSession } } = await supabase.auth.getSession();
+
+      // 1. Criar usuário no auth (signUp cria mas faz login automático)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newUserForm.email,
         password: defaultPassword,
         options: {
-          emailRedirectTo: undefined, // Não enviar email de confirmação
+          emailRedirectTo: undefined,
           data: {
             full_name: newUserForm.full_name,
           }
@@ -278,6 +281,14 @@ export default function SetupPage() {
         throw authError;
       }
       if (!authData.user) throw new Error('Usuário não foi criado no auth');
+
+      // Restaurar sessão do admin IMEDIATAMENTE (antes de qualquer outra operação)
+      if (adminSession) {
+        await supabase.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token
+        });
+      }
 
       // 2. Criar user_profile usando função segura
       console.log('Criando user_profile para:', authData.user.id);
@@ -294,13 +305,9 @@ export default function SetupPage() {
       if (profileError) {
         console.error('Erro ao criar user_profile:', profileError);
         
-        // Tentar limpar o usuário órfão do auth se falhou
-        try {
-          await supabase.auth.admin.deleteUser(authData.user.id);
-          console.log('Usuário órfão removido do auth');
-        } catch (cleanupError) {
-          console.warn('Não foi possível remover usuário órfão:', cleanupError);
-        }
+        // NOTA: Usuário órfão ficará no auth.users mas sem user_profile
+        // Admin pode limpar manualmente no Supabase Dashboard > Authentication
+        console.warn('ATENÇÃO: Usuário criado no auth mas sem perfil:', authData.user.id);
         
         // Mensagens de erro específicas
         if (profileError.message?.includes('apenas administradores')) {

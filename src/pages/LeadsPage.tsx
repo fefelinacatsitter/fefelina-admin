@@ -5,6 +5,7 @@ import { Users, Phone, MapPin, Calendar, DollarSign, Plus, X, Edit2, Clock } fro
 import PreEncontroModal from '../components/PreEncontroModal'
 import ConvertLeadModal from '../components/ConvertLeadModal'
 import CatLoader from '../components/CatLoader'
+import Avatar from '../components/Avatar'
 import {
   DndContext,
   DragEndEvent,
@@ -236,10 +237,45 @@ export default function LeadsPage() {
   const [editingPreEncontroId, setEditingPreEncontroId] = useState<string | null>(null)
   const [editingPreEncontroData, setEditingPreEncontroData] = useState<Visit | null>(null)
   const [savingPreEncontro, setSavingPreEncontro] = useState(false)
+  const [users, setUsers] = useState<{id: string, full_name: string, avatar_url?: string}[]>([])
+  const [usersMap, setUsersMap] = useState<Record<string, {full_name: string, avatar_url?: string}>>({})
 
   useEffect(() => {
     fetchLeads()
+    fetchUsers()
   }, [])
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, avatar_url')
+        .eq('is_active', true)
+        .order('full_name')
+
+      if (error) throw error
+
+      const usersData = (data || []).map(u => ({
+        id: u.user_id,
+        full_name: u.full_name,
+        avatar_url: u.avatar_url
+      }))
+
+      setUsers(usersData)
+
+      // Criar mapa para acesso rápido
+      const map: Record<string, {full_name: string, avatar_url?: string}> = {}
+      usersData.forEach(user => {
+        map[user.id] = {
+          full_name: user.full_name,
+          avatar_url: user.avatar_url
+        }
+      })
+      setUsersMap(map)
+    } catch (error) {
+      console.error('Erro ao carregar usuários:', error)
+    }
+  }
 
   const fetchLeads = async () => {
     try {
@@ -361,6 +397,7 @@ export default function LeadsPage() {
           horario: editingPreEncontroData.horario,
           duracao_minutos: editingPreEncontroData.duracao_minutos || 30,
           status: editingPreEncontroData.status,
+          assigned_user_id: editingPreEncontroData.assigned_user_id || null,
           observacoes: editingPreEncontroData.observacoes || null
         })
         .eq('id', editingPreEncontroId)
@@ -1266,7 +1303,7 @@ export default function LeadsPage() {
                             Horário
                           </th>
                           <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                            Duração
+                            Responsável
                           </th>
                           <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
                             Status
@@ -1314,23 +1351,34 @@ export default function LeadsPage() {
                                 )}
                               </td>
 
-                              {/* Duração */}
-                              <td className="px-3 py-2.5 text-sm text-gray-600">
+                              {/* Responsável */}
+                              <td className="px-3 py-2.5 text-sm text-gray-900">
                                 {isEditing ? (
                                   <select
-                                    value={editData?.duracao_minutos || 30}
-                                    onChange={(e) => handlePreEncontroFieldChange('duracao_minutos', parseInt(e.target.value))}
+                                    value={editData?.assigned_user_id || ''}
+                                    onChange={(e) => handlePreEncontroFieldChange('assigned_user_id', e.target.value)}
                                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   >
-                                    <option value={15}>15 min</option>
-                                    <option value={30}>30 min</option>
-                                    <option value={45}>45 min</option>
-                                    <option value={60}>60 min</option>
-                                    <option value={90}>90 min</option>
-                                    <option value={120}>120 min</option>
+                                    <option value="">Sem responsável</option>
+                                    {users.map((user) => (
+                                      <option key={user.id} value={user.id}>
+                                        {user.full_name}
+                                      </option>
+                                    ))}
                                   </select>
+                                ) : encontro.assigned_user_id && usersMap[encontro.assigned_user_id] ? (
+                                  <div className="flex items-center gap-2">
+                                    <Avatar
+                                      avatarId={usersMap[encontro.assigned_user_id].avatar_url}
+                                      name={usersMap[encontro.assigned_user_id].full_name}
+                                      size="xs"
+                                    />
+                                    <span className="text-sm text-gray-700">
+                                      {usersMap[encontro.assigned_user_id].full_name}
+                                    </span>
+                                  </div>
                                 ) : (
-                                  `${encontro.duracao_minutos || 30} min`
+                                  <span className="text-xs text-gray-400">—</span>
                                 )}
                               </td>
 

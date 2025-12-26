@@ -1,7 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Calendar, Clock, FileText, X } from 'lucide-react'
+import { Calendar, Clock, FileText, X, Users } from 'lucide-react'
+import { usePermissions } from '../contexts/PermissionsContext'
+import Avatar from './Avatar'
+
+interface UserProfile {
+  id: string
+  full_name: string
+  email: string
+  avatar_url?: string
+}
 
 interface PreEncontroModalProps {
   leadId: string
@@ -20,12 +29,41 @@ export default function PreEncontroModal({
   initialDate,
   initialTime
 }: PreEncontroModalProps) {
+  const { userProfile } = usePermissions()
   const [loading, setLoading] = useState(false)
+  const [users, setUsers] = useState<UserProfile[]>([])
   const [formData, setFormData] = useState({
     data: initialDate || new Date().toISOString().split('T')[0],
     horario: initialTime || '10:00',
+    assigned_user_id: userProfile?.user_id || '',
     observacoes: ''
   })
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, email, avatar_url')
+        .eq('is_active', true)
+        .order('full_name')
+
+      if (error) throw error
+
+      setUsers((data || []).map(u => ({
+        id: u.user_id,
+        full_name: u.full_name,
+        email: u.email,
+        avatar_url: u.avatar_url
+      })))
+    } catch (error: any) {
+      console.error('Erro ao buscar usuários:', error)
+      toast.error('Erro ao carregar usuários')
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,6 +88,7 @@ export default function PreEncontroModal({
           valor: 0, // Sem valor para pré-encontro
           desconto_plataforma: 0,
           status: 'agendada',
+          assigned_user_id: formData.assigned_user_id || null,
           observacoes: formData.observacoes || null
         })
 
@@ -116,6 +155,39 @@ export default function PreEncontroModal({
             <p className="text-xs text-gray-500 mt-1.5">
               Duração: 30 minutos
             </p>
+          </div>
+
+          {/* Responsável */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
+              <Users className="w-3.5 h-3.5" />
+              Responsável pelo Pré-Encontro
+            </label>
+            <select
+              value={formData.assigned_user_id}
+              onChange={(e) => setFormData({ ...formData, assigned_user_id: e.target.value })}
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              required
+            >
+              <option value="">Selecione um responsável</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.full_name}
+                </option>
+              ))}
+            </select>
+            {formData.assigned_user_id && users.find(u => u.id === formData.assigned_user_id) && (
+              <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
+                <Avatar
+                  avatarId={users.find(u => u.id === formData.assigned_user_id)?.avatar_url}
+                  name={users.find(u => u.id === formData.assigned_user_id)?.full_name || ''}
+                  size="sm"
+                />
+                <span className="text-sm text-gray-700">
+                  {users.find(u => u.id === formData.assigned_user_id)?.full_name}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Observações */}

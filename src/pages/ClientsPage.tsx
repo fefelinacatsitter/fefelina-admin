@@ -1379,28 +1379,49 @@ export default function ClientsPage() {
                 </div>
 
                 {/* Pets */}
-                {viewingPets.length > 0 && (
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">
-                      Pets ({viewingPets.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {viewingPets.map((pet) => (
-                        <div key={pet.id} className="bg-white rounded-md p-3 border border-gray-200">
-                          <div className="font-medium text-sm text-gray-900 mb-1.5">{pet.nome}</div>
-                          <div className="text-xs text-gray-600 mb-1">
-                            <span className="font-medium">Característica:</span> {pet.caracteristica || '—'}
-                          </div>
-                          {pet.observacoes && (
-                            <div className="text-xs text-gray-600">
-                              <span className="font-medium">Observações:</span> {pet.observacoes}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">
+                    Pets ({viewingPets.length})
+                  </h4>
+                  {viewingPets.length === 0 ? (
+                    <div className="bg-white border border-gray-200 rounded-md p-4 text-center">
+                      <p className="text-sm text-gray-500">Nenhum pet cadastrado</p>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="border border-gray-200 rounded-md overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-white">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                              Nome
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                              Características
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                              Observações
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {viewingPets.map((pet) => (
+                            <tr key={pet.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-3 py-2.5 text-sm font-medium text-gray-900">
+                                {pet.nome}
+                              </td>
+                              <td className="px-3 py-2.5 text-sm text-gray-600">
+                                {pet.caracteristica || '—'}
+                              </td>
+                              <td className="px-3 py-2.5 text-sm text-gray-600">
+                                {pet.observacoes || '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Botão Fechar */}

@@ -559,6 +559,7 @@ ${formattedDates}
 
 🔑 Chave PIX:
 fefelinacatsitter@gmail.com
+(André Thiago Hass | Banco Itaú)
 
 Peço, por gentileza, que valide as datas informadas acima.
 Após o pagamento, enviar o comprovante.

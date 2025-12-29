@@ -19,6 +19,7 @@ interface Service {
   total_visitas: number
   total_valor: number
   total_a_receber: number
+  valor_pago: number
   created_at: string
   assigned_user_id?: string
   clients?: {
@@ -173,12 +174,14 @@ export default function ServicesPage() {
     status_pagamento: 'pendente' | 'pendente_plataforma' | 'pago_parcialmente' | 'pago'
     desconto_plataforma_default: number
     assigned_user_id: string
+    valor_pago: number
   }>({
     nome_servico: '',
     client_id: '',
     status_pagamento: 'pendente',
     desconto_plataforma_default: 0,
-    assigned_user_id: ''
+    assigned_user_id: '',
+    valor_pago: 0
   })
 
   // States para múltiplas visitas
@@ -477,7 +480,8 @@ export default function ServicesPage() {
         client_id: service.client_id,
         status_pagamento: service.status_pagamento || 'pendente',
         desconto_plataforma_default: service.desconto_plataforma_default,
-        assigned_user_id: service.assigned_user_id || ''
+        assigned_user_id: service.assigned_user_id || '',
+        valor_pago: service.valor_pago || 0
       })
       setSelectedClient(clients.find(c => c.id === service.client_id) || null)
       fetchVisitsForService(service.id)
@@ -488,7 +492,8 @@ export default function ServicesPage() {
         client_id: '',
         status_pagamento: 'pendente',
         desconto_plataforma_default: 0,
-        assigned_user_id: ''
+        assigned_user_id: '',
+        valor_pago: 0
       })
       setVisits([])
       setSelectedClient(null)
@@ -631,7 +636,8 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
       client_id: '',
       status_pagamento: 'pendente',
       desconto_plataforma_default: 0,
-      assigned_user_id: ''
+      assigned_user_id: '',
+      valor_pago: 0
     })
     setVisits([])
     setSelectedClient(null)
@@ -701,6 +707,11 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
       const dataInicio = dates.sort()[0]
       const dataFim = dates.sort().reverse()[0]
       
+      // Se status for 'pago', valor_pago = total_a_receber
+      const valorPago = formData.status_pagamento === 'pago' 
+        ? totalAReceber 
+        : formData.valor_pago
+      
       let serviceData: any = {
         ...formData,
         data_inicio: dataInicio,
@@ -708,6 +719,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
         total_visitas: totalVisitas,
         total_valor: totalValor,
         total_a_receber: totalAReceber,
+        valor_pago: valorPago,
         assigned_user_id: formData.assigned_user_id || null // Trigger do banco usa auth.uid() se null
       }
 
@@ -1434,6 +1446,27 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                     />
                   </div>
 
+                  {/* Campo Valor Pago - visível apenas quando status = pago_parcialmente */}
+                  {formData.status_pagamento === 'pago_parcialmente' && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Valor Pago (R$)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.valor_pago}
+                        onChange={(e) => setFormData({ ...formData, valor_pago: parseFloat(e.target.value) || 0 })}
+                        className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        placeholder="0.00"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Valor já pago pelo cliente
+                      </p>
+                    </div>
+                  )}
+
                   <div className="md:col-span-2 bg-primary-50 p-2.5 rounded-lg">
                     <h5 className="text-xs font-medium text-primary-900 mb-1.5">ℹ️ Informações automáticas</h5>
                     <ul className="text-xs text-primary-800 space-y-0.5">
@@ -1779,7 +1812,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                 {/* Resumo Financeiro */}
                 <div className="bg-primary-50 rounded-lg p-3">
                   <h4 className="text-sm font-medium text-gray-900 mb-3">Resumo Financeiro</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className={`grid grid-cols-1 ${viewingService.status_pagamento === 'pago_parcialmente' ? 'md:grid-cols-5' : 'md:grid-cols-3'} gap-3`}>
                     <div className="text-center">
                       <div className="text-xl font-bold text-gray-900">
                         {viewingVisits.filter(v => v.status !== 'cancelada').length}
@@ -1794,6 +1827,24 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                       <div className="text-xl font-bold text-primary-600">{maskField('total_a_receber', formatCurrency(viewingService.total_a_receber))}</div>
                       <div className="text-xs text-gray-600">Valor a Receber</div>
                     </div>
+                    
+                    {/* Campos extras para Pago Parcialmente */}
+                    {viewingService.status_pagamento === 'pago_parcialmente' && (
+                      <>
+                        <div className="text-center">
+                          <div className="text-xl font-bold text-green-600">
+                            {maskField('valor_pago', formatCurrency(viewingService.valor_pago || 0))}
+                          </div>
+                          <div className="text-xs text-gray-600">Valor Pago</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xl font-bold text-orange-600">
+                            {maskField('saldo_restante', formatCurrency(viewingService.total_a_receber - (viewingService.valor_pago || 0)))}
+                          </div>
+                          <div className="text-xs text-gray-600">Saldo Restante</div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 

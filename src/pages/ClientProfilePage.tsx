@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { format, parseISO } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 import CatLoader from '../components/CatLoader'
 import ShareClientModal from '../components/ShareClientModal'
@@ -202,15 +204,21 @@ export default function ClientProfilePage() {
       if (servicesError) throw servicesError
       setServices(servicesData || [])
 
-      // Buscar visitas
-      const { data: visitsData, error: visitsError } = await supabase
-        .from('visits')
-        .select('*')
-        .eq('client_id', id)
-        .order('data', { ascending: false })
+      // Buscar visitas apenas dos serviços existentes
+      let visitsData: Visit[] = []
+      if (servicesData && servicesData.length > 0) {
+        const serviceIds = servicesData.map(s => s.id)
+        const { data, error: visitsError } = await supabase
+          .from('visits')
+          .select('*')
+          .in('service_id', serviceIds)
+          .order('data', { ascending: false })
 
-      if (visitsError) throw visitsError
-      setVisits(visitsData || [])
+        if (visitsError) throw visitsError
+        visitsData = data || []
+      }
+      
+      setVisits(visitsData)
 
       // Inicializar notas e tags
       setNotes(clientData.notas || '')
@@ -1660,9 +1668,9 @@ export default function ClientProfilePage() {
                       </div>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(service.data_inicio).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                      {format(parseISO(service.data_inicio), 'dd \d\e MMM', { locale: ptBR })}
                       {' - '}
-                      {new Date(service.data_fim).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {format(parseISO(service.data_fim), 'dd \d\e MMM \d\e yyyy', { locale: ptBR })}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {service.total_visitas}
@@ -1724,7 +1732,7 @@ export default function ClientProfilePage() {
                 {visits.slice(0, 20).map((visit) => (
                   <tr key={visit.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(visit.data).toLocaleDateString('pt-BR')}
+                      {format(parseISO(visit.data), 'dd/MM/yyyy', { locale: ptBR })}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {visit.horario}

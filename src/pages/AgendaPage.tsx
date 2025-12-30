@@ -42,7 +42,7 @@ export default function AgendaPage() {
   const [isDraggingTouch, setIsDraggingTouch] = useState(false)
   
   // Estados para filtro por responsável
-  const [filterByUser, setFilterByUser] = useState<string>('my-agenda')
+  const [filterByUser, setFilterByUser] = useState<string>(isAdmin ? 'all-admins' : 'my-agenda')
   const [users, setUsers] = useState<{id: string, full_name: string, email: string, avatar_url?: string, is_admin: boolean}[]>([])
   const [usersMap, setUsersMap] = useState<Record<string, {full_name: string, avatar_url?: string}>>({})
   

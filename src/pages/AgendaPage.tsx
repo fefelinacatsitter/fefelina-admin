@@ -93,11 +93,14 @@ export default function AgendaPage() {
   }, [longPressTimer])
 
   useEffect(() => {
-    fetchVisits()
     if (isAdmin) {
       fetchUsers()
     }
-  }, [currentDate, viewMode, filterByUser])
+  }, [isAdmin])
+
+  useEffect(() => {
+    fetchVisits()
+  }, [currentDate, viewMode, filterByUser, users])
 
   // Restaurar scroll após carregar visitas
   useEffect(() => {
@@ -134,7 +137,7 @@ export default function AgendaPage() {
         full_name: user.full_name,
         email: user.email,
         avatar_url: user.avatar_url,
-        is_admin: profilesMap.get(user.profile_id) || false
+        is_admin: profilesMap.get(user.profile_id) === true
       }))
       
       setUsers(usersData)
@@ -185,7 +188,7 @@ export default function AgendaPage() {
       // Aplicar filtro por responsável
       if (filterByUser === 'all-admins') {
         // Buscar apenas visitas de usuários admin
-        const adminUserIds = users.filter(u => u.is_admin).map(u => u.id)
+        const adminUserIds = users.filter(u => u.is_admin === true).map(u => u.id)
         if (adminUserIds.length > 0) {
           query = query.in('assigned_user_id', adminUserIds)
         }

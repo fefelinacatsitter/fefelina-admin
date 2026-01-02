@@ -112,6 +112,7 @@ interface Visit {
 interface ClientQuickInfo {
   endereco_completo?: string
   telefone?: string
+  notas?: string
   pets: Array<{ nome: string; caracteristica: string }>
 }
 
@@ -143,6 +144,10 @@ export default function VisitsPage() {
   const [hoveredVisitId, setHoveredVisitId] = useState<string | null>(null)
   const [clientsQuickInfo, setClientsQuickInfo] = useState<Record<string, ClientQuickInfo>>({})
   const [tooltipPosition, setTooltipPosition] = useState<'bottom' | 'top'>('bottom')
+  
+  // Estados para modal mobile de informações do cliente
+  const [showMobileClientInfo, setShowMobileClientInfo] = useState(false)
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchVisits()
@@ -409,18 +414,18 @@ export default function VisitsPage() {
       // Buscar informações do cliente
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
-        .select('endereco_completo, telefone')
+        .select('endereco_completo, telefone, notas')
         .eq('id', clientId)
         .single()
 
       if (clientError) throw clientError
 
-      // Buscar pets do cliente
+      // Buscar pets do cliente (todos, sem limite para o modal mobile)
       const { data: petsData, error: petsError } = await supabase
         .from('pets')
         .select('nome, caracteristica')
         .eq('client_id', clientId)
-        .limit(3) // Limitar a 3 pets para não ficar muito grande
+        .order('nome', { ascending: true })
 
       if (petsError) throw petsError
 
@@ -429,6 +434,7 @@ export default function VisitsPage() {
         [clientId]: {
           endereco_completo: clientData.endereco_completo,
           telefone: clientData.telefone,
+          notas: clientData.notas,
           pets: petsData || []
         }
       }))
@@ -680,7 +686,7 @@ export default function VisitsPage() {
         <>
           {/* Mobile: Cards */}
           <div className="block md:hidden space-y-4">
-            {getSortedVisits().map((visit, index, array) => (
+            {getSortedVisits().map((visit) => (
               <div key={visit.id} className={`border rounded-lg p-4 shadow-sm ${
                 visit.isLastVisit ? 'border-l-4 border-l-orange-400 bg-orange-50/30' :
                 visit.tipo_encontro === 'task' ? 'bg-blue-50 border-blue-200' : 
@@ -720,65 +726,21 @@ export default function VisitsPage() {
                     ) : (
                       <>
                         {visit.client_id ? (
-                          <div className="relative inline-block group">
+                          <div className="flex items-center gap-2">
+                            <div className="text-sm text-gray-700 font-medium">{visit.clients?.nome}</div>
                             <button
-                              onClick={() => navigate(`/clients/${visit.client_id}`)}
-                              onMouseEnter={(e) => {
-                                if (visit.client_id) {
-                                  handleMouseEnter(visit.id, visit.client_id, e, index, array.length)
-                                }
+                              onClick={() => {
+                                setSelectedClientId(visit.client_id!)
+                                fetchClientQuickInfo(visit.client_id!)
+                                setShowMobileClientInfo(true)
                               }}
-                              onMouseLeave={() => setHoveredVisitId(null)}
-                              className="text-sm text-primary-600 hover:text-primary-800 hover:underline font-medium text-left"
+                              className="text-primary-600 hover:text-primary-800 p-1"
+                              title="Ver informações do cliente"
                             >
-                              {visit.clients?.nome}
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
                             </button>
-                            
-                            {/* Tooltip Mobile */}
-                            {hoveredVisitId === visit.id && visit.client_id && clientsQuickInfo[visit.client_id] && (
-                              <div className={`absolute left-0 z-50 w-64 bg-white rounded-md shadow-lg border border-gray-200 p-2 text-left pointer-events-none ${
-                                tooltipPosition === 'bottom' ? 'top-full mt-1' : 'bottom-full mb-1'
-                              }`}>
-                                <div className="space-y-1.5 text-xs">
-                                  {clientsQuickInfo[visit.client_id].endereco_completo && (
-                                    <div className="flex items-start gap-1.5">
-                                      <svg className="w-3 h-3 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                      </svg>
-                                      <p className="text-gray-600 flex-1 leading-tight line-clamp-2">{clientsQuickInfo[visit.client_id].endereco_completo}</p>
-                                    </div>
-                                  )}
-                                  {clientsQuickInfo[visit.client_id].telefone && (
-                                    <div className="flex items-center gap-1.5">
-                                      <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                      </svg>
-                                      <p className="text-gray-600">{clientsQuickInfo[visit.client_id].telefone}</p>
-                                    </div>
-                                  )}
-                                  {clientsQuickInfo[visit.client_id].pets.length > 0 && (
-                                    <div className="pt-1.5 border-t border-gray-100">
-                                      <div className="flex items-center gap-1 mb-1">
-                                        <svg className="w-3 h-3 text-primary-500" fill="currentColor" viewBox="0 0 24 24">
-                                          <path d="M8.5 5C7.67157 5 7 5.67157 7 6.5C7 7.32843 7.67157 8 8.5 8C9.32843 8 10 7.32843 10 6.5C10 5.67157 9.32843 5 8.5 5Z"/>
-                                          <path d="M15.5 5C14.6716 5 14 5.67157 14 6.5C14 7.32843 14.6716 8 15.5 8C16.3284 8 17 7.32843 17 6.5C17 5.67157 16.3284 5 15.5 5Z"/>
-                                          <path d="M5 9.5C5 8.67157 5.67157 8 6.5 8C7.32843 8 8 8.67157 8 9.5C8 10.3284 7.32843 11 6.5 11C5.67157 11 5 10.3284 5 9.5Z"/>
-                                          <path d="M17.5 8C16.6716 8 16 8.67157 16 9.5C16 10.3284 16.6716 11 17.5 11C18.3284 11 19 10.3284 19 9.5C19 8.67157 18.3284 8 17.5 8Z"/>
-                                          <path d="M12 10C9.79086 10 8 11.7909 8 14C8 15.8638 9.27477 17.4299 11 17.874V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V17.874C14.7252 17.4299 16 15.8638 16 14C16 11.7909 14.2091 10 12 10Z"/>
-                                        </svg>
-                                        <span className="font-medium text-gray-700">Pets:</span>
-                                      </div>
-                                      {clientsQuickInfo[visit.client_id].pets.map((pet, idx) => (
-                                        <div key={idx} className="text-gray-600 ml-4 leading-tight">
-                                          • <span className="font-medium">{pet.nome}</span> <span className="text-gray-400">·</span> <span className="text-[10px]">{pet.caracteristica}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
                           </div>
                         ) : (
                           <div className="text-sm text-gray-700">{visit.clients?.nome}</div>
@@ -1083,6 +1045,116 @@ export default function VisitsPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Modal Mobile: Informações do Cliente */}
+      {showMobileClientInfo && selectedClientId && clientsQuickInfo[selectedClientId] && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end md:hidden">
+          <div className="bg-white w-full rounded-t-2xl shadow-xl max-h-[80vh] overflow-y-auto">
+            {/* Header do Modal */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Informações do Cliente</h3>
+              <button
+                onClick={() => {
+                  setShowMobileClientInfo(false)
+                  setSelectedClientId(null)
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="p-4 space-y-4">
+              {/* Endereço */}
+              {clientsQuickInfo[selectedClientId].endereco_completo && (
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-start gap-2 mb-1">
+                    <svg className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <div className="flex-1">
+                      <h4 className="text-xs font-semibold text-gray-700 uppercase mb-1">Endereço</h4>
+                      <p className="text-sm text-gray-900 leading-relaxed">{clientsQuickInfo[selectedClientId].endereco_completo}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Telefone */}
+              {clientsQuickInfo[selectedClientId].telefone && (
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-primary-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    <div className="flex-1">
+                      <h4 className="text-xs font-semibold text-gray-700 uppercase mb-1">Telefone</h4>
+                      <a href={`tel:${clientsQuickInfo[selectedClientId].telefone}`} className="text-sm text-primary-600 font-medium hover:underline">
+                        {clientsQuickInfo[selectedClientId].telefone}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Pets */}
+              {clientsQuickInfo[selectedClientId].pets.length > 0 && (
+                <div className="bg-primary-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg className="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8.5 5C7.67157 5 7 5.67157 7 6.5C7 7.32843 7.67157 8 8.5 8C9.32843 8 10 7.32843 10 6.5C10 5.67157 9.32843 5 8.5 5Z"/>
+                      <path d="M15.5 5C14.6716 5 14 5.67157 14 6.5C14 7.32843 14.6716 8 15.5 8C16.3284 8 17 7.32843 17 6.5C17 5.67157 16.3284 5 15.5 5Z"/>
+                      <path d="M5 9.5C5 8.67157 5.67157 8 6.5 8C7.32843 8 8 8.67157 8 9.5C8 10.3284 7.32843 11 6.5 11C5.67157 11 5 10.3284 5 9.5Z"/>
+                      <path d="M17.5 8C16.6716 8 16 8.67157 16 9.5C16 10.3284 16.6716 11 17.5 11C18.3284 11 19 10.3284 19 9.5C19 8.67157 18.3284 8 17.5 8Z"/>
+                      <path d="M12 10C9.79086 10 8 11.7909 8 14C8 15.8638 9.27477 17.4299 11 17.874V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V17.874C14.7252 17.4299 16 15.8638 16 14C16 11.7909 14.2091 10 12 10Z"/>
+                    </svg>
+                    <h4 className="text-xs font-semibold text-gray-700 uppercase">Pets</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {clientsQuickInfo[selectedClientId].pets.map((pet, idx) => (
+                      <div key={idx} className="bg-white rounded-md p-2 border border-primary-100">
+                        <p className="text-sm font-semibold text-gray-900">{pet.nome}</p>
+                        <p className="text-xs text-gray-600 mt-0.5">{pet.caracteristica}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notas */}
+              {clientsQuickInfo[selectedClientId].notas && (
+                <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                  <div className="flex items-start gap-2 mb-1">
+                    <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <div className="flex-1">
+                      <h4 className="text-xs font-semibold text-yellow-900 uppercase mb-1">Notas Importantes</h4>
+                      <p className="text-sm text-gray-900 leading-relaxed whitespace-pre-wrap">{clientsQuickInfo[selectedClientId].notas}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Botão para ver perfil completo */}
+              <button
+                onClick={() => {
+                  navigate(`/clients/${selectedClientId}`)
+                  setShowMobileClientInfo(false)
+                  setSelectedClientId(null)
+                }}
+                className="w-full bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors"
+              >
+                Ver Perfil Completo do Cliente
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -50,6 +50,7 @@ interface Client {
   nome: string
   valor_diaria: number
   valor_duas_visitas: number
+  credito_disponivel?: number
 }
 
 // Funções auxiliares para validação de data
@@ -341,7 +342,7 @@ export default function ServicesPage() {
     try {
       const { data, error } = await supabase
         .from('clients')
-        .select('id, nome, valor_diaria, valor_duas_visitas')
+        .select('id, nome, valor_diaria, valor_duas_visitas, credito_disponivel')
         .order('nome')
 
       if (error) throw error
@@ -712,6 +713,25 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
         ? totalAReceber 
         : formData.valor_pago
       
+      // Verificar e aplicar crédito disponível (apenas ao criar novo serviço)
+      let creditoUsado = 0
+      if (!editingService) {
+        const creditoDisponivel = selectedClient?.credito_disponivel || 0
+        
+        if (creditoDisponivel > 0) {
+          creditoUsado = Math.min(creditoDisponivel, totalValor)
+          
+          // Atualizar saldo do cliente
+          const novoSaldo = creditoDisponivel - creditoUsado
+          const { error: updateCreditError } = await supabase
+            .from('clients')
+            .update({ credito_disponivel: novoSaldo })
+            .eq('id', formData.client_id)
+
+          if (updateCreditError) throw updateCreditError
+        }
+      }
+      
       let serviceData: any = {
         ...formData,
         data_inicio: dataInicio,
@@ -720,6 +740,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
         total_valor: totalValor,
         total_a_receber: totalAReceber,
         valor_pago: valorPago,
+        credito_usado: creditoUsado,
         assigned_user_id: formData.assigned_user_id || null // Trigger do banco usa auth.uid() se null
       }
 
@@ -774,11 +795,31 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
         if (visitsError) throw visitsError
       }
 
-      toast.success(
-        editingService 
+      // Registrar uso de crédito no histórico (apenas ao criar novo serviço)
+      if (!editingService && creditoUsado > 0) {
+        const creditoDisponivel = selectedClient?.credito_disponivel || 0
+        const { error: historyError } = await supabase
+          .from('client_credits_history')
+          .insert({
+            client_id: formData.client_id,
+            tipo: 'uso',
+            valor: creditoUsado,
+            saldo_anterior: creditoDisponivel,
+            saldo_novo: creditoDisponivel - creditoUsado,
+            descricao: `Crédito usado no serviço ${formData.nome_servico || 'sem nome'}`,
+            service_id: savedService.id
+          })
+
+        if (historyError) console.error('Erro ao registrar histórico de crédito:', historyError)
+      }
+
+      const mensagemSucesso = !editingService && creditoUsado > 0
+        ? `Serviço "${formData.nome_servico || 'Sem nome'}" criado! Crédito de ${formatCurrency(creditoUsado)} foi usado. Saldo restante: ${formatCurrency((selectedClient?.credito_disponivel || 0) - creditoUsado)}`
+        : editingService 
           ? `Serviço "${formData.nome_servico || 'Sem nome'}" atualizado com ${visits.length} visita(s)!`
           : `Serviço "${formData.nome_servico || 'Sem nome'}" criado com ${visits.length} visita(s)!`
-      )
+
+      toast.success(mensagemSucesso, { duration: 5000 })
 
       await fetchServices()
       closeModal()
@@ -1630,7 +1671,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
 
                 {/* Resumo dos Totais */}
                 {visits.length > 0 && (
-                  <div className="border-t pt-3">
+                  <div className="border-t pt-3 space-y-3">
                     <div className="bg-primary-50 rounded-lg p-2.5">
                       <h5 className="text-xs font-medium text-gray-900 mb-2">Resumo do Serviço</h5>
                       <div className="grid grid-cols-3 gap-3 text-xs">
@@ -1648,6 +1689,52 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                         </div>
                       </div>
                     </div>
+
+                    {/* Card de Crédito Disponível */}
+                    {(() => {
+                      const creditoDisponivel = selectedClient?.credito_disponivel || 0
+                      const creditoAUsar = Math.min(creditoDisponivel, totalValor)
+                      const saldoRestante = creditoDisponivel - creditoAUsar
+                      const valorFinal = totalValor - creditoAUsar
+
+                      return !editingService && creditoDisponivel > 0 ? (
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <div className="flex-shrink-0 p-1.5 bg-green-500 rounded-lg">
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <h5 className="text-xs font-bold text-green-900 mb-1.5">💰 Crédito Disponível</h5>
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-700">Saldo atual:</span>
+                                  <span className="font-semibold text-green-700">{formatCurrency(creditoDisponivel)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-700">Será usado:</span>
+                                  <span className="font-bold text-green-800">{formatCurrency(creditoAUsar)}</span>
+                                </div>
+                                <div className="flex justify-between pt-1 border-t border-green-200">
+                                  <span className="text-gray-700">Saldo após:</span>
+                                  <span className="font-semibold text-green-700">{formatCurrency(saldoRestante)}</span>
+                                </div>
+                                <div className="flex justify-between items-center pt-1 mt-1 border-t-2 border-green-300">
+                                  <span className="font-medium text-gray-900">Valor final:</span>
+                                  <span className="text-sm font-bold text-primary-600">{formatCurrency(valorFinal)}</span>
+                                </div>
+                              </div>
+                              {creditoAUsar > 0 && (
+                                <div className="mt-2 p-1.5 bg-green-100 border border-green-300 rounded text-[10px] text-green-800">
+                                  ✅ Crédito aplicado automaticamente
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : null
+                    })()}
                   </div>
                 )}
 

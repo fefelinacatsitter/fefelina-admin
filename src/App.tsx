@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { PermissionsProvider } from './contexts/PermissionsContext'
 import LoginPage from './pages/LoginPage'
-import Dashboard from './pages/Dashboard'
+import DashboardEnhanced from './pages/DashboardEnhanced'
 import ClientsPage from './pages/ClientsPage'
 import ClientProfilePage from './pages/ClientProfilePage'
 import PetsPage from './pages/PetsPage'
@@ -44,7 +44,7 @@ function App() {
                     path="/dashboard" 
                     element={
                       <ProtectedRoute resource="dashboard">
-                        <Dashboard />
+                        <DashboardEnhanced />
                       </ProtectedRoute>
                     } 
                   />

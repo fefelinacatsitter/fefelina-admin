@@ -223,15 +223,15 @@ export default function FinancesPage() {
     let chartEndDate: string
     
     if (chartFilters.viewType === 'month') {
-      // 9 meses para trás + mês atual + 2 meses à frente = 12 meses
+      // 12 meses para trás + mês atual + 1 mês à frente = 13 meses (comparação ano anterior)
       const currentMonth = new Date(chartFilters.selectedYear, chartFilters.selectedMonth - 1, 1)
-      const nineMonthsBack = new Date(currentMonth)
-      nineMonthsBack.setMonth(currentMonth.getMonth() - 9)
-      const twoMonthsForward = new Date(currentMonth)
-      twoMonthsForward.setMonth(currentMonth.getMonth() + 2)
+      const twelveMonthsBack = new Date(currentMonth)
+      twelveMonthsBack.setMonth(currentMonth.getMonth() - 12)
+      const oneMonthForward = new Date(currentMonth)
+      oneMonthForward.setMonth(currentMonth.getMonth() + 1)
       
-      chartStartDate = format(nineMonthsBack, 'yyyy-MM-dd')
-      chartEndDate = format(new Date(twoMonthsForward.getFullYear(), twoMonthsForward.getMonth() + 1, 0), 'yyyy-MM-dd')
+      chartStartDate = format(twelveMonthsBack, 'yyyy-MM-dd')
+      chartEndDate = format(new Date(oneMonthForward.getFullYear(), oneMonthForward.getMonth() + 1, 0), 'yyyy-MM-dd')
     } else {
       // Para visualização anual, pegar os últimos anos
       chartStartDate = `${chartFilters.selectedYear - 2}-01-01`
@@ -325,7 +325,8 @@ export default function FinancesPage() {
     total: number
     visits: number
   }> => {
-    // Criar array de 12 meses (9 para trás + atual + 2 à frente)
+    // Criar array de 13 meses (12 meses para trás do mês atual + mês atual + 1 mês à frente)
+    // Exemplo: se estamos em fev/2026, mostra de fev/2025 até mar/2026
     const currentMonth = new Date(chartFilters.selectedYear, chartFilters.selectedMonth - 1, 1)
     const months: Array<{
       month: string
@@ -336,8 +337,8 @@ export default function FinancesPage() {
       visits: number
     }> = []
     
-    // Gerar os 12 meses
-    for (let i = -9; i <= 2; i++) {
+    // Gerar os 13 meses (12 para trás + atual + 1 à frente)
+    for (let i = -12; i <= 1; i++) {
       const date = new Date(currentMonth)
       date.setMonth(currentMonth.getMonth() + i)
       

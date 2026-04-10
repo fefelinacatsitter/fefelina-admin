@@ -1068,6 +1068,146 @@ export default function ClientProfilePage() {
         </div>
       </div>
 
+      {/* Informações do Cliente - Endereço e Pets (prioridade operacional) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Dados Cadastrais */}
+        <div className="space-y-6">
+          <div className="card-fefelina p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Dados Cadastrais</h3>
+            <dl className="space-y-3">
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Nome</dt>
+              <dd className="mt-1 text-sm text-gray-900">{client.nome}</dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Endereço</dt>
+              <dd className="mt-1 text-sm text-gray-900">{client.endereco_completo || 'Não informado'}</dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Veterinário de Confiança</dt>
+              <dd className="mt-1 text-sm text-gray-900">{client.veterinario_confianca || 'Não informado'}</dd>
+            </div>
+            {shouldShowField('valor_diaria') && (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Valor Diária</dt>
+                <dd className="mt-1 text-sm text-gray-900">{maskClientField('valor_diaria', formatCurrency(client.valor_diaria))}</dd>
+              </div>
+            )}
+            {shouldShowField('valor_duas_visitas') && (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Valor Duas Visitas</dt>
+                <dd className="mt-1 text-sm text-gray-900">{maskClientField('valor_duas_visitas', formatCurrency(client.valor_duas_visitas))}</dd>
+              </div>
+            )}
+            {client.observacoes && (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Observações</dt>
+                <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{client.observacoes}</dd>
+              </div>
+            )}
+          </dl>
+          
+          {/* Notas do CRM */}
+          {client.notas && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium text-gray-700 flex items-center">
+                  <svg className="w-4 h-4 mr-1 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Notas CRM
+                </h4>
+                <button
+                  onClick={() => setShowNotesModal(true)}
+                  className="text-xs text-primary-600 hover:text-primary-800"
+                >
+                  Editar
+                </button>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{client.notas}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+          {/* Créditos do Cliente */}
+          <ClientCredits
+            clientId={client.id}
+            clientName={client.nome}
+            currentCredit={client.credito_disponivel || 0}
+            onUpdate={fetchClientData}
+          />
+        </div>
+
+        {/* Pets */}
+        <div className="card-fefelina p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Pets ({pets.length})</h3>
+            <button
+              onClick={openPetModal}
+              className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-full p-1.5 transition-colors"
+              title="Adicionar Pet"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
+          {pets.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8.5 5C7.67157 5 7 5.67157 7 6.5C7 7.32843 7.67157 8 8.5 8C9.32843 8 10 7.32843 10 6.5C10 5.67157 9.32843 5 8.5 5Z"/>
+                <path d="M15.5 5C14.6716 5 14 5.67157 14 6.5C14 7.32843 14.6716 8 15.5 8C16.3284 8 17 7.32843 17 6.5C17 5.67157 16.3284 5 15.5 5Z"/>
+                <path d="M5 9.5C5 8.67157 5.67157 8 6.5 8C7.32843 8 8 8.67157 8 9.5C8 10.3284 7.32843 11 6.5 11C5.67157 11 5 10.3284 5 9.5Z"/>
+                <path d="M17.5 8C16.6716 8 16 8.67157 16 9.5C16 10.3284 16.6716 11 17.5 11C18.3284 11 19 10.3284 19 9.5C19 8.67157 18.3284 8 17.5 8Z"/>
+                <path d="M12 10C9.79086 10 8 11.7909 8 14C8 15.8638 9.27477 17.4299 11 17.874V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V17.874C14.7252 17.4299 16 15.8638 16 14C16 11.7909 14.2091 10 12 10Z"/>
+              </svg>
+              <p className="text-sm">Nenhum pet cadastrado</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pets.map((pet) => (
+                <div key={pet.id} className="border border-gray-200 rounded-lg p-3 hover:border-primary-300 transition-colors">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
+                      <svg className="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8.5 5C7.67157 5 7 5.67157 7 6.5C7 7.32843 7.67157 8 8.5 8C9.32843 8 10 7.32843 10 6.5C10 5.67157 9.32843 5 8.5 5Z"/>
+                        <path d="M15.5 5C14.6716 5 14 5.67157 14 6.5C14 7.32843 14.6716 8 15.5 8C16.3284 8 17 7.32843 17 6.5C17 5.67157 16.3284 5 15.5 5Z"/>
+                        <path d="M5 9.5C5 8.67157 5.67157 8 6.5 8C7.32843 8 8 8.67157 8 9.5C8 10.3284 7.32843 11 6.5 11C5.67157 11 5 10.3284 5 9.5Z"/>
+                        <path d="M17.5 8C16.6716 8 16 8.67157 16 9.5C16 10.3284 16.6716 11 17.5 11C18.3284 11 19 10.3284 19 9.5C19 8.67157 18.3284 8 17.5 8Z"/>
+                        <path d="M12 10C9.79086 10 8 11.7909 8 14C8 15.8638 9.27477 17.4299 11 17.874V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V17.874C14.7252 17.4299 16 15.8638 16 14C16 11.7909 14.2091 10 12 10Z"/>
+                      </svg>
+                    </div>
+                    <div className="ml-3 flex-1">
+                      <h4 className="text-sm font-semibold text-gray-900">{pet.nome}</h4>
+                      <p className="text-xs text-gray-600 mt-1">{pet.caracteristica}</p>
+                      {pet.observacoes && (
+                        <p className="text-xs text-gray-500 mt-1 italic">{pet.observacoes}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Métricas e Análises (seção colapsável) */}
+      <details className="mb-6 group">
+        <summary className="cursor-pointer list-none flex items-center justify-between p-4 card-fefelina hover:bg-gray-50 transition-colors rounded-lg mb-4">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span className="text-lg font-semibold text-gray-900">Métricas, Análises e Desempenho</span>
+          </div>
+          <svg className="w-5 h-5 text-gray-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </summary>
+
       {/* Métricas Principais - Linha 1: Financeiro */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         {/* Total de Receita */}
@@ -1534,131 +1674,7 @@ export default function ClientProfilePage() {
         </div>
       )}
 
-      {/* Informações do Cliente */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Dados Cadastrais */}
-        <div className="space-y-6">
-          <div className="card-fefelina p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Dados Cadastrais</h3>
-            <dl className="space-y-3">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Nome</dt>
-              <dd className="mt-1 text-sm text-gray-900">{client.nome}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Endereço</dt>
-              <dd className="mt-1 text-sm text-gray-900">{client.endereco_completo || 'Não informado'}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Veterinário de Confiança</dt>
-              <dd className="mt-1 text-sm text-gray-900">{client.veterinario_confianca || 'Não informado'}</dd>
-            </div>
-            {shouldShowField('valor_diaria') && (
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Valor Diária</dt>
-                <dd className="mt-1 text-sm text-gray-900">{maskClientField('valor_diaria', formatCurrency(client.valor_diaria))}</dd>
-              </div>
-            )}
-            {shouldShowField('valor_duas_visitas') && (
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Valor Duas Visitas</dt>
-                <dd className="mt-1 text-sm text-gray-900">{maskClientField('valor_duas_visitas', formatCurrency(client.valor_duas_visitas))}</dd>
-              </div>
-            )}
-            {client.observacoes && (
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Observações</dt>
-                <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{client.observacoes}</dd>
-              </div>
-            )}
-          </dl>
-          
-          {/* Notas do CRM */}
-          {client.notas && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium text-gray-700 flex items-center">
-                  <svg className="w-4 h-4 mr-1 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Notas CRM
-                </h4>
-                <button
-                  onClick={() => setShowNotesModal(true)}
-                  className="text-xs text-primary-600 hover:text-primary-800"
-                >
-                  Editar
-                </button>
-              </div>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{client.notas}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-          {/* Créditos do Cliente */}
-          <ClientCredits
-            clientId={client.id}
-            clientName={client.nome}
-            currentCredit={client.credito_disponivel || 0}
-            onUpdate={fetchClientData}
-          />
-        </div>
-
-        {/* Pets */}
-        <div className="card-fefelina p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Pets ({pets.length})</h3>
-            <button
-              onClick={openPetModal}
-              className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-full p-1.5 transition-colors"
-              title="Adicionar Pet"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-          </div>
-          {pets.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8.5 5C7.67157 5 7 5.67157 7 6.5C7 7.32843 7.67157 8 8.5 8C9.32843 8 10 7.32843 10 6.5C10 5.67157 9.32843 5 8.5 5Z"/>
-                <path d="M15.5 5C14.6716 5 14 5.67157 14 6.5C14 7.32843 14.6716 8 15.5 8C16.3284 8 17 7.32843 17 6.5C17 5.67157 16.3284 5 15.5 5Z"/>
-                <path d="M5 9.5C5 8.67157 5.67157 8 6.5 8C7.32843 8 8 8.67157 8 9.5C8 10.3284 7.32843 11 6.5 11C5.67157 11 5 10.3284 5 9.5Z"/>
-                <path d="M17.5 8C16.6716 8 16 8.67157 16 9.5C16 10.3284 16.6716 11 17.5 11C18.3284 11 19 10.3284 19 9.5C19 8.67157 18.3284 8 17.5 8Z"/>
-                <path d="M12 10C9.79086 10 8 11.7909 8 14C8 15.8638 9.27477 17.4299 11 17.874V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V17.874C14.7252 17.4299 16 15.8638 16 14C16 11.7909 14.2091 10 12 10Z"/>
-              </svg>
-              <p className="text-sm">Nenhum pet cadastrado</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {pets.map((pet) => (
-                <div key={pet.id} className="border border-gray-200 rounded-lg p-3 hover:border-primary-300 transition-colors">
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
-                      <svg className="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8.5 5C7.67157 5 7 5.67157 7 6.5C7 7.32843 7.67157 8 8.5 8C9.32843 8 10 7.32843 10 6.5C10 5.67157 9.32843 5 8.5 5Z"/>
-                        <path d="M15.5 5C14.6716 5 14 5.67157 14 6.5C14 7.32843 14.6716 8 15.5 8C16.3284 8 17 7.32843 17 6.5C17 5.67157 16.3284 5 15.5 5Z"/>
-                        <path d="M5 9.5C5 8.67157 5.67157 8 6.5 8C7.32843 8 8 8.67157 8 9.5C8 10.3284 7.32843 11 6.5 11C5.67157 11 5 10.3284 5 9.5Z"/>
-                        <path d="M17.5 8C16.6716 8 16 8.67157 16 9.5C16 10.3284 16.6716 11 17.5 11C18.3284 11 19 10.3284 19 9.5C19 8.67157 18.3284 8 17.5 8Z"/>
-                        <path d="M12 10C9.79086 10 8 11.7909 8 14C8 15.8638 9.27477 17.4299 11 17.874V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V17.874C14.7252 17.4299 16 15.8638 16 14C16 11.7909 14.2091 10 12 10Z"/>
-                      </svg>
-                    </div>
-                    <div className="ml-3 flex-1">
-                      <h4 className="text-sm font-semibold text-gray-900">{pet.nome}</h4>
-                      <p className="text-xs text-gray-600 mt-1">{pet.caracteristica}</p>
-                      {pet.observacoes && (
-                        <p className="text-xs text-gray-500 mt-1 italic">{pet.observacoes}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      </details>
 
       {/* Serviços */}
       <div className="card-fefelina p-6 mb-6">

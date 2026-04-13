@@ -50,6 +50,9 @@ function formatPhoneInput(value: string): string {
 
 type LeadStatus = 'em_contato' | 'negociacao' | 'aguardando_resposta' | 'fechado_ganho' | 'fechado_perdido'
 
+// Período de exibição para colunas de leads fechados (em dias)
+const FECHADO_DISPLAY_DAYS = 30
+
 const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; bgColor: string; borderColor: string }> = {
   em_contato: {
     label: 'Em Contato',
@@ -784,6 +787,17 @@ export default function LeadsPage() {
   }
 
   const getLeadsByStatus = (status: LeadStatus) => {
+    const filtered = leads.filter(lead => lead.status === status)
+    // Limitar colunas fechadas aos últimos N dias
+    if (status === 'fechado_ganho' || status === 'fechado_perdido') {
+      const cutoff = new Date()
+      cutoff.setDate(cutoff.getDate() - FECHADO_DISPLAY_DAYS)
+      return filtered.filter(lead => new Date(lead.updated_at) >= cutoff)
+    }
+    return filtered
+  }
+
+  const getAllLeadsByStatus = (status: LeadStatus) => {
     return leads.filter(lead => lead.status === status)
   }
 
@@ -836,8 +850,8 @@ export default function LeadsPage() {
     em_contato: getLeadsByStatus('em_contato').length,
     negociacao: getLeadsByStatus('negociacao').length,
     aguardando_resposta: getLeadsByStatus('aguardando_resposta').length,
-    fechado_ganho: getLeadsByStatus('fechado_ganho').length,
-    fechado_perdido: getLeadsByStatus('fechado_perdido').length,
+    fechado_ganho: getAllLeadsByStatus('fechado_ganho').length,
+    fechado_perdido: getAllLeadsByStatus('fechado_perdido').length,
     valor_potencial: leads
       .filter(l => !['fechado_perdido', 'fechado_ganho'].includes(l.status))
       .reduce((sum, l) => sum + (l.valor_orcamento || 0), 0)
@@ -948,9 +962,16 @@ export default function LeadsPage() {
                     <div className={`flex flex-col ${!isLastColumn ? 'border-r border-gray-200 pr-3' : ''}`}>
                       {/* Header da coluna estilo Jira - altura fixa */}
                       <div className="mb-2 h-8 flex items-center justify-between px-2">
-                        <h3 className={`text-xs font-semibold uppercase ${config.color} tracking-wide`}>
-                          {config.label}
-                        </h3>
+                        <div className="flex items-center gap-1">
+                          <h3 className={`text-xs font-semibold uppercase ${config.color} tracking-wide`}>
+                            {config.label}
+                          </h3>
+                          {(status === 'fechado_ganho' || status === 'fechado_perdido') && (
+                            <span className="text-[10px] text-gray-400" title={`Exibindo últimos ${FECHADO_DISPLAY_DAYS} dias`}>
+                              ({FECHADO_DISPLAY_DAYS}d)
+                            </span>
+                          )}
+                        </div>
                         <span className={`text-xs font-medium ${config.color} bg-white px-2 py-0.5 rounded-full border ${config.borderColor}`}>
                           {statusLeads.length}
                         </span>

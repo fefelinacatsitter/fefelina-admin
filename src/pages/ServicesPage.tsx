@@ -186,7 +186,9 @@ export default function ServicesPage() {
   })
 
   // States para múltiplas visitas
-  const [multiVisitDays, setMultiVisitDays] = useState(1);
+  const [multiVisitStartDate, setMultiVisitStartDate] = useState('');
+  const [multiVisitEndDate, setMultiVisitEndDate] = useState('');
+  const [multiVisitTipo, setMultiVisitTipo] = useState<'inteira' | 'meia'>('inteira');
 
   useEffect(() => {
     fetchServices()
@@ -985,56 +987,66 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
 
   // Função para gerar múltiplas visitas
   const handleGenerateMultipleVisits = () => {
-    if (!selectedClient || multiVisitDays < 1) return;
-    if (visits.length === 0) {
-      toast.error("Cadastre pelo menos uma visita para usar como base!")
+    if (!selectedClient) return;
+    if (!multiVisitStartDate || !multiVisitEndDate) {
+      toast.error('Informe a data de início e fim para gerar as visitas.')
       return;
     }
-    
-    const base = visits[0];
-    const newVisits = [];
-    
-    // Se a visita base for do tipo "meia", gera 2 visitas por dia (09:00 e 18:00)
-    if (base.tipo_visita === 'meia') {
-      // Calcula quantos dias completos precisamos (cada dia tem 2 visitas)
-      const totalDays = Math.ceil(multiVisitDays / 2);
-      
-      for (let dayIndex = 0; dayIndex < totalDays; dayIndex++) {
-        const date = new Date(base.data + 'T00:00:00');
-        date.setDate(date.getDate() + dayIndex);
-        const dateStr = date.toISOString().slice(0, 10);
-        
-        // Primeira visita do dia (09:00)
-        if (newVisits.length < multiVisitDays) {
-          newVisits.push({
-            ...base,
-            data: dateStr,
-            horario: '09:00'
-          });
-        }
-        
-        // Segunda visita do dia (18:00)
-        if (newVisits.length < multiVisitDays) {
-          newVisits.push({
-            ...base,
-            data: dateStr,
-            horario: '18:00'
-          });
-        }
-      }
-    } else {
-      // Se for visita "inteira", gera 1 visita por dia
-      for (let i = 0; i < multiVisitDays; i++) {
-        const date = new Date(base.data + 'T00:00:00');
-        date.setDate(date.getDate() + i);
-        const dateStr = date.toISOString().slice(0, 10);
+
+    const start = new Date(multiVisitStartDate + 'T00:00:00');
+    const end = new Date(multiVisitEndDate + 'T00:00:00');
+
+    if (end < start) {
+      toast.error('A data de fim deve ser igual ou posterior à data de início.')
+      return;
+    }
+
+    const valor = selectedClient
+      ? calculateVisitValue(selectedClient, multiVisitTipo)
+      : 0;
+
+    const newVisits: Visit[] = [];
+    const current = new Date(start);
+
+    while (current <= end) {
+      const dateStr = current.toISOString().slice(0, 10);
+
+      if (multiVisitTipo === 'meia') {
+        // Meia visita: 2 por dia
         newVisits.push({
-          ...base,
-          data: dateStr
+          data: dateStr,
+          horario: '09:00',
+          tipo_visita: 'meia',
+          tipo_encontro: 'visita_servico',
+          valor,
+          status: 'agendada',
+          desconto_plataforma: formData.desconto_plataforma_default
+        });
+        newVisits.push({
+          data: dateStr,
+          horario: '18:00',
+          tipo_visita: 'meia',
+          tipo_encontro: 'visita_servico',
+          valor,
+          status: 'agendada',
+          desconto_plataforma: formData.desconto_plataforma_default
+        });
+      } else {
+        // Visita inteira: 1 por dia
+        newVisits.push({
+          data: dateStr,
+          horario: '09:00',
+          tipo_visita: 'inteira',
+          tipo_encontro: 'visita_servico',
+          valor,
+          status: 'agendada',
+          desconto_plataforma: formData.desconto_plataforma_default
         });
       }
+
+      current.setDate(current.getDate() + 1);
     }
-    
+
     setVisits(newVisits);
     toast.success(`${newVisits.length} visita(s) gerada(s) com sucesso!`);
   }
@@ -1533,26 +1545,45 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                         </svg>
                         Adicionar Visita
                       </button>
-                      {/* Botão e inputs para gerar múltiplas visitas */}
-                      <div className="flex flex-row gap-1.5 items-center">
+                      {/* Botão e inputs para gerar múltiplas visitas por período */}
+                      <div className="flex flex-col sm:flex-row gap-1.5 items-start sm:items-center">
+                        <select
+                          value={multiVisitTipo}
+                          onChange={e => setMultiVisitTipo(e.target.value as 'inteira' | 'meia')}
+                          disabled={!selectedClient}
+                          className="border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        >
+                          <option value="inteira">Inteira</option>
+                          <option value="meia">Meia</option>
+                        </select>
                         <input
-                          type="number"
-                          id="multiVisitDays"
-                          min="1"
-                          max="60"
-                          className="border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 w-16"
-                          value={multiVisitDays}
-                          onChange={e => setMultiVisitDays(Number(e.target.value))}
-                          disabled={!selectedClient || visits.length === 0}
-                          placeholder="Qtd"
+                          type="date"
+                          min="1900-01-01"
+                          max="2100-12-31"
+                          className="border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          value={multiVisitStartDate}
+                          onChange={e => setMultiVisitStartDate(e.target.value)}
+                          disabled={!selectedClient}
+                          placeholder="Data início"
+                        />
+                        <span className="text-xs text-gray-500">até</span>
+                        <input
+                          type="date"
+                          min="1900-01-01"
+                          max="2100-12-31"
+                          className="border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          value={multiVisitEndDate}
+                          onChange={e => setMultiVisitEndDate(e.target.value)}
+                          disabled={!selectedClient}
+                          placeholder="Data fim"
                         />
                         <button
                           type="button"
                           onClick={handleGenerateMultipleVisits}
-                          disabled={!selectedClient || visits.length === 0 || multiVisitDays < 1}
+                          disabled={!selectedClient || !multiVisitStartDate || !multiVisitEndDate}
                           className="inline-flex items-center px-2.5 py-1.5 shadow-sm text-xs font-medium rounded text-white bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap transition-colors"
                         >
-                          Gerar Múltiplas
+                          Gerar Visitas
                         </button>
                       </div>
                     </div>

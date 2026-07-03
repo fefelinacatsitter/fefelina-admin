@@ -528,9 +528,9 @@ export default function ServicesPage() {
       // Buscar as visitas do serviço (apenas visitas de serviço, não tasks ou pré-encontros)
       const { data: visitsData, error } = await supabase
         .from('visits')
-        .select('data, tipo_encontro, tipo_visita')
+        .select('data, tipo_encontro, tipo_visita, status')
         .eq('service_id', service.id)
-        .eq('status', 'agendada')
+        .neq('status', 'cancelada')
         .order('data', { ascending: true })
 
       if (error) throw error

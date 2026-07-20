@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { fetchAllRows } from '../lib/paginatedFetch'
 import CatLoader from '../components/CatLoader'
@@ -210,8 +210,14 @@ export default function DashboardEnhanced() {
 
   const revenueGrowth = getGrowthPercentage(stats.monthlyRevenue, stats.lastMonthRevenue)
   const visitsGrowth = getGrowthPercentage(stats.monthlyVisits, stats.lastMonthVisits)
-  const revenueChartData = getRevenueChartData()
-  const revenueChartTotal = revenueChartData.reduce((sum, r) => sum + r.receita, 0)
+  // Memoizado: só reprocessa o histórico de receita quando ele muda ou quando
+  // o usuário troca o período selecionado, em vez de refiltrar/agrupar a cada
+  // re-render do componente.
+  const revenueChartData = useMemo(() => getRevenueChartData(), [revenueHistory, revenueRange])
+  const revenueChartTotal = useMemo(
+    () => revenueChartData.reduce((sum, r) => sum + r.receita, 0),
+    [revenueChartData]
+  )
 
   return (
     <div className="space-y-6">

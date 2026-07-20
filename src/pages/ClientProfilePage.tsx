@@ -176,32 +176,23 @@ export default function ClientProfilePage() {
     try {
       setLoading(true)
 
-      // Buscar dados do cliente
-      const { data: clientData, error: clientError } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', id)
-        .single()
+      // Buscar cliente, pets e serviços em paralelo (independentes entre si),
+      // em vez de sequencialmente — reduz o tempo de carregamento inicial da página.
+      const [
+        { data: clientData, error: clientError },
+        { data: petsData, error: petsError },
+        { data: servicesData, error: servicesError }
+      ] = await Promise.all([
+        supabase.from('clients').select('*').eq('id', id).single(),
+        supabase.from('pets').select('*').eq('client_id', id).order('created_at', { ascending: false }),
+        supabase.from('services').select('*').eq('client_id', id).order('data_inicio', { ascending: false })
+      ])
 
       if (clientError) throw clientError
       setClient(clientData)
 
-      // Buscar pets
-      const { data: petsData, error: petsError } = await supabase
-        .from('pets')
-        .select('*')
-        .eq('client_id', id)
-        .order('created_at', { ascending: false })
-
       if (petsError) throw petsError
       setPets(petsData || [])
-
-      // Buscar serviços
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('*')
-        .eq('client_id', id)
-        .order('data_inicio', { ascending: false })
 
       if (servicesError) throw servicesError
       setServices(servicesData || [])

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import { Copy, Eye, Pencil, CheckCircle2, MoreVertical, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
@@ -280,6 +280,8 @@ export default function ServicesPage() {
     setVisits(visits.filter((_, i) => i !== index))
   }
 
+  // Memoizado: só recalcula quando a lista de visitas do formulário muda,
+  // em vez de refiltrar/reduzir a cada re-render do componente.
   const calculateTotals = () => {
     const totalVisitas = visits.filter(v => v.status !== 'cancelada').length
     const totalValor = visits
@@ -866,7 +868,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
     toast.success(`${newVisits.length} visita(s) gerada(s) com sucesso!`);
   }
 
-  const { totalVisitas, totalValor, totalAReceber } = calculateTotals()
+  const { totalVisitas, totalValor, totalAReceber } = useMemo(() => calculateTotals(), [visits])
 
   if (loading) {
     return (

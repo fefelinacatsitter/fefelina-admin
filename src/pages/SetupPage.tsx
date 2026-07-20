@@ -36,6 +36,43 @@ interface Permission {
 
 type Tab = 'users' | 'profiles' | 'permissions' | 'field-permissions';
 
+// Gera uma senha temporária aleatória e segura (não reutilizável/adivinhável)
+// para cada novo usuário, em vez de uma senha padrão fixa embutida no código.
+function generateTemporaryPassword(): string {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnopqrstuvwxyz';
+  const digits = '23456789';
+  const symbols = '!@#$%&*';
+  const all = upper + lower + digits + symbols;
+
+  const randomChar = (chars: string) => {
+    const bytes = new Uint32Array(1);
+    crypto.getRandomValues(bytes);
+    return chars[bytes[0] % chars.length];
+  };
+
+  // Garante ao menos um caractere de cada categoria, depois completa até 12.
+  const passwordChars = [
+    randomChar(upper),
+    randomChar(lower),
+    randomChar(digits),
+    randomChar(symbols),
+  ];
+  for (let i = passwordChars.length; i < 12; i++) {
+    passwordChars.push(randomChar(all));
+  }
+
+  // Embaralha (Fisher-Yates) para não deixar posições previsíveis.
+  for (let i = passwordChars.length - 1; i > 0; i--) {
+    const bytes = new Uint32Array(1);
+    crypto.getRandomValues(bytes);
+    const j = bytes[0] % (i + 1);
+    ;[passwordChars[i], passwordChars[j]] = [passwordChars[j], passwordChars[i]];
+  }
+
+  return passwordChars.join('');
+}
+
 const RESOURCES = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'clients', label: 'Clientes' },
@@ -282,8 +319,8 @@ export default function SetupPage() {
         return;
       }
 
-      // Senha padrão
-      const defaultPassword = 'Fefelina2024!';
+      // Senha temporária única e aleatória (evita senha padrão previsível/hardcoded)
+      const defaultPassword = generateTemporaryPassword();
 
       // Salvar sessão do admin antes de criar novo usuário
       const { data: { session: adminSession } } = await supabase.auth.getSession();
@@ -865,9 +902,9 @@ export default function SetupPage() {
                   <div className="flex items-start">
                     <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
                     <div className="text-sm text-yellow-800">
-                      <p className="font-medium">Senha inicial: Fefelina2024!</p>
+                      <p className="font-medium">Uma senha temporária e única será gerada para este usuário.</p>
                       <p className="mt-1">
-                        O usuário deverá trocar a senha no primeiro acesso.
+                        A senha será exibida na tela seguinte para você repassar ao usuário. Ele deverá trocá-la no primeiro acesso.
                       </p>
                     </div>
                   </div>

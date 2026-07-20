@@ -126,9 +126,8 @@ export default function ChangePasswordPage() {
             <div className="flex items-start">
               <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
               <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">Senha inicial fornecida:</p>
-                <p className="font-mono">Fefelina2024!</p>
-                <p className="mt-2">Use esta senha no campo "Senha Atual" abaixo.</p>
+                <p className="font-medium">Use a senha temporária que foi informada a você para acessar sua conta.</p>
+                <p className="mt-2">Digite-a no campo "Senha Atual" abaixo.</p>
               </div>
             </div>
           </div>
@@ -154,7 +153,7 @@ export default function ChangePasswordPage() {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder={isFirstLogin ? 'Fefelina2024!' : '••••••••'}
+                placeholder={isFirstLogin ? 'Senha temporária recebida' : '••••••••'}
                 required
               />
               <button

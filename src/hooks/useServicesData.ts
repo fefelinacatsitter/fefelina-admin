@@ -98,13 +98,21 @@ export function useServicesData() {
           )
         `, { count: 'exact' })
 
-      // Ordenação: coluna clicada pelo usuário tem prioridade; senão, padrão do filtro
+      // Ordenação: coluna clicada pelo usuário tem prioridade; senão, o padrão
+      // depende do filtro. `data_inicio` é uma coluna DATE no Postgres, então a
+      // ordenação é sempre feita pelo valor real da data (ano/mês/dia),
+      // independente de qualquer formato de exibição (dd/mm/yyyy) usado na UI.
       if (sortColumn) {
         query = query.order(sortColumn, { ascending: sortDirection === 'asc' })
       } else if (selectedFilter === 'concluidos') {
+        // Concluídos: os concluídos mais recentemente aparecem primeiro.
         query = query.order('data_inicio', { ascending: false })
       } else {
-        query = query.order('created_at', { ascending: false })
+        // Ativos: os que já começaram há mais tempo aparecem primeiro (ordem
+        // crescente de data_inicio). Como consequência natural, serviços que
+        // ainda vão começar no futuro ficam no final da lista, em vez de
+        // aparecerem primeiro só por terem uma data "maior".
+        query = query.order('data_inicio', { ascending: true })
       }
 
       // Filtros por status (agora aplicados no servidor)

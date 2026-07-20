@@ -178,7 +178,7 @@ export default function DashboardEnhanced() {
   }
 
   // Cores discretas/profissionais para o gráfico de pizza (tons da paleta da marca)
-  const COLORS = ['#b85c2e', '#a876e3', '#94a3b8', '#e8814a']
+  const COLORS = ['#ff9f6c', '#a876e3', '#94a3b8', '#e8814a']
 
   const getRevenueChartData = (): RevenuePoint[] => {
     if (revenueRange === 'year') {
@@ -298,7 +298,7 @@ export default function DashboardEnhanced() {
             <XAxis dataKey="label" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => formatCurrency(v)} width={90} />
             <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
-            <Bar dataKey="receita" fill="#b85c2e" name="Faturamento" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="receita" fill="#ff9f6c" name="Faturamento" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

@@ -344,21 +344,19 @@ export default function ServicesPage() {
 
   const copyWhatsAppMessage = async (service: Service) => {
     try {
-      // Buscar as visitas do serviço (apenas visitas de serviço, não tasks ou pré-encontros)
-      const { data: visitsData, error } = await supabase
-        .from('visits')
-        .select('data, tipo_encontro, tipo_visita, status')
-        .eq('service_id', service.id)
-        .neq('status', 'cancelada')
-        .order('data', { ascending: true })
-
-      if (error) throw error
-
-      // Filtrar apenas visitas de serviço (excluir task e pre_encontro)
-      const visits = (visitsData || []).filter(visit => 
-        visit.tipo_encontro !== 'task' && visit.tipo_encontro !== 'pre_encontro'
+      // Usa as visitas já carregadas no modal de detalhes (viewingVisits), em vez
+      // de buscar novamente no Supabase. Isso é essencial no iOS: o Safari só
+      // permite escrever na área de transferência se isso ocorrer de forma
+      // síncrona, dentro do mesmo gesto de clique. Um `await` de uma requisição
+      // de rede antes do clipboard.writeText/execCommand fazia o iOS invalidar
+      // silenciosamente a permissão de "ação do usuário" (funcionava no
+      // Chrome/desktop, mas falhava só no iPhone).
+      const visits = viewingVisits.filter(visit =>
+        visit.tipo_encontro !== 'task' &&
+        visit.tipo_encontro !== 'pre_encontro' &&
+        visit.status !== 'cancelada'
       )
-      
+
       // Formatar as datas das visitas com o tipo (meia/inteira)
       const formattedDates = visits.map(visit => {
         const [year, month, day] = visit.data.split('-')

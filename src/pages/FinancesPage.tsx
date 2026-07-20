@@ -10,13 +10,10 @@ import {
   Download, CreditCard, Clock, CheckCircle, X, Eye, EyeOff
 } from 'lucide-react'
 import CatLoader from '../components/CatLoader'
-import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 interface FinancialData {
-  totalReceived: number
-  totalPending: number
-  totalPendingPlatform: number
   monthlyRevenue: Array<{
     month: string
     monthKey: string
@@ -49,12 +46,49 @@ interface ChartFilters {
   viewType: 'month' | 'year'
 }
 
+interface VisitRevenueRow {
+  data: string
+  valor: number
+  desconto_plataforma: number
+  services: any
+}
+
+// Retorna o status de pagamento do serviço "pai" de uma visita (usado para
+// classificar o valor da visita como recebido ou pendente no gráfico/cards).
+// O Supabase pode inferir a relação como objeto único ou como array dependendo
+// do contexto, então tratamos os dois formatos.
+function getVisitServiceStatus(visit: { services: any }): string | undefined {
+  const service = Array.isArray(visit.services) ? visit.services[0] : visit.services
+  return service?.status_pagamento
+}
+
+// O período selecionado (ao clicar em uma barra do gráfico) pode estar no
+// formato "yyyy-MM" (visão mensal) ou apenas "yyyy" (visão anual) — precisamos
+// tratar os dois formatos para não quebrar ao alternar entre as visões.
+function getPeriodRange(key: string): { start: string; end: string } {
+  if (/^\d{4}-\d{2}$/.test(key)) {
+    const [year, month] = key.split('-').map(Number)
+    const date = new Date(year, month - 1, 1)
+    return {
+      start: format(startOfMonth(date), 'yyyy-MM-dd'),
+      end: format(endOfMonth(date), 'yyyy-MM-dd')
+    }
+  }
+  const year = Number(key)
+  return { start: `${year}-01-01`, end: `${year}-12-31` }
+}
+
+function getPeriodLabel(key: string): string {
+  if (/^\d{4}-\d{2}$/.test(key)) {
+    const [year, month] = key.split('-').map(Number)
+    return format(new Date(year, month - 1, 1), 'MMMM yyyy', { locale: ptBR })
+  }
+  return `Ano ${key}`
+}
+
 export default function FinancesPage() {
   const currentDate = new Date()
   const [financialData, setFinancialData] = useState<FinancialData>({
-    totalReceived: 0,
-    totalPending: 0,
-    totalPendingPlatform: 0,
     monthlyRevenue: [],
     recentTransactions: []
   })
@@ -124,57 +158,59 @@ export default function FinancesPage() {
 
   const applyChartFilters = () => {
     setChartFilters({ ...tempChartFilters })
-    // Também atualizar o mês selecionado para mostrar as transações do mês filtrado
-    const newSelectedKey = format(
-      new Date(tempChartFilters.selectedYear, tempChartFilters.selectedMonth - 1, 1), 
-      'yyyy-MM'
-    )
-    setSelectedMonthKey(newSelectedKey)
+    // Também atualizar o período selecionado para mostrar as transações do período filtrado
+    if (tempChartFilters.viewType === 'year') {
+      setSelectedMonthKey(String(tempChartFilters.selectedYear))
+    } else {
+      const newSelectedKey = format(
+        new Date(tempChartFilters.selectedYear, tempChartFilters.selectedMonth - 1, 1), 
+        'yyyy-MM'
+      )
+      setSelectedMonthKey(newSelectedKey)
+    }
   }
 
   const fetchCardTotals = async () => {
     try {
-      // Buscar todos os serviços do ano atual, independente dos filtros do gráfico
+      // Buscar todas as visitas de serviço (ignorando pré-encontros/tasks e visitas
+      // canceladas) do ano atual, contabilizando cada uma pela SUA PRÓPRIA data — e não
+      // pela data de início do serviço, já que um serviço pode começar em um mês e ter
+      // visitas em outro.
       const currentYear = currentDate.getFullYear()
       const currentMonth = currentDate.getMonth() + 1
-      
-      // Buscar serviços do ano atual
-      const yearServices = await fetchAllRows(
-        supabase
-          .from('services')
-          .select('status_pagamento, total_a_receber, data_inicio')
-          .gte('data_inicio', `${currentYear}-01-01`)
-          .lte('data_inicio', `${currentYear}-12-31`)
-      )
-
-      // Buscar serviços do mês atual
       const monthStart = format(new Date(currentYear, currentMonth - 1, 1), 'yyyy-MM-dd')
       const monthEnd = format(new Date(currentYear, currentMonth, 0), 'yyyy-MM-dd')
-      
-      const monthServices = await fetchAllRows(
+
+      const yearVisits = await fetchAllRows<VisitRevenueRow>(
         supabase
-          .from('services')
-          .select('status_pagamento, total_a_receber, data_inicio')
-          .gte('data_inicio', monthStart)
-          .lte('data_inicio', monthEnd)
+          .from('visits')
+          .select('data, valor, desconto_plataforma, services(status_pagamento)')
+          .eq('tipo_encontro', 'visita_servico')
+          .neq('status', 'cancelada')
+          .not('service_id', 'is', null)
+          .gte('data', `${currentYear}-01-01`)
+          .lte('data', `${currentYear}-12-31`)
       )
 
-      // Calcular totais do mês atual
-      const currentMonthReceived = (monthServices || [])
-        .filter(s => s.status_pagamento === 'pago')
-        .reduce((sum, s) => sum + s.total_a_receber, 0)
+      const monthVisits = yearVisits.filter(v => v.data >= monthStart && v.data <= monthEnd)
+      const netAmount = (v: VisitRevenueRow) => v.valor * (1 - (v.desconto_plataforma || 0) / 100)
 
-      const currentMonthPending = (monthServices || [])
-        .filter(s => s.status_pagamento !== 'pago')
-        .reduce((sum, s) => sum + s.total_a_receber, 0)
+      // Calcular totais do mês atual
+      const currentMonthReceived = monthVisits
+        .filter(v => getVisitServiceStatus(v) === 'pago')
+        .reduce((sum, v) => sum + netAmount(v), 0)
+
+      const currentMonthPending = monthVisits
+        .filter(v => getVisitServiceStatus(v) !== 'pago')
+        .reduce((sum, v) => sum + netAmount(v), 0)
 
       // Calcular totais do ano atual
-      const yearReceived = (yearServices || [])
-        .filter(s => s.status_pagamento === 'pago')
-        .reduce((sum, s) => sum + s.total_a_receber, 0)
+      const yearReceived = yearVisits
+        .filter(v => getVisitServiceStatus(v) === 'pago')
+        .reduce((sum, v) => sum + netAmount(v), 0)
 
-      const yearTotal = (yearServices || [])
-        .reduce((sum, s) => sum + s.total_a_receber, 0)
+      const yearTotal = yearVisits
+        .reduce((sum, v) => sum + netAmount(v), 0)
 
       setCardTotals({
         currentMonthReceived,
@@ -191,12 +227,9 @@ export default function FinancesPage() {
     try {
       setLoading(true)
       
-      // Calcular período baseado nos filtros
-      const { startDate, endDate } = getDateRange()
-      
       // Buscar dados financeiros
       const [revenueData, transactionsData] = await Promise.all([
-        fetchRevenueData(startDate, endDate),
+        fetchRevenueData(),
         fetchRecentTransactions()
       ])
 
@@ -211,18 +244,7 @@ export default function FinancesPage() {
     }
   }
 
-  const getDateRange = () => {
-    // Para os cards de resumo, usar o ano inteiro do ano selecionado no gráfico
-    const startDate = startOfYear(new Date(chartFilters.selectedYear, 0))
-    const endDate = endOfYear(new Date(chartFilters.selectedYear, 0))
-
-    return {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0]
-    }
-  }
-
-  const fetchRevenueData = async (startDate: string, endDate: string) => {
+  const fetchRevenueData = async () => {
     // Calcular range de meses para o gráfico baseado no viewType
     let chartStartDate: string
     let chartEndDate: string
@@ -243,88 +265,69 @@ export default function FinancesPage() {
       chartEndDate = `${chartFilters.selectedYear + 2}-12-31`
     }
 
-    // Buscar dados de receita através dos serviços
-    const services = await fetchAllRows(
+    // Buscar visitas de serviço (ignorando pré-encontros/tasks e visitas canceladas) no
+    // período, contabilizando a receita pela DATA DA VISITA — e não pela data de início
+    // do serviço. Assim, um serviço que começa em um mês e termina em outro tem seu valor
+    // corretamente dividido entre os meses conforme as datas reais de cada visita.
+    const visits = await fetchAllRows<VisitRevenueRow>(
       supabase
-        .from('services')
-        .select(`
-        status_pagamento,
-        total_a_receber,
-        data_inicio,
-        data_fim,
-        clients(nome)
-      `)
-        .gte('data_inicio', chartStartDate)
-        .lte('data_inicio', chartEndDate)
-        .order('data_inicio')
+        .from('visits')
+        .select('data, valor, desconto_plataforma, services(status_pagamento)')
+        .eq('tipo_encontro', 'visita_servico')
+        .neq('status', 'cancelada')
+        .not('service_id', 'is', null)
+        .gte('data', chartStartDate)
+        .lte('data', chartEndDate)
+        .order('data')
     )
-
-    const servicesData = services || []
-
-    // Calcular totais por status de pagamento (usando o período dos filtros gerais)
-    const servicesInPeriod = servicesData.filter(s => 
-      s.data_inicio >= startDate && s.data_inicio <= endDate
-    )
-
-    const totalReceived = servicesInPeriod
-      .filter(s => s.status_pagamento === 'pago')
-      .reduce((sum, s) => sum + s.total_a_receber, 0)
-
-    const totalPartiallyPaid = servicesInPeriod
-      .filter(s => s.status_pagamento === 'pago_parcialmente')
-      .reduce((sum, s) => sum + s.total_a_receber, 0)
-
-    const totalPending = servicesInPeriod
-      .filter(s => s.status_pagamento === 'pendente')
-      .reduce((sum, s) => sum + s.total_a_receber, 0)
-
-    const totalPendingPlatform = servicesInPeriod
-      .filter(s => s.status_pagamento === 'pendente_plataforma')
-      .reduce((sum, s) => sum + s.total_a_receber, 0)
 
     // Agrupar por mês ou ano para o gráfico
     const monthlyRevenue = chartFilters.viewType === 'month' 
-      ? groupServicesByMonth(servicesData)
-      : groupServicesByYear(servicesData)
+      ? groupVisitsByMonth(visits)
+      : groupVisitsByYear(visits)
 
-    return {
-      totalReceived,
-      totalPending: totalPending + totalPartiallyPaid,
-      totalPendingPlatform,
-      monthlyRevenue
-    }
+    return { monthlyRevenue }
   }
 
   const fetchRecentTransactions = async () => {
-    // Filtrar pelo mês selecionado (ao clicar na barra ou mês atual por padrão)
-    const [year, month] = selectedMonthKey.split('-').map(Number)
-    const selectedDate = new Date(year, month - 1, 1)
-    const startDate = format(startOfMonth(selectedDate), 'yyyy-MM-dd')
-    const endDate = format(endOfMonth(selectedDate), 'yyyy-MM-dd')
+    // Filtrar pelo período selecionado: "yyyy-MM" quando uma barra do gráfico mensal foi
+    // clicada (ou mês atual por padrão), ou "yyyy" quando uma barra do gráfico anual foi
+    // clicada. Cada linha da tabela representa uma VISITA (não o serviço inteiro), para
+    // ficar consistente com o gráfico calculado pela data da visita.
+    const { start, end } = getPeriodRange(selectedMonthKey)
 
     const { data } = await supabase
-      .from('services')
+      .from('visits')
       .select(`
-        *,
-        clients(*)
+        id,
+        data,
+        valor,
+        desconto_plataforma,
+        services(*, clients(*))
       `)
-      .gte('data_inicio', startDate)
-      .lte('data_inicio', endDate)
-      .order('created_at', { ascending: false })
-      .limit(50)
+      .eq('tipo_encontro', 'visita_servico')
+      .neq('status', 'cancelada')
+      .not('service_id', 'is', null)
+      .gte('data', start)
+      .lte('data', end)
+      .order('data', { ascending: false })
+      .limit(100)
 
-    return data?.map(service => ({
-      id: service.id,
-      client: (service.clients as any)?.nome || 'Cliente não informado',
-      service: service.nome_servico || 'Serviço',
-      date: service.data_inicio,
-      amount: service.total_a_receber,
-      status: service.status_pagamento,
-      serviceDetails: service
-    })) || []
+    return data?.map(visit => {
+      const service = (Array.isArray(visit.services) ? visit.services[0] : visit.services) as any
+      return {
+        id: visit.id,
+        client: service?.clients?.nome || 'Cliente não informado',
+        service: service?.nome_servico || 'Serviço',
+        date: visit.data,
+        amount: visit.valor * (1 - (visit.desconto_plataforma || 0) / 100),
+        status: service?.status_pagamento,
+        serviceDetails: service
+      }
+    }) || []
   }
 
-  const groupServicesByMonth = (data: any[]): Array<{
+  const groupVisitsByMonth = (data: VisitRevenueRow[]): Array<{
     month: string
     monthKey: string
     received: number
@@ -362,9 +365,9 @@ export default function FinancesPage() {
       })
     }
     
-    // Preencher com os dados dos serviços
-    data.forEach(service => {
-      const [year, month, day] = service.data_inicio.split('-').map(Number)
+    // Preencher com os dados das visitas, cada uma contabilizada no mês da SUA PRÓPRIA data
+    data.forEach(visit => {
+      const [year, month, day] = visit.data.split('-').map(Number)
       const date = new Date(year, month - 1, day)
       const monthKey = format(date, 'yyyy-MM')
       
@@ -372,9 +375,9 @@ export default function FinancesPage() {
       const monthData = months.find(m => m.monthKey === monthKey)
       
       if (monthData) {
-        const amount = service.total_a_receber
+        const amount = visit.valor * (1 - (visit.desconto_plataforma || 0) / 100)
         
-        if (service.status_pagamento === 'pago') {
+        if (getVisitServiceStatus(visit) === 'pago') {
           monthData.received += amount
         } else {
           monthData.pending += amount
@@ -388,7 +391,7 @@ export default function FinancesPage() {
     return months
   }
 
-  const groupServicesByYear = (data: any[]): Array<{
+  const groupVisitsByYear = (data: VisitRevenueRow[]): Array<{
     month: string
     monthKey: string
     received: number
@@ -396,8 +399,8 @@ export default function FinancesPage() {
     total: number
     visits: number
   }> => {
-    const grouped = data.reduce((acc, service) => {
-      const [year] = service.data_inicio.split('-').map(Number)
+    const grouped = data.reduce((acc, visit) => {
+      const [year] = visit.data.split('-').map(Number)
       const yearKey = year.toString()
       
       if (!acc[yearKey]) {
@@ -411,9 +414,9 @@ export default function FinancesPage() {
         }
       }
       
-      const amount = service.total_a_receber
+      const amount = visit.valor * (1 - (visit.desconto_plataforma || 0) / 100)
       
-      if (service.status_pagamento === 'pago') {
+      if (getVisitServiceStatus(visit) === 'pago') {
         acc[yearKey].received += amount
       } else {
         acc[yearKey].pending += amount
@@ -756,10 +759,7 @@ export default function FinancesPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
-              Transações de {(() => {
-                const [year, month] = selectedMonthKey.split('-').map(Number)
-                return format(new Date(year, month - 1, 1), 'MMMM yyyy', { locale: ptBR })
-              })()}
+              Transações de {getPeriodLabel(selectedMonthKey)}
             </h3>
             <p className="text-sm text-gray-600 mt-1">
               Clique em uma transação para ver os detalhes ou clique em uma barra do gráfico para filtrar
@@ -770,16 +770,16 @@ export default function FinancesPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                   Cliente/Serviço
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                   Data
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                   Valor
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                   Status
                 </th>
               </tr>

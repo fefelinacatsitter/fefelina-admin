@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { fetchAllRows } from '../lib/paginatedFetch'
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar
+  BarChart, Bar, PieChart, Pie, Cell
 } from 'recharts'
 import { 
-  TrendingUp, Filter,
+  ChevronDown,
   Download, CreditCard, Clock, CheckCircle, X, Eye, EyeOff
 } from 'lucide-react'
 import CatLoader from '../components/CatLoader'
@@ -33,18 +33,17 @@ interface FinancialData {
   }>
 }
 
-interface CardTotals {
-  currentMonthReceived: number
-  currentMonthPending: number
-  yearReceived: number
+interface SummaryTotals {
+  monthlyAverage: number
+  currentMonthTotal: number
   yearTotal: number
+  last12MonthsTotal: number
+  grandTotal: number
+  grandReceived: number
+  grandPending: number
 }
 
-interface ChartFilters {
-  selectedMonth: number
-  selectedYear: number
-  viewType: 'month' | 'year'
-}
+type SummaryPeriodOption = 'month' | 'year' | 'last12'
 
 interface VisitRevenueRow {
   data: string
@@ -86,6 +85,20 @@ function getPeriodLabel(key: string): string {
   return `Ano ${key}`
 }
 
+const SUMMARY_PERIOD_LABELS: Record<SummaryPeriodOption, string> = {
+  month: 'Total do mês',
+  year: 'Total do ano',
+  last12: 'Total últimos 12 meses'
+}
+
+function SUMMARY_PERIOD_VALUES(totals: SummaryTotals): Record<SummaryPeriodOption, number> {
+  return {
+    month: totals.currentMonthTotal,
+    year: totals.yearTotal,
+    last12: totals.last12MonthsTotal
+  }
+}
+
 export default function FinancesPage() {
   const currentDate = new Date()
   const [financialData, setFinancialData] = useState<FinancialData>({
@@ -98,30 +111,43 @@ export default function FinancesPage() {
     const saved = localStorage.getItem('fefelina_showFinanceValues')
     return saved !== null ? saved === 'true' : true
   })
-  const [chartFilters, setChartFilters] = useState<ChartFilters>({
-    selectedMonth: currentDate.getMonth() + 1,
-    selectedYear: currentDate.getFullYear(),
-    viewType: 'month'
-  })
-  // Filtros temporários que só são aplicados ao clicar no botão
-  const [tempChartFilters, setTempChartFilters] = useState<ChartFilters>({
-    selectedMonth: currentDate.getMonth() + 1,
-    selectedYear: currentDate.getFullYear(),
-    viewType: 'month'
-  })
+  // Tipo de visualização do gráfico: por mês (últimos 13 meses) ou por ano (últimos 5 anos).
+  // Já é aplicado imediatamente ao clicar, sem necessidade de um botão "Aplicar".
+  const [viewType, setViewType] = useState<'month' | 'year'>('month')
+  // Loading que afeta SOMENTE o gráfico (ao alternar Mês/Ano), sem recarregar a página inteira
+  const [chartLoading, setChartLoading] = useState(false)
+  const isMountedRef = useRef(false)
   const [selectedService, setSelectedService] = useState<any>(null)
   const [showServiceModal, setShowServiceModal] = useState(false)
   // Mês selecionado para filtrar as transações (ao clicar na barra)
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
     format(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), 'yyyy-MM')
   )
-  // Totais dos cards (independentes dos filtros do gráfico)
-  const [cardTotals, setCardTotals] = useState<CardTotals>({
-    currentMonthReceived: 0,
-    currentMonthPending: 0,
-    yearReceived: 0,
-    yearTotal: 0
+  // Totais do card "Resumo" (independentes dos filtros do gráfico)
+  const [summaryTotals, setSummaryTotals] = useState<SummaryTotals>({
+    monthlyAverage: 0,
+    currentMonthTotal: 0,
+    yearTotal: 0,
+    last12MonthsTotal: 0,
+    grandTotal: 0,
+    grandReceived: 0,
+    grandPending: 0
   })
+  // Opção de período exibida na seção do meio do card Resumo (mês/ano/últimos 12 meses)
+  const [summaryPeriodOption, setSummaryPeriodOption] = useState<SummaryPeriodOption>('month')
+  const [showSummaryPeriodMenu, setShowSummaryPeriodMenu] = useState(false)
+  const summaryPeriodMenuRef = useRef<HTMLDivElement>(null)
+
+  // Fechar o menu de seleção de período do card Resumo ao clicar fora dele
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (summaryPeriodMenuRef.current && !summaryPeriodMenuRef.current.contains(event.target as Node)) {
+        setShowSummaryPeriodMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Salvar preferência de visualização no localStorage
   useEffect(() => {
@@ -129,12 +155,13 @@ export default function FinancesPage() {
   }, [showValues])
 
   useEffect(() => {
+    // Carga inicial da página (executa uma única vez ao montar)
     fetchFinancialData()
-  }, [chartFilters])
+  }, [])
 
   useEffect(() => {
-    // Buscar totais dos cards (independente dos filtros do gráfico)
-    fetchCardTotals()
+    // Buscar totais do card Resumo (independente dos filtros do gráfico)
+    fetchSummaryTotals()
   }, [])
 
   useEffect(() => {
@@ -149,77 +176,84 @@ export default function FinancesPage() {
     loadTransactions()
   }, [selectedMonthKey])
 
-  // Atualizar viewType automaticamente sem precisar clicar em Aplicar
   useEffect(() => {
-    if (tempChartFilters.viewType !== chartFilters.viewType) {
-      setChartFilters(prev => ({ ...prev, viewType: tempChartFilters.viewType }))
+    // Ao alternar entre Mês/Ano, recarregar SOMENTE o gráfico (não a página inteira).
+    // Pula a primeira execução (montagem), já coberta pela carga inicial acima.
+    if (!isMountedRef.current) {
+      isMountedRef.current = true
+      return
     }
-  }, [tempChartFilters.viewType])
+    reloadChartOnly()
+  }, [viewType])
 
-  const applyChartFilters = () => {
-    setChartFilters({ ...tempChartFilters })
-    // Também atualizar o período selecionado para mostrar as transações do período filtrado
-    if (tempChartFilters.viewType === 'year') {
-      setSelectedMonthKey(String(tempChartFilters.selectedYear))
-    } else {
-      const newSelectedKey = format(
-        new Date(tempChartFilters.selectedYear, tempChartFilters.selectedMonth - 1, 1), 
-        'yyyy-MM'
-      )
-      setSelectedMonthKey(newSelectedKey)
+  const reloadChartOnly = async () => {
+    try {
+      setChartLoading(true)
+      const revenueData = await fetchRevenueData()
+      setFinancialData(prev => ({ ...prev, monthlyRevenue: revenueData.monthlyRevenue }))
+    } catch (error) {
+      console.error('Erro ao recarregar o gráfico:', error)
+    } finally {
+      setChartLoading(false)
     }
   }
 
-  const fetchCardTotals = async () => {
+  const fetchSummaryTotals = async () => {
     try {
-      // Buscar todas as visitas de serviço (ignorando pré-encontros/tasks e visitas
-      // canceladas) do ano atual, contabilizando cada uma pela SUA PRÓPRIA data — e não
-      // pela data de início do serviço, já que um serviço pode começar em um mês e ter
-      // visitas em outro.
-      const currentYear = currentDate.getFullYear()
-      const currentMonth = currentDate.getMonth() + 1
-      const monthStart = format(new Date(currentYear, currentMonth - 1, 1), 'yyyy-MM-dd')
-      const monthEnd = format(new Date(currentYear, currentMonth, 0), 'yyyy-MM-dd')
-
-      const yearVisits = await fetchAllRows<VisitRevenueRow>(
+      // Buscar TODAS as visitas de serviço já registradas (sem limite de data) para
+      // calcular o total geral histórico. A partir do mesmo conjunto de dados também
+      // derivamos a média mensal dos últimos 12 meses, o total do mês atual, o total do
+      // ano atual e o total recebido x pendente, evitando buscas separadas.
+      const allVisits = await fetchAllRows<VisitRevenueRow>(
         supabase
           .from('visits')
           .select('data, valor, desconto_plataforma, services(status_pagamento)')
           .eq('tipo_encontro', 'visita_servico')
           .neq('status', 'cancelada')
           .not('service_id', 'is', null)
-          .gte('data', `${currentYear}-01-01`)
-          .lte('data', `${currentYear}-12-31`)
       )
 
-      const monthVisits = yearVisits.filter(v => v.data >= monthStart && v.data <= monthEnd)
       const netAmount = (v: VisitRevenueRow) => v.valor * (1 - (v.desconto_plataforma || 0) / 100)
 
-      // Calcular totais do mês atual
-      const currentMonthReceived = monthVisits
+      const currentYear = currentDate.getFullYear()
+      const currentMonth = currentDate.getMonth() + 1
+      const monthStart = format(new Date(currentYear, currentMonth - 1, 1), 'yyyy-MM-dd')
+      const monthEnd = format(new Date(currentYear, currentMonth, 0), 'yyyy-MM-dd')
+      const yearStart = `${currentYear}-01-01`
+      const yearEnd = `${currentYear}-12-31`
+
+      // Últimos 12 meses: do 1º dia de 11 meses atrás até o último dia do mês atual
+      const twelveMonthsStart = format(startOfMonth(new Date(currentYear, currentMonth - 12, 1)), 'yyyy-MM-dd')
+
+      const grandTotal = allVisits.reduce((sum, v) => sum + netAmount(v), 0)
+      const grandReceived = allVisits
         .filter(v => getVisitServiceStatus(v) === 'pago')
         .reduce((sum, v) => sum + netAmount(v), 0)
+      const grandPending = grandTotal - grandReceived
 
-      const currentMonthPending = monthVisits
-        .filter(v => getVisitServiceStatus(v) !== 'pago')
+      const currentMonthTotal = allVisits
+        .filter(v => v.data >= monthStart && v.data <= monthEnd)
         .reduce((sum, v) => sum + netAmount(v), 0)
 
-      // Calcular totais do ano atual
-      const yearReceived = yearVisits
-        .filter(v => getVisitServiceStatus(v) === 'pago')
+      const yearTotal = allVisits
+        .filter(v => v.data >= yearStart && v.data <= yearEnd)
         .reduce((sum, v) => sum + netAmount(v), 0)
 
-      const yearTotal = yearVisits
+      const last12MonthsTotal = allVisits
+        .filter(v => v.data >= twelveMonthsStart && v.data <= monthEnd)
         .reduce((sum, v) => sum + netAmount(v), 0)
 
-      setCardTotals({
-        currentMonthReceived,
-        currentMonthPending,
-        yearReceived,
-        yearTotal
+      setSummaryTotals({
+        monthlyAverage: last12MonthsTotal / 12,
+        currentMonthTotal,
+        yearTotal,
+        last12MonthsTotal,
+        grandTotal,
+        grandReceived,
+        grandPending
       })
     } catch (error) {
-      console.error('Erro ao buscar totais dos cards:', error)
+      console.error('Erro ao buscar totais do resumo:', error)
     }
   }
 
@@ -245,13 +279,15 @@ export default function FinancesPage() {
   }
 
   const fetchRevenueData = async () => {
-    // Calcular range de meses para o gráfico baseado no viewType
+    // Calcular range de meses para o gráfico baseado no viewType, sempre centrado no mês/ano atual
     let chartStartDate: string
     let chartEndDate: string
+    const currentYear = currentDate.getFullYear()
+    const currentMonthNumber = currentDate.getMonth() + 1
     
-    if (chartFilters.viewType === 'month') {
+    if (viewType === 'month') {
       // 12 meses para trás + mês atual + 1 mês à frente = 13 meses (comparação ano anterior)
-      const currentMonth = new Date(chartFilters.selectedYear, chartFilters.selectedMonth - 1, 1)
+      const currentMonth = new Date(currentYear, currentMonthNumber - 1, 1)
       const twelveMonthsBack = new Date(currentMonth)
       twelveMonthsBack.setMonth(currentMonth.getMonth() - 12)
       const oneMonthForward = new Date(currentMonth)
@@ -261,8 +297,8 @@ export default function FinancesPage() {
       chartEndDate = format(new Date(oneMonthForward.getFullYear(), oneMonthForward.getMonth() + 1, 0), 'yyyy-MM-dd')
     } else {
       // Para visualização anual, pegar os últimos anos
-      chartStartDate = `${chartFilters.selectedYear - 2}-01-01`
-      chartEndDate = `${chartFilters.selectedYear + 2}-12-31`
+      chartStartDate = `${currentYear - 2}-01-01`
+      chartEndDate = `${currentYear + 2}-12-31`
     }
 
     // Buscar visitas de serviço (ignorando pré-encontros/tasks e visitas canceladas) no
@@ -282,7 +318,7 @@ export default function FinancesPage() {
     )
 
     // Agrupar por mês ou ano para o gráfico
-    const monthlyRevenue = chartFilters.viewType === 'month' 
+    const monthlyRevenue = viewType === 'month' 
       ? groupVisitsByMonth(visits)
       : groupVisitsByYear(visits)
 
@@ -337,7 +373,7 @@ export default function FinancesPage() {
   }> => {
     // Criar array de 13 meses (12 meses para trás do mês atual + mês atual + 1 mês à frente)
     // Exemplo: se estamos em fev/2026, mostra de fev/2025 até mar/2026
-    const currentMonth = new Date(chartFilters.selectedYear, chartFilters.selectedMonth - 1, 1)
+    const currentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
     const months: Array<{
       month: string
       monthKey: string
@@ -545,158 +581,136 @@ export default function FinancesPage() {
         </div>
       </div>
 
-      {/* Cards de Resumo - Sempre baseados no MÊS e ANO ATUAL (não variam com os filtros do gráfico) */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card-fefelina">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Recebido no Mês Atual</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {formatCurrency(cardTotals.currentMonthReceived)}
-              </p>
-              <p className="text-sm text-green-600">
-                {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card-fefelina">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-yellow-600" />
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Pendente no Mês Atual</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {formatCurrency(cardTotals.currentMonthPending)}
-              </p>
-              <p className="text-sm text-yellow-600">
-                A receber este mês
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card-fefelina">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Recebido no Ano</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {formatCurrency(cardTotals.yearReceived)}
-              </p>
-              <p className="text-sm text-blue-600">
-                Ano {currentDate.getFullYear()}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card-fefelina">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-purple-600" />
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Previsto no Ano</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {formatCurrency(cardTotals.yearTotal)}
-              </p>
-              <p className="text-sm text-purple-600">
-                Recebido + Pendente
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Gráficos */}
-      <div className="mt-8">
-        {/* Gráfico de Receita Mensal - Largura Total */}
-        <div className="card-fefelina">
-          <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-            <div className="flex items-center space-x-4">
-              <h3 className="text-lg font-semibold text-gray-900">Receita Mensal</h3>
-              
-              {/* Filtros de Mês e Ano */}
-              <div className="flex items-center space-x-2">
-                <select
-                  value={tempChartFilters.selectedMonth}
-                  onChange={(e) => setTempChartFilters({ ...tempChartFilters, selectedMonth: parseInt(e.target.value) })}
-                  className="input-fefelina py-1 text-sm w-32"
-                >
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                    <option key={month} value={month}>
-                      {format(new Date(2024, month - 1), 'MMMM', { locale: ptBR })}
-                    </option>
-                  ))}
-                </select>
-                
-                <select
-                  value={tempChartFilters.selectedYear}
-                  onChange={(e) => setTempChartFilters({ ...tempChartFilters, selectedYear: parseInt(e.target.value) })}
-                  className="input-fefelina py-1 text-sm w-24"
-                >
-                  {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+      <div className="mt-8 flex flex-col lg:flex-row gap-6 items-stretch">
+        {/* Card Resumo - 30% da largura, mesma altura do card de gráfico */}
+        <div className="card-fefelina lg:w-[30%] flex flex-col">
+          <h3 className="text-lg font-semibold text-gray-900">Resumo</h3>
+          <div className="border-t border-gray-100 mt-4"></div>
 
-            <div className="flex items-center space-x-4">
-              {/* Visualizar por */}
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Visualizar por:</span>
-                <div className="flex bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setTempChartFilters({ ...tempChartFilters, viewType: 'month' })}
-                    className={`px-3 py-1 text-sm rounded ${
-                      tempChartFilters.viewType === 'month'
-                        ? 'bg-white text-primary-600 shadow-sm font-medium'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Mês
-                  </button>
-                  <button
-                    onClick={() => setTempChartFilters({ ...tempChartFilters, viewType: 'year' })}
-                    className={`px-3 py-1 text-sm rounded ${
-                      tempChartFilters.viewType === 'year'
-                        ? 'bg-white text-primary-600 shadow-sm font-medium'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Ano
-                  </button>
+          <div className="flex-1 flex flex-col justify-between">
+            <div className="pt-4">
+              <p className="text-sm text-gray-600">Média Mensal (últ. 12 meses)</p>
+              <p className="text-xl font-bold text-gray-900 mt-1">
+                {formatCurrency(summaryTotals.monthlyAverage)}
+              </p>
+            </div>
+            <div className="border-t border-gray-100 mt-4"></div>
+
+            <div className="pt-4 relative" ref={summaryPeriodMenuRef}>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">{SUMMARY_PERIOD_LABELS[summaryPeriodOption]}</p>
+                <button
+                  onClick={() => setShowSummaryPeriodMenu(prev => !prev)}
+                  className="text-gray-400 hover:text-gray-600 p-0.5 rounded"
+                  title="Alterar período"
+                >
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <p className="text-xl font-bold text-gray-900 mt-1">
+                {formatCurrency(SUMMARY_PERIOD_VALUES(summaryTotals)[summaryPeriodOption])}
+              </p>
+
+              {showSummaryPeriodMenu && (
+                <div className="absolute right-0 top-full mt-1 z-20 w-44 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 py-1">
+                  {(Object.keys(SUMMARY_PERIOD_LABELS) as SummaryPeriodOption[]).map(option => (
+                    <button
+                      key={option}
+                      onClick={() => {
+                        setSummaryPeriodOption(option)
+                        setShowSummaryPeriodMenu(false)
+                      }}
+                      className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${
+                        option === summaryPeriodOption ? 'text-primary-600 font-medium' : 'text-gray-700'
+                      }`}
+                    >
+                      {SUMMARY_PERIOD_LABELS[option]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="border-t border-gray-100 mt-4"></div>
+
+            <div className="pt-4">
+              <p className="text-sm text-gray-600">Total geral</p>
+              <p className="text-xl font-bold text-gray-900 mt-1">
+                {formatCurrency(summaryTotals.grandTotal)}
+              </p>
+            </div>
+            <div className="border-t border-gray-100 mt-4"></div>
+
+            <div className="pt-4 flex items-center gap-3">
+              <div style={{ width: 110, height: 110 }} className="flex-shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Recebido', value: summaryTotals.grandReceived },
+                        { name: 'Pendente', value: summaryTotals.grandPending }
+                      ]}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={30}
+                      outerRadius={50}
+                      paddingAngle={2}
+                      stroke="none"
+                    >
+                      <Cell fill="#10b981" />
+                      <Cell fill="#F59E0B" />
+                    </Pie>
+                    <Tooltip formatter={(value) => [formatCurrency(Number(value)), '']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
+                  <span className="text-xs text-gray-600">Recebido: {formatCurrency(summaryTotals.grandReceived)}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0"></span>
+                  <span className="text-xs text-gray-600">Pendente: {formatCurrency(summaryTotals.grandPending)}</span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
 
-              <button
-                onClick={applyChartFilters}
-                className="btn-secondary text-sm py-1"
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Aplicar Filtro
-              </button>
+        {/* Gráfico de Receita - 70% da largura */}
+        <div className="card-fefelina lg:w-[70%]">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+            <h3 className="text-lg font-semibold text-gray-900">Receita</h3>
+
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Visualizar por:</span>
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewType('month')}
+                  className={`px-3 py-1 text-sm rounded ${
+                    viewType === 'month'
+                      ? 'bg-white text-primary-600 shadow-sm font-medium'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Mês
+                </button>
+                <button
+                  onClick={() => setViewType('year')}
+                  className={`px-3 py-1 text-sm rounded ${
+                    viewType === 'year'
+                      ? 'bg-white text-primary-600 shadow-sm font-medium'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Ano
+                </button>
+              </div>
             </div>
           </div>
           
-          <div className="h-96">
+          <div className={`h-96 transition-opacity duration-200 ${chartLoading ? 'opacity-40' : 'opacity-100'}`}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={financialData.monthlyRevenue}
@@ -745,10 +759,6 @@ export default function FinancesPage() {
             <div className="flex items-center">
               <div className="w-4 h-4 rounded bg-yellow-500 mr-2"></div>
               <span className="text-sm text-gray-600">Pendente</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 rounded border-2 border-blue-500 bg-blue-50 mr-2"></div>
-              <span className="text-sm text-gray-600">Mês Selecionado</span>
             </div>
           </div>
         </div>

@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase, CaixaMovimento } from '../lib/supabase'
+import { fetchAllRows } from '../lib/paginatedFetch'
 import CatLoader from '../components/CatLoader'
+import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 
 export default function FinanceiroPage() {
   const [movimentos, setMovimentos] = useState<CaixaMovimento[]>([])
@@ -11,6 +13,7 @@ export default function FinanceiroPage() {
   const [page, setPage] = useState(0)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingMovimento, setEditingMovimento] = useState<CaixaMovimento | null>(null)
+  const [openActionsMenuId, setOpenActionsMenuId] = useState<string | null>(null)
   
   // Formulário
   const [formData, setFormData] = useState({
@@ -30,7 +33,7 @@ export default function FinanceiroPage() {
     { value: 'rendimentos', label: 'Rendimentos', color: 'text-blue-600', categoria: 'receita' },
     { value: 'pagamento_mensal', label: 'Pagamento Mensal', color: 'text-purple-600', categoria: 'receita' },
     { value: 'despesas_servicos', label: 'Despesas - Serviços', color: 'text-red-600', categoria: 'despesa' },
-    { value: 'despesas_outros', label: 'Despesas - Outros', color: 'text-orange-600', categoria: 'despesa' }
+    { value: 'despesas_outros', label: 'Despesas - Outros', color: 'text-primary-600', categoria: 'despesa' }
   ]
 
   // Validação de data
@@ -80,6 +83,13 @@ export default function FinanceiroPage() {
     fetchMovimentos(true)
   }, [])
 
+  // Fecha o menu de ações da tabela ao clicar fora dele
+  useEffect(() => {
+    if (openActionsMenuId === null) return
+    const handleClickOutside = () => setOpenActionsMenuId(null)
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [openActionsMenuId])
 
 
   const fetchMovimentos = async (resetList = false) => {
@@ -107,15 +117,14 @@ export default function FinanceiroPage() {
 
       if (error) throw error
 
-      // Buscar saldo total (sem paginação)
+      // Buscar saldo total considerando TODOS os lançamentos (não apenas os
+      // primeiros 1000 retornados pelo Supabase/PostgREST)
       if (resetList) {
-        const { data: saldoData, error: saldoError } = await supabase
-          .from('caixa_movimentos')
-          .select('valor')
+        const saldoData = await fetchAllRows<{ valor: number }>(
+          supabase.from('caixa_movimentos').select('valor')
+        )
 
-        if (saldoError) throw saldoError
-        
-        const saldo = (saldoData || []).reduce((acc, movimento) => acc + movimento.valor, 0)
+        const saldo = saldoData.reduce((acc, movimento) => acc + movimento.valor, 0)
         setSaldoAtual(saldo)
       }
 
@@ -337,19 +346,19 @@ export default function FinanceiroPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                   Data
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                   Tipo
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                   Descrição
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">
                   Valor
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">
                   Ações
                 </th>
               </tr>
@@ -373,19 +382,45 @@ export default function FinanceiroPage() {
                       {formatCurrency(movimento.valor)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm relative">
                     <button
-                      onClick={() => handleEdit(movimento)}
-                      className="text-primary-600 hover:text-primary-900 mr-3"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setOpenActionsMenuId(prev => (prev === movimento.id ? null : movimento.id))
+                      }}
+                      title="Ações"
+                      className="inline-flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                     >
-                      Editar
+                      <MoreVertical className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => handleDelete(movimento.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Excluir
-                    </button>
+
+                    {openActionsMenuId === movimento.id && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-6 top-full mt-1 z-20 w-40 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 py-1 text-left"
+                      >
+                        <button
+                          onClick={() => {
+                            setOpenActionsMenuId(null)
+                            handleEdit(movimento)
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          <Pencil className="w-4 h-4 text-gray-400" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => {
+                            setOpenActionsMenuId(null)
+                            handleDelete(movimento.id)
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          <Trash2 className="w-4 h-4 text-gray-400" />
+                          Excluir
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

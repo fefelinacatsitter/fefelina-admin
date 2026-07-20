@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Users, Shield, Settings, Check, X, AlertCircle, UserPlus, Copy, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { usePermissions } from '../contexts/PermissionsContext';
@@ -955,10 +955,10 @@ export default function SetupPage() {
                 </div>
               </div>
 
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-4">
+              <div className="bg-primary-50 border border-primary-200 rounded-lg p-3 mt-4">
                 <div className="flex items-start">
-                  <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 mr-2 flex-shrink-0" />
-                  <p className="text-sm text-orange-800">
+                  <AlertCircle className="w-5 h-5 text-primary-600 mt-0.5 mr-2 flex-shrink-0" />
+                  <p className="text-sm text-primary-800">
                     <strong>Importante:</strong> Peça para o usuário trocar a senha no primeiro acesso em "Meu Perfil".
                   </p>
                 </div>

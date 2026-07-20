@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { fetchAllRows } from '../lib/paginatedFetch'
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar
@@ -138,21 +139,25 @@ export default function FinancesPage() {
       const currentMonth = currentDate.getMonth() + 1
       
       // Buscar serviços do ano atual
-      const { data: yearServices } = await supabase
-        .from('services')
-        .select('status_pagamento, total_a_receber, data_inicio')
-        .gte('data_inicio', `${currentYear}-01-01`)
-        .lte('data_inicio', `${currentYear}-12-31`)
+      const yearServices = await fetchAllRows(
+        supabase
+          .from('services')
+          .select('status_pagamento, total_a_receber, data_inicio')
+          .gte('data_inicio', `${currentYear}-01-01`)
+          .lte('data_inicio', `${currentYear}-12-31`)
+      )
 
       // Buscar serviços do mês atual
       const monthStart = format(new Date(currentYear, currentMonth - 1, 1), 'yyyy-MM-dd')
       const monthEnd = format(new Date(currentYear, currentMonth, 0), 'yyyy-MM-dd')
       
-      const { data: monthServices } = await supabase
-        .from('services')
-        .select('status_pagamento, total_a_receber, data_inicio')
-        .gte('data_inicio', monthStart)
-        .lte('data_inicio', monthEnd)
+      const monthServices = await fetchAllRows(
+        supabase
+          .from('services')
+          .select('status_pagamento, total_a_receber, data_inicio')
+          .gte('data_inicio', monthStart)
+          .lte('data_inicio', monthEnd)
+      )
 
       // Calcular totais do mês atual
       const currentMonthReceived = (monthServices || [])
@@ -239,18 +244,20 @@ export default function FinancesPage() {
     }
 
     // Buscar dados de receita através dos serviços
-    const { data: services } = await supabase
-      .from('services')
-      .select(`
+    const services = await fetchAllRows(
+      supabase
+        .from('services')
+        .select(`
         status_pagamento,
         total_a_receber,
         data_inicio,
         data_fim,
         clients(nome)
       `)
-      .gte('data_inicio', chartStartDate)
-      .lte('data_inicio', chartEndDate)
-      .order('data_inicio')
+        .gte('data_inicio', chartStartDate)
+        .lte('data_inicio', chartEndDate)
+        .order('data_inicio')
+    )
 
     const servicesData = services || []
 

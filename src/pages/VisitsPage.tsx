@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { fetchAllRows } from '../lib/paginatedFetch'
+import PaginationControls from '../components/PaginationControls'
 import toast from 'react-hot-toast'
 import CatLoader from '../components/CatLoader'
 import { useFieldMask } from '../hooks/useFieldMask'
 import { usePermissions } from '../contexts/PermissionsContext'
 import Avatar from '../components/Avatar'
+import { CheckCircle2 } from 'lucide-react'
 
 // Funções auxiliares para validação de data
 const validateDateInput = (value: string): string => {
@@ -149,13 +152,22 @@ export default function VisitsPage() {
   const [showMobileClientInfo, setShowMobileClientInfo] = useState(false)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
 
+  // Paginação
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const pageSize = 20
+
+  useEffect(() => {
+    setPage(1)
+  }, [selectedFilter, filterStartDate, filterEndDate, filterByUser])
+
   useEffect(() => {
     fetchVisits()
     checkFutureVisits()
     if (isAdmin) {
       fetchUsers()
     }
-  }, [selectedFilter, filterStartDate, filterEndDate, filterByUser])
+  }, [selectedFilter, filterStartDate, filterEndDate, filterByUser, page])
 
   const checkFutureVisits = async () => {
     try {
@@ -189,7 +201,7 @@ export default function VisitsPage() {
           clients (nome),
           services (nome_servico, total_visitas),
           leads (nome)
-        `)
+        `, { count: 'exact' })
         .order('data', { ascending: true })
         .order('horario', { ascending: true })
 
@@ -242,10 +254,13 @@ export default function VisitsPage() {
         query = query.eq('assigned_user_id', filterByUser)
       }
 
-      const { data, error } = await query
-
+      // Paginação real no servidor (evita carregar milhares de visitas de uma vez)
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      const { data, error, count } = await query.range(from, to)
       if (error) throw error
-      
+      setTotalCount(count || 0)
+
       const visitsData = (data || []).map(visit => ({
         ...visit,
         clients: Array.isArray(visit.clients) ? visit.clients[0] : visit.clients,
@@ -264,14 +279,16 @@ export default function VisitsPage() {
 
       // Buscar todas as visitas de cada serviço
       if (serviceIds.size > 0) {
-        const { data: allServiceVisits, error: serviceError } = await supabase
-          .from('visits')
-          .select('id, service_id, data, horario, status')
-          .in('service_id', Array.from(serviceIds))
-          .eq('tipo_encontro', 'visita_servico')
-          .in('status', ['agendada', 'realizada'])
+        const allServiceVisits = await fetchAllRows(
+          supabase
+            .from('visits')
+            .select('id, service_id, data, horario, status')
+            .in('service_id', Array.from(serviceIds))
+            .eq('tipo_encontro', 'visita_servico')
+            .in('status', ['agendada', 'realizada'])
+        )
 
-        if (!serviceError && allServiceVisits) {
+        if (allServiceVisits) {
           // Agrupar por serviço
           const visitsByService = new Map<string, typeof allServiceVisits>()
           
@@ -688,7 +705,7 @@ export default function VisitsPage() {
           <div className="block md:hidden space-y-4">
             {getSortedVisits().map((visit) => (
               <div key={visit.id} className={`border rounded-lg p-4 shadow-sm ${
-                visit.isLastVisit ? 'border-l-4 border-l-orange-400 bg-orange-50/30' :
+                visit.isLastVisit ? 'border-l-4 border-l-primary-400 bg-primary-50/30' :
                 visit.tipo_encontro === 'task' ? 'bg-blue-50 border-blue-200' : 
                 visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50 border-purple-200' : 
                 'bg-white'
@@ -754,7 +771,7 @@ export default function VisitsPage() {
                   <div className="flex flex-col gap-1.5 items-end">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${visit.tipo_visita === 'inteira' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>{visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}</span>
                     {visit.isLastVisit && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
                         🏁 Última
                       </span>
                     )}
@@ -815,26 +832,26 @@ export default function VisitsPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                       Data/Horário
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                       Cliente/Serviço
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                       Tipo
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                       Valor
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                       Responsável
                     </th>
 
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                       Ações
                     </th>
                   </tr>
@@ -842,7 +859,7 @@ export default function VisitsPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {getSortedVisits().map((visit, index, array) => (
                     <tr key={visit.id} className={`${
-                      visit.isLastVisit ? 'border-l-4 border-l-orange-400 bg-orange-50/20' :
+                      visit.isLastVisit ? 'border-l-4 border-l-primary-400 bg-primary-50/20' :
                       visit.tipo_encontro === 'task' ? 'bg-blue-50' : 
                       visit.tipo_encontro === 'pre_encontro' ? 'bg-purple-50' : 
                       'hover:bg-gray-50'
@@ -974,7 +991,7 @@ export default function VisitsPage() {
                             {visit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
                           </span>
                           {visit.isLastVisit && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
                               🏁 Última
                             </span>
                           )}
@@ -1022,21 +1039,20 @@ export default function VisitsPage() {
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div className="flex space-x-2">
-                          {visit.status === 'agendada' && (
-                            <button
-                              onClick={() => updateVisitStatus(visit.id, 'realizada')}
-                              disabled={updatingVisit === visit.id}
-                              className={`text-xs font-medium ${
-                                updatingVisit === visit.id 
-                                  ? 'text-gray-400 cursor-not-allowed' 
-                                  : 'text-green-600 hover:text-green-900'
-                              }`}
-                            >
-                              {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Realizada'}
-                            </button>
-                          )}
-                        </div>
+                        {visit.status === 'agendada' && (
+                          <button
+                            onClick={() => updateVisitStatus(visit.id, 'realizada')}
+                            disabled={updatingVisit === visit.id}
+                            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              updatingVisit === visit.id
+                                ? 'text-gray-400 cursor-not-allowed'
+                                : 'text-green-700 hover:bg-green-50'
+                            }`}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            {updatingVisit === visit.id ? 'Atualizando...' : 'Marcar Realizada'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1044,6 +1060,13 @@ export default function VisitsPage() {
               </table>
             </div>
           </div>
+          <PaginationControls
+            page={page}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            onPageChange={setPage}
+            loading={loading}
+          />
         </>
       )}
 

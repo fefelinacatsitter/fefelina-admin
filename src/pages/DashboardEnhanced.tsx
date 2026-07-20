@@ -1,25 +1,19 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { fetchAllRows } from '../lib/paginatedFetch'
 import CatLoader from '../components/CatLoader'
 import { 
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+  BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts'
-import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns'
+import { format, startOfMonth, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 interface DashboardStats {
-  totalClients: number
-  totalPets: number
-  activeServices: number
-  visitsToday: number
   monthlyRevenue: number
-  monthlyVisits: number
   lastMonthRevenue: number
+  monthlyVisits: number
   lastMonthVisits: number
-  visitasRealizadas: number
-  visitasAgendadas: number
-  ticketMedio: number
   clientesNovos: number
 }
 
@@ -34,114 +28,95 @@ interface UpcomingVisit {
   leads: { nome: string } | null
 }
 
-interface ChartData {
-  name: string
-  visitas: number
+interface RevenuePoint {
+  key: string
+  label: string
   receita: number
 }
 
+type RevenueRangeOption = 'year' | '12m' | '24m' | 'all'
+
 export default function DashboardEnhanced() {
   const [stats, setStats] = useState<DashboardStats>({
-    totalClients: 0,
-    totalPets: 0,
-    activeServices: 0,
-    visitsToday: 0,
     monthlyRevenue: 0,
-    monthlyVisits: 0,
     lastMonthRevenue: 0,
+    monthlyVisits: 0,
     lastMonthVisits: 0,
-    visitasRealizadas: 0,
-    visitasAgendadas: 0,
-    ticketMedio: 0,
     clientesNovos: 0
   })
   
   const [upcomingVisits, setUpcomingVisits] = useState<UpcomingVisit[]>([])
-  const [weeklyData, setWeeklyData] = useState<ChartData[]>([])
-  const [monthlyTrend, setMonthlyTrend] = useState<ChartData[]>([])
+  const [revenueHistory, setRevenueHistory] = useState<RevenuePoint[]>([])
+  const [revenueRange, setRevenueRange] = useState<RevenueRangeOption>('year')
   const [visitTypeData, setVisitTypeData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d'>('30d')
 
   useEffect(() => {
     fetchDashboardData()
-  }, [selectedPeriod])
+  }, [])
 
   const fetchDashboardData = async () => {
     try {
       const today = new Date()
       const todayString = format(today, 'yyyy-MM-dd')
-      
-      // Calcular período baseado no filtro selecionado
-      const periodDays = selectedPeriod === '7d' ? 7 : selectedPeriod === '30d' ? 30 : 90
-      const periodStartDate = subDays(today, periodDays)
-      const periodStart = format(periodStartDate, 'yyyy-MM-dd')
-      
-      // Período anterior (para comparação)
-      const previousPeriodStart = format(subDays(periodStartDate, periodDays), 'yyyy-MM-dd')
-      const previousPeriodEnd = format(subDays(periodStartDate, 1), 'yyyy-MM-dd')
-      
-      // Mês atual (para algumas métricas específicas)
       const mesAtual = startOfMonth(today)
 
-      // Buscar dados básicos
-      const [
-        clientsResult,
-        petsResult,
-        servicesResult,
-        visitsTodayResult,
-        periodVisitsResult,
-        previousPeriodVisitsResult,
-        clientesNovosResult
-      ] = await Promise.all([
-        supabase.from('clients').select('*', { count: 'exact' }),
-        supabase.from('pets').select('*', { count: 'exact' }),
-        supabase.from('services').select('*', { count: 'exact' }).neq('status_pagamento', 'pago'),
-        supabase.from('visits').select('*', { count: 'exact' }).eq('data', todayString),
-        // Visitas do período selecionado
-        supabase.from('visits').select('valor, desconto_plataforma, status, tipo_visita, data').gte('data', periodStart).lte('data', todayString),
-        // Visitas do período anterior (para comparação)
-        supabase.from('visits').select('valor, desconto_plataforma, status').eq('status', 'realizada').gte('data', previousPeriodStart).lte('data', previousPeriodEnd),
-        supabase.from('clients').select('*', { count: 'exact', head: true }).gte('created_at', format(mesAtual, 'yyyy-MM-dd'))
+      // Dashboard não tem mais filtro de período: buscamos todo o histórico de
+      // visitas realizadas de uma vez (em lotes, via fetchAllRows) para calcular
+      // o faturamento mês a mês, os tipos de visita e as métricas do mês atual.
+      const [realizedVisits, clientesNovosResult, upcomingResult] = await Promise.all([
+        fetchAllRows(
+          supabase.from('visits').select('data, valor, desconto_plataforma, tipo_visita').eq('status', 'realizada')
+        ),
+        supabase.from('clients').select('*', { count: 'exact', head: true }).gte('created_at', format(mesAtual, 'yyyy-MM-dd')),
+        supabase
+          .from('visits')
+          .select(`
+            id, data, horario, tipo_visita, valor, status,
+            clients(nome),
+            leads(nome)
+          `)
+          .gte('data', todayString)
+          .in('status', ['agendada'])
+          .order('data', { ascending: true })
+          .order('horario', { ascending: true })
+          .limit(8)
       ])
 
-      // Buscar próximas visitas
-      const upcomingResult = await supabase
-        .from('visits')
-        .select(`
-          id, data, horario, tipo_visita, valor, status,
-          clients(nome),
-          leads(nome)
-        `)
-        .gte('data', todayString)
-        .in('status', ['agendada'])
-        .order('data', { ascending: true })
-        .order('horario', { ascending: true })
-        .limit(8)
+      const visits = realizedVisits || []
 
-      // Calcular estatísticas do período selecionado
-      const periodVisitsData = periodVisitsResult.data || []
-      const previousPeriodVisitsData = previousPeriodVisitsResult.data || []
-      
-      const visitasRealizadas = periodVisitsData.filter(v => v.status === 'realizada').length
-      const visitasAgendadas = periodVisitsData.filter(v => v.status === 'agendada').length
-      
-      const periodRevenue = periodVisitsData
-        .filter(v => v.status === 'realizada')
-        .reduce((sum, v) => sum + (v.valor * (1 - (v.desconto_plataforma || 0) / 100)), 0)
-      
-      const previousPeriodRevenue = previousPeriodVisitsData
-        .reduce((sum, v) => sum + (v.valor * (1 - (v.desconto_plataforma || 0) / 100)), 0)
+      // Agrupar faturamento e quantidade de visitas por mês (chave yyyy-MM)
+      const revenueByMonth = new Map<string, number>()
+      const countByMonth = new Map<string, number>()
+      visits.forEach(v => {
+        const monthKey = v.data.slice(0, 7)
+        const net = v.valor * (1 - (v.desconto_plataforma || 0) / 100)
+        revenueByMonth.set(monthKey, (revenueByMonth.get(monthKey) || 0) + net)
+        countByMonth.set(monthKey, (countByMonth.get(monthKey) || 0) + 1)
+      })
 
-      const ticketMedio = visitasRealizadas > 0 ? periodRevenue / visitasRealizadas : 0
-
-      // Processar tipos de visita do período
-      const visitTypeMap = new Map()
-      periodVisitsData.forEach(v => {
-        if (v.status === 'realizada') {
-          const tipo = v.tipo_visita || 'outros'
-          visitTypeMap.set(tipo, (visitTypeMap.get(tipo) || 0) + 1)
+      // Preencher todos os meses entre o primeiro registro e o mês atual (sem lacunas)
+      const history: RevenuePoint[] = []
+      if (revenueByMonth.size > 0) {
+        const sortedKeys = Array.from(revenueByMonth.keys()).sort()
+        const cursor = new Date(sortedKeys[0] + '-01T00:00:00')
+        const end = new Date(today.getFullYear(), today.getMonth(), 1)
+        while (cursor <= end) {
+          const key = format(cursor, 'yyyy-MM')
+          history.push({
+            key,
+            label: format(cursor, 'MMM/yy', { locale: ptBR }),
+            receita: revenueByMonth.get(key) || 0
+          })
+          cursor.setMonth(cursor.getMonth() + 1)
         }
+      }
+
+      // Tipos de visita (histórico completo)
+      const visitTypeMap = new Map<string, number>()
+      visits.forEach(v => {
+        const tipo = v.tipo_visita || 'outros'
+        visitTypeMap.set(tipo, (visitTypeMap.get(tipo) || 0) + 1)
       })
 
       const visitTypes = Array.from(visitTypeMap.entries()).map(([name, value]) => ({
@@ -149,57 +124,15 @@ export default function DashboardEnhanced() {
         value
       }))
 
-      // Dados por dia do período selecionado
-      const dayData: ChartData[] = []
-      const daysToShow = periodDays <= 7 ? periodDays : 7 // Mostrar no máximo 7 dias no gráfico
-      
-      for (let i = daysToShow - 1; i >= 0; i--) {
-        const date = subDays(today, i)
-        const dateStr = format(date, 'yyyy-MM-dd')
-        const dayVisits = periodVisitsData.filter(v => v.data === dateStr && v.status === 'realizada')
-        
-        dayData.push({
-          name: format(date, 'EEE', { locale: ptBR }),
-          visitas: dayVisits.length,
-          receita: dayVisits.reduce((sum, v) => sum + (v.valor * (1 - (v.desconto_plataforma || 0) / 100)), 0)
-        })
-      }
-
-      // Tendência mensal (últimos 6 meses)
-      const monthlyData: ChartData[] = []
-      for (let i = 5; i >= 0; i--) {
-        const monthDate = subMonths(today, i)
-        const monthStart = startOfMonth(monthDate)
-        const monthEnd = endOfMonth(monthDate)
-        
-        const monthVisitsResult = await supabase
-          .from('visits')
-          .select('valor, desconto_plataforma')
-          .eq('status', 'realizada')
-          .gte('data', format(monthStart, 'yyyy-MM-dd'))
-          .lte('data', format(monthEnd, 'yyyy-MM-dd'))
-
-        const monthVisits = monthVisitsResult.data || []
-        
-        monthlyData.push({
-          name: format(monthDate, 'MMM', { locale: ptBR }),
-          visitas: monthVisits.length,
-          receita: monthVisits.reduce((sum, v) => sum + (v.valor * (1 - (v.desconto_plataforma || 0) / 100)), 0)
-        })
-      }
+      // Comparação fixa: mês atual vs mês anterior (não depende mais de filtro)
+      const currentMonthKey = format(today, 'yyyy-MM')
+      const lastMonthKey = format(subMonths(today, 1), 'yyyy-MM')
 
       setStats({
-        totalClients: clientsResult.count || 0,
-        totalPets: petsResult.count || 0,
-        activeServices: servicesResult.count || 0,
-        visitsToday: visitsTodayResult.count || 0,
-        monthlyRevenue: periodRevenue,
-        monthlyVisits: visitasRealizadas,
-        lastMonthRevenue: previousPeriodRevenue,
-        lastMonthVisits: previousPeriodVisitsData.length,
-        visitasRealizadas,
-        visitasAgendadas,
-        ticketMedio,
+        monthlyRevenue: revenueByMonth.get(currentMonthKey) || 0,
+        lastMonthRevenue: revenueByMonth.get(lastMonthKey) || 0,
+        monthlyVisits: countByMonth.get(currentMonthKey) || 0,
+        lastMonthVisits: countByMonth.get(lastMonthKey) || 0,
         clientesNovos: clientesNovosResult.count || 0
       })
 
@@ -210,8 +143,7 @@ export default function DashboardEnhanced() {
       })) as UpcomingVisit[]
 
       setUpcomingVisits(mappedVisits)
-      setWeeklyData(dayData)
-      setMonthlyTrend(monthlyData)
+      setRevenueHistory(history)
       setVisitTypeData(visitTypes)
 
     } catch (error) {
@@ -245,7 +177,28 @@ export default function DashboardEnhanced() {
     return ((current - previous) / previous) * 100
   }
 
-  const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444']
+  // Cores discretas/profissionais para o gráfico de pizza (tons da paleta da marca)
+  const COLORS = ['#b85c2e', '#a876e3', '#94a3b8', '#e8814a']
+
+  const getRevenueChartData = (): RevenuePoint[] => {
+    if (revenueRange === 'year') {
+      const yearPrefix = format(new Date(), 'yyyy')
+      return revenueHistory.filter(h => h.key.startsWith(yearPrefix))
+    }
+    if (revenueRange === '12m') return revenueHistory.slice(-12)
+    if (revenueRange === '24m') return revenueHistory.slice(-24)
+
+    // 'all' - se houver muitos meses de histórico, agrupar por ano para manter o gráfico legível
+    if (revenueHistory.length > 36) {
+      const byYear = new Map<string, number>()
+      revenueHistory.forEach(h => {
+        const year = h.key.slice(0, 4)
+        byYear.set(year, (byYear.get(year) || 0) + h.receita)
+      })
+      return Array.from(byYear.entries()).map(([year, receita]) => ({ key: year, label: year, receita }))
+    }
+    return revenueHistory
+  }
 
   if (loading) {
     return (
@@ -257,132 +210,103 @@ export default function DashboardEnhanced() {
 
   const revenueGrowth = getGrowthPercentage(stats.monthlyRevenue, stats.lastMonthRevenue)
   const visitsGrowth = getGrowthPercentage(stats.monthlyVisits, stats.lastMonthVisits)
+  const revenueChartData = getRevenueChartData()
+  const revenueChartTotal = revenueChartData.reduce((sum, r) => sum + r.receita, 0)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="page-title-fefelina">Dashboard</h1>
-        <select
-          value={selectedPeriod}
-          onChange={(e) => setSelectedPeriod(e.target.value as any)}
-          className="input-fefelina w-auto text-sm"
-        >
-          <option value="7d">Últimos 7 dias</option>
-          <option value="30d">Últimos 30 dias</option>
-          <option value="90d">Últimos 90 dias</option>
-        </select>
-      </div>
+      <h1 className="page-title-fefelina">Dashboard</h1>
       
       {/* Cards de Estatísticas Principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Receita Mensal */}
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-lg shadow-md border border-green-100">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-green-600">Receita Mensal</p>
+              <p className="text-sm font-medium text-gray-500">Receita Mensal</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.monthlyRevenue)}</p>
               <div className="flex items-center mt-2">
-                <span className={`text-xs font-medium ${revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`text-xs font-semibold ${revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {revenueGrowth >= 0 ? '↑' : '↓'} {Math.abs(revenueGrowth).toFixed(1)}%
                 </span>
-                <span className="text-xs text-gray-500 ml-1">vs mês anterior</span>
+                <span className="text-xs text-gray-400 ml-1">vs mês anterior</span>
               </div>
             </div>
-            <div className="bg-green-500 rounded-full p-3">
-              <span className="text-white text-2xl">💰</span>
+            <div className="bg-gray-100 rounded-full p-3">
+              <span className="text-gray-500 text-2xl">💰</span>
             </div>
           </div>
         </div>
 
-        {/* Visitas do Mês */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg shadow-md border border-blue-100">
+        {/* Visitas Realizadas */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-blue-600">Visitas Realizadas</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.visitasRealizadas}</p>
+              <p className="text-sm font-medium text-gray-500">Visitas Realizadas</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.monthlyVisits}</p>
               <div className="flex items-center mt-2">
-                <span className={`text-xs font-medium ${visitsGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`text-xs font-semibold ${visitsGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {visitsGrowth >= 0 ? '↑' : '↓'} {Math.abs(visitsGrowth).toFixed(1)}%
                 </span>
-                <span className="text-xs text-gray-500 ml-1">vs mês anterior</span>
+                <span className="text-xs text-gray-400 ml-1">vs mês anterior</span>
               </div>
             </div>
-            <div className="bg-blue-500 rounded-full p-3">
-              <span className="text-white text-2xl">📅</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Ticket Médio */}
-        <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-lg shadow-md border border-purple-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-purple-600">Ticket Médio</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.ticketMedio)}</p>
-              <p className="text-xs text-gray-500 mt-2">{stats.totalClients} clientes ativos</p>
-            </div>
-            <div className="bg-purple-500 rounded-full p-3">
-              <span className="text-white text-2xl">💳</span>
+            <div className="bg-gray-100 rounded-full p-3">
+              <span className="text-gray-500 text-2xl">📅</span>
             </div>
           </div>
         </div>
 
         {/* Clientes Novos */}
-        <div className="bg-gradient-to-br from-orange-50 to-yellow-50 p-6 rounded-lg shadow-md border border-orange-100">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-orange-600">Clientes Novos</p>
+              <p className="text-sm font-medium text-gray-500">Clientes Novos</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{stats.clientesNovos}</p>
-              <p className="text-xs text-gray-500 mt-2">neste mês</p>
+              <p className="text-xs text-gray-400 mt-2">neste mês</p>
             </div>
-            <div className="bg-orange-500 rounded-full p-3">
-              <span className="text-white text-2xl">✨</span>
+            <div className="bg-gray-100 rounded-full p-3">
+              <span className="text-gray-500 text-2xl">✨</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Gráficos */}
+      {/* Gráfico de Faturamento */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Faturamento</h3>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Total no período: <span className="font-medium text-gray-700">{formatCurrency(revenueChartTotal)}</span>
+            </p>
+          </div>
+          <select
+            value={revenueRange}
+            onChange={(e) => setRevenueRange(e.target.value as RevenueRangeOption)}
+            className="input-fefelina w-auto text-sm"
+          >
+            <option value="year">Este ano (mês a mês)</option>
+            <option value="12m">Últimos 12 meses</option>
+            <option value="24m">Últimos 24 meses</option>
+            <option value="all">Todo o período</option>
+          </select>
+        </div>
+        <ResponsiveContainer width="100%" height={320}>
+          <BarChart data={revenueChartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+            <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => formatCurrency(v)} width={90} />
+            <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
+            <Bar dataKey="receita" fill="#b85c2e" name="Faturamento" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Gráficos secundários */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico de Tendência Mensal */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Tendência de Receita (6 meses)</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyTrend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip 
-                formatter={(value: any, name?: string) => {
-                  if (name === 'receita') return formatCurrency(value)
-                  return value
-                }}
-              />
-              <Legend />
-              <Line yAxisId="left" type="monotone" dataKey="receita" stroke="#10b981" strokeWidth={2} name="Receita (R$)" />
-              <Line yAxisId="right" type="monotone" dataKey="visitas" stroke="#3b82f6" strokeWidth={2} name="Visitas" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Gráfico Semanal */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Visitas por Dia (Última Semana)</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="visitas" fill="#3b82f6" name="Visitas" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
         {/* Tipos de Visita */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Distribuição por Tipo de Visita</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -406,7 +330,7 @@ export default function DashboardEnhanced() {
         </div>
 
         {/* Próximas Visitas */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Próximas Visitas Agendadas</h3>
           <div className="space-y-3 max-h-[300px] overflow-y-auto">
             {upcomingVisits.length === 0 ? (
@@ -423,35 +347,12 @@ export default function DashboardEnhanced() {
                     </p>
                   </div>
                   <div className="text-right ml-4">
-                    <p className="font-semibold text-green-600">{formatCurrency(visit.valor)}</p>
+                    <p className="font-semibold text-gray-900">{formatCurrency(visit.valor)}</p>
                     <p className="text-xs text-gray-500 capitalize">{visit.tipo_visita}</p>
                   </div>
                 </div>
               ))
             )}
-          </div>
-        </div>
-      </div>
-
-      {/* Cards de Status */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Visitas Realizadas</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.visitasRealizadas}</p>
-            </div>
-            <span className="text-3xl">✅</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Visitas Agendadas</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.visitasAgendadas}</p>
-            </div>
-            <span className="text-3xl">📋</span>
           </div>
         </div>
       </div>

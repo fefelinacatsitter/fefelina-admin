@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, Client, Pet } from '../lib/supabase'
+import { fetchAllRows } from '../lib/paginatedFetch'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import PaginationControls from '../components/PaginationControls'
 import toast from 'react-hot-toast'
 import CatLoader from '../components/CatLoader'
 import { useFieldMask } from '../hooks/useFieldMask'
 import { usePermissions } from '../contexts/PermissionsContext'
+import { Pencil } from 'lucide-react'
 
 // Função para formatar telefone brasileiro
 const formatPhone = (value: string): string => {
@@ -54,7 +58,10 @@ export default function ClientsPage() {
   const [clientPets, setClientPets] = useState<Pet[]>([])
   const [sortBy, setSortBy] = useState<'recent_services' | 'alphabetical'>('alphabetical')
   const [searchTerm, setSearchTerm] = useState('')
-  const [filteredClients, setFilteredClients] = useState<Client[]>([])
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 400)
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const pageSize = 20
   
   // Modal de visualização para não-admins
   const [showViewModal, setShowViewModal] = useState(false)
@@ -82,31 +89,28 @@ export default function ClientsPage() {
     { nome: '', caracteristica: '', observacoes: '' }
   ])
 
+  // Volta para a primeira página sempre que o filtro de busca (já com debounce) mudar
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearchTerm, sortBy])
+
   useEffect(() => {
     fetchClients()
-  }, [sortBy])
-
-  // Filtrar clientes baseado no termo de busca
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredClients(clients)
-    } else {
-      const filtered = clients.filter(client =>
-        client.nome.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      setFilteredClients(filtered)
-    }
-  }, [clients, searchTerm])
+  }, [sortBy, page, debouncedSearchTerm])
 
   const fetchClients = async () => {
     setLoading(true)
     
     try {
       if (sortBy === 'recent_services') {
-        // Ordenar por atividade mais recente (visitas realizadas)
-        const { data, error } = await supabase
-          .from('clients')
-          .select(`
+        // Esta ordenação depende de agregação (última visita realizada) que não
+        // existe como coluna no banco, então ainda precisamos buscar todos os
+        // clientes para calcular e ordenar no cliente. A paginação, nesse caso,
+        // é aplicada apenas na exibição (fatiamento do array já ordenado).
+        const data = await fetchAllRows(
+          supabase
+            .from('clients')
+            .select(`
             *,
             services (
               id,
@@ -118,8 +122,7 @@ export default function ClientsPage() {
               )
             )
           `)
-        
-        if (error) throw error
+        )
         
         // Ordenar do lado do cliente por atividade mais recente
         const sortedClients = (data || []).sort((a, b) => {
@@ -182,20 +185,40 @@ export default function ClientsPage() {
           return a.nome.localeCompare(b.nome)
         })
         
-        setClients(sortedClients)
+        // Aplica a busca (por nome) e a paginação no array já ordenado
+        const term = debouncedSearchTerm.trim().toLowerCase()
+        const filtered = term
+          ? sortedClients.filter(c => c.nome.toLowerCase().includes(term))
+          : sortedClients
+        
+        setTotalCount(filtered.length)
+        const from = (page - 1) * pageSize
+        setClients(filtered.slice(from, from + pageSize))
       } else {
-        // Ordenar alfabeticamente
-        const { data, error } = await supabase
+        // Ordenar alfabeticamente - paginação e busca feitas diretamente no servidor
+        const from = (page - 1) * pageSize
+        const to = from + pageSize - 1
+        
+        let query = supabase
           .from('clients')
-          .select('*')
+          .select('*', { count: 'exact' })
           .order('nome', { ascending: true })
         
+        const term = debouncedSearchTerm.trim()
+        if (term) {
+          query = query.ilike('nome', `%${term}%`)
+        }
+        
+        const { data, error, count } = await query.range(from, to)
         if (error) throw error
+
         setClients(data || [])
+        setTotalCount(count || 0)
       }
     } catch (error) {
       console.error('Erro ao buscar clientes:', error)
       setClients([])
+      setTotalCount(0)
     }
     
     setLoading(false)
@@ -1031,7 +1054,7 @@ export default function ClientsPage() {
           </div>
           {searchTerm && (
             <p className="mt-1 text-sm text-gray-500">
-              {filteredClients.length} cliente(s) encontrado(s) para "{searchTerm}"
+              {totalCount} cliente(s) encontrado(s) para "{searchTerm}"
             </p>
           )}
         </div>
@@ -1057,12 +1080,12 @@ export default function ClientsPage() {
       <div className="mt-8 md:hidden space-y-4">
         {loading ? (
           <div className="text-center text-gray-500 py-4">Carregando...</div>
-        ) : filteredClients.length === 0 ? (
+        ) : clients.length === 0 ? (
           <div className="text-center text-gray-500 py-4">
             {searchTerm ? `Nenhum cliente encontrado para "${searchTerm}"` : 'Nenhum cliente cadastrado ainda.'}
           </div>
         ) : (
-          filteredClients.map((client) => (
+          clients.map((client) => (
             <div 
               key={client.id} 
               onClick={() => handleClientClick(client)}
@@ -1116,16 +1139,16 @@ export default function ClientsPage() {
               <table className="min-w-full divide-y divide-gray-300 table-fixed">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="w-[20%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[20%] px-4 py-3 text-left text-xs font-medium text-gray-500">
                       Nome
                     </th>
-                    <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500">
                       Diária
                     </th>
-                    <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500">
                       2 Visitas
                     </th>
-                    <th className="w-[30%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[30%] px-4 py-3 text-left text-xs font-medium text-gray-500">
                       Endereço
                     </th>
                     <th className="w-[26%] relative px-4 py-3">
@@ -1142,14 +1165,14 @@ export default function ClientsPage() {
                         </div>
                       </td>
                     </tr>
-                  ) : filteredClients.length === 0 ? (
+                  ) : clients.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
                         {searchTerm ? `Nenhum cliente encontrado para "${searchTerm}"` : 'Nenhum cliente cadastrado ainda.'}
                       </td>
                     </tr>
                   ) : (
-                    filteredClients.map((client) => (
+                    clients.map((client) => (
                       <tr 
                         key={client.id} 
                         onClick={() => handleClientClick(client)}
@@ -1176,9 +1199,10 @@ export default function ClientsPage() {
                                 e.stopPropagation();
                                 openEditForm(client);
                               }}
-                              className="text-primary-600 hover:text-primary-900"
+                              className="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-900"
                               title="Editar cliente"
                             >
+                              <Pencil className="w-3.5 h-3.5 text-gray-400" />
                               Editar
                             </button>
                           )}
@@ -1188,9 +1212,27 @@ export default function ClientsPage() {
                   )}
                 </tbody>
               </table>
+              <PaginationControls
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                loading={loading}
+              />
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Paginação (também usada na visão mobile) */}
+      <div className="md:hidden mt-4">
+        <PaginationControls
+          page={page}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          loading={loading}
+        />
       </div>
 
       {/* Modal de Adicionar/Editar Pet */}
@@ -1371,7 +1413,7 @@ export default function ClientsPage() {
                   {viewingClient.notas && (
                     <div className="mt-3 pt-3 border-t border-gray-200">
                       <label className="block text-xs font-medium text-gray-700 mb-1.5">Notas Internas</label>
-                      <div className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap bg-orange-50 border border-orange-100 rounded-md p-3">
+                      <div className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap bg-primary-50 border border-primary-100 rounded-md p-3">
                         {maskField('notas', viewingClient.notas)}
                       </div>
                     </div>

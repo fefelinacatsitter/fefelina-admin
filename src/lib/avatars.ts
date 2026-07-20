@@ -1,4 +1,4 @@
-// Coleção de avatares pré-definidos
+﻿// Coleção de avatares pré-definidos
 export interface AvatarOption {
   id: string
   emoji: string
@@ -7,7 +7,7 @@ export interface AvatarOption {
 }
 
 export const AVATARS: AvatarOption[] = [
-  { id: 'cat-orange', emoji: '🐱', label: 'Gato Laranja', bgColor: 'bg-orange-100' },
+  { id: 'cat-orange', emoji: '🐱', label: 'Gato Laranja', bgColor: 'bg-primary-100' },
   { id: 'cat-black', emoji: '🐈', label: 'Gato Preto', bgColor: 'bg-gray-100' },
   { id: 'cat-white', emoji: '🐈‍⬛', label: 'Gato Branco', bgColor: 'bg-slate-100' },
   { id: 'dog', emoji: '🐕', label: 'Cachorro', bgColor: 'bg-amber-100' },
@@ -20,7 +20,7 @@ export const AVATARS: AvatarOption[] = [
   { id: 'rainbow', emoji: '🌈', label: 'Arco-íris', bgColor: 'bg-indigo-100' },
   { id: 'sun', emoji: '☀️', label: 'Sol', bgColor: 'bg-yellow-100' },
   { id: 'moon', emoji: '🌙', label: 'Lua', bgColor: 'bg-blue-100' },
-  { id: 'fire', emoji: '🔥', label: 'Fogo', bgColor: 'bg-orange-100' },
+  { id: 'fire', emoji: '🔥', label: 'Fogo', bgColor: 'bg-primary-100' },
   { id: 'tree', emoji: '🌳', label: 'Árvore', bgColor: 'bg-green-100' },
   { id: 'butterfly', emoji: '🦋', label: 'Borboleta', bgColor: 'bg-purple-100' },
   { id: 'bee', emoji: '🐝', label: 'Abelha', bgColor: 'bg-yellow-100' },

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase, Lead, Visit } from '../lib/supabase'
+import { fetchAllRows } from '../lib/paginatedFetch'
 import toast from 'react-hot-toast'
 import { Users, Phone, MapPin, Calendar, DollarSign, Plus, X, Edit2, Clock } from 'lucide-react'
 import PreEncontroModal from '../components/PreEncontroModal'
@@ -283,13 +284,13 @@ export default function LeadsPage() {
   const fetchLeads = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false })
+      const data = await fetchAllRows<Lead>(
+        supabase
+          .from('leads')
+          .select('*')
+          .order('created_at', { ascending: false })
+      )
 
-      if (error) throw error
-      
       // Verificar se há leads com status inválido e corrigi-los
       const invalidLeads = (data || []).filter(lead => 
         !['novo', 'em_contato', 'negociacao', 'aguardando_resposta', 'fechado_ganho', 'fechado_perdido'].includes(lead.status)
@@ -308,10 +309,12 @@ export default function LeadsPage() {
         }
         
         // Recarregar dados
-        const { data: refreshedData } = await supabase
-          .from('leads')
-          .select('*')
-          .order('created_at', { ascending: false })
+        const refreshedData = await fetchAllRows<Lead>(
+          supabase
+            .from('leads')
+            .select('*')
+            .order('created_at', { ascending: false })
+        )
         
         setLeads(refreshedData || [])
       } else {

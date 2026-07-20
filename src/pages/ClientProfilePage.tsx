@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { format, parseISO } from 'date-fns'
@@ -643,7 +643,7 @@ export default function ClientProfilePage() {
     if (score >= 80) return { label: 'Excelente', color: 'text-green-600', bg: 'bg-green-100', icon: '🌟' }
     if (score >= 60) return { label: 'Ótimo', color: 'text-blue-600', bg: 'bg-blue-100', icon: '😊' }
     if (score >= 40) return { label: 'Bom', color: 'text-yellow-600', bg: 'bg-yellow-100', icon: '👍' }
-    if (score >= 20) return { label: 'Regular', color: 'text-orange-600', bg: 'bg-orange-100', icon: '🤔' }
+    if (score >= 20) return { label: 'Regular', color: 'text-primary-600', bg: 'bg-primary-100', icon: '🤔' }
     return { label: 'Novo', color: 'text-gray-600', bg: 'bg-gray-100', icon: '🌱' }
   }
 
@@ -1241,16 +1241,16 @@ export default function ClientProfilePage() {
         </div>
 
         {/* A Receber */}
-        <div className="card-fefelina p-5 border-2 border-orange-200">
+        <div className="card-fefelina p-5 border-2 border-primary-200">
           <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 bg-orange-100 rounded-lg">
-              <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex-shrink-0 p-3 bg-primary-100 rounded-lg">
+              <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">A Receber (Pendente)</p>
-              <p className="text-2xl font-bold text-orange-600">{formatCurrency(totalToReceive)}</p>
+              <p className="text-2xl font-bold text-primary-600">{formatCurrency(totalToReceive)}</p>
               <p className="text-xs text-gray-500 mt-1">Somente serviços não pagos</p>
             </div>
           </div>
@@ -1307,7 +1307,7 @@ export default function ClientProfilePage() {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-600">Receita Total</span>
                 <span className={`text-sm font-semibold ${
-                  totalRevenue >= globalAverageRevenue ? 'text-green-600' : 'text-orange-600'
+                  totalRevenue >= globalAverageRevenue ? 'text-green-600' : 'text-primary-600'
                 }`}>
                   {totalRevenue >= globalAverageRevenue ? (
                     <>+{((totalRevenue / globalAverageRevenue - 1) * 100).toFixed(0)}% acima</>
@@ -1319,7 +1319,7 @@ export default function ClientProfilePage() {
               <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
                   className={`absolute h-full ${
-                    totalRevenue >= globalAverageRevenue ? 'bg-green-500' : 'bg-orange-500'
+                    totalRevenue >= globalAverageRevenue ? 'bg-green-500' : 'bg-primary-500'
                   } transition-all duration-500`}
                   style={{ width: `${Math.min((totalRevenue / (globalAverageRevenue * 2)) * 100, 100)}%` }}
                 />
@@ -1335,7 +1335,7 @@ export default function ClientProfilePage() {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-600">Total de Serviços</span>
                 <span className={`text-sm font-semibold ${
-                  totalServices >= globalAverageServices ? 'text-green-600' : 'text-orange-600'
+                  totalServices >= globalAverageServices ? 'text-green-600' : 'text-primary-600'
                 }`}>
                   {totalServices >= globalAverageServices ? (
                     <>+{((totalServices / globalAverageServices - 1) * 100).toFixed(0)}% acima</>
@@ -1347,7 +1347,7 @@ export default function ClientProfilePage() {
               <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
                   className={`absolute h-full ${
-                    totalServices >= globalAverageServices ? 'bg-green-500' : 'bg-orange-500'
+                    totalServices >= globalAverageServices ? 'bg-green-500' : 'bg-primary-500'
                   } transition-all duration-500`}
                   style={{ width: `${Math.min((totalServices / (globalAverageServices * 2)) * 100, 100)}%` }}
                 />
@@ -1404,14 +1404,14 @@ export default function ClientProfilePage() {
                 )
               } else if (daysSince > 90) {
                 return (
-                  <div className="p-3 bg-orange-50 border-l-4 border-orange-500 rounded">
+                  <div className="p-3 bg-primary-50 border-l-4 border-primary-500 rounded">
                     <div className="flex items-start">
-                      <svg className="w-5 h-5 text-orange-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-5 h-5 text-primary-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                       </svg>
                       <div className="ml-3">
-                        <p className="text-sm font-medium text-orange-800">Sem contratações há {daysSince} dias</p>
-                        <p className="text-xs text-orange-700 mt-1">Recomendado: Envie mensagem de follow-up</p>
+                        <p className="text-sm font-medium text-primary-800">Sem contratações há {daysSince} dias</p>
+                        <p className="text-xs text-primary-700 mt-1">Recomendado: Envie mensagem de follow-up</p>
                       </div>
                     </div>
                   </div>
@@ -1591,7 +1591,7 @@ export default function ClientProfilePage() {
                 <p className="text-xs text-gray-700">
                   <strong className="text-green-700">Já recebido:</strong> {formatCurrency(totalPaid)} ({totalRevenue > 0 ? ((totalPaid / totalRevenue) * 100).toFixed(0) : 0}%)
                   {' • '}
-                  <strong className="text-orange-700">Pendente:</strong> {formatCurrency(totalToReceive)} ({totalRevenue > 0 ? ((totalToReceive / totalRevenue) * 100).toFixed(0) : 0}%)
+                  <strong className="text-primary-700">Pendente:</strong> {formatCurrency(totalToReceive)} ({totalRevenue > 0 ? ((totalToReceive / totalRevenue) * 100).toFixed(0) : 0}%)
                 </p>
               </div>
             </div>
@@ -1968,7 +1968,7 @@ export default function ClientProfilePage() {
                             tag === 'Novo' ? 'bg-green-100 border-green-500 text-green-800' :
                             tag === 'Fidelizado' ? 'bg-indigo-100 border-indigo-500 text-indigo-800' :
                             tag === 'Corporativo' ? 'bg-gray-100 border-gray-500 text-gray-800' :
-                            'bg-orange-100 border-orange-500 text-orange-800'
+                            'bg-primary-100 border-primary-500 text-primary-800'
                           : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
                       }`}
                     >
@@ -1992,7 +1992,7 @@ export default function ClientProfilePage() {
                             tag === 'Novo' ? 'bg-green-100 text-green-800' :
                             tag === 'Fidelizado' ? 'bg-indigo-100 text-indigo-800' :
                             tag === 'Corporativo' ? 'bg-gray-100 text-gray-800' :
-                            'bg-orange-100 text-orange-800'
+                            'bg-primary-100 text-primary-800'
                           }`}
                         >
                           {tag}

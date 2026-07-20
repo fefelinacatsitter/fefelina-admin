@@ -7,17 +7,19 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Paleta oficial Fefelina (ver variáveis --color-* em src/index.css)
+        // Peach: soft=#FDEBE1 (100), vivid=#FF9F6C (500), dark=#B85C2E (700)
         primary: {
-          50: '#fdf6f2',
-          100: '#faeee5',
-          200: '#f4d8c2',
-          300: '#edc299',
-          400: '#e5a575',
-          500: '#e28e60', // Cor principal Fefelina (exata do CSS)
-          600: '#d7784a',
-          700: '#c4643a',
-          800: '#a05332',
-          900: '#82442c',
+          50: '#fff5f0',
+          100: '#fdebe1', // peach-soft (cor exata)
+          200: '#fbd8c4',
+          300: '#fcc3a0',
+          400: '#ffb088',
+          500: '#ff9f6c', // peach-vivid (cor exata) - cor principal Fefelina
+          600: '#e8814a',
+          700: '#b85c2e', // peach-dark (cor exata)
+          800: '#944a25',
+          900: '#6e371b',
         },
         secondary: {
           50: '#f8f9fa', // Cor de fundo clara do CSS
@@ -31,25 +33,40 @@ export default {
           800: '#1a1a1a',
           900: '#000000',
         },
-        accent: {
-          50: '#fff5f2',
-          100: '#ffe9e1',
-          200: '#ffd4c4',
-          300: '#ffb59a',
-          400: '#ff9170',
-          500: '#ff9f6c', // Cor de destaque do CSS
-          600: '#e8844a',
-          700: '#d36b2f',
-          800: '#b85625',
-          900: '#9c4821',
+        // Lilac: soft=#E7E1F7 (100), vivid=#A876E3 (500) - cor de destaque
+        lilac: {
+          50: '#f5f2fc',
+          100: '#e7e1f7', // lilac-soft (cor exata)
+          200: '#d6cbf2',
+          300: '#c2aeea',
+          400: '#b692e5',
+          500: '#a876e3', // lilac-vivid (cor exata)
+          600: '#9059d0',
+          700: '#7745ad',
+          800: '#5f3689',
+          900: '#482868',
         },
+        // Alias de accent -> lilac, para uso como cor de destaque secundária
+        accent: {
+          50: '#f5f2fc',
+          100: '#e7e1f7',
+          200: '#d6cbf2',
+          300: '#c2aeea',
+          400: '#b692e5',
+          500: '#a876e3',
+          600: '#9059d0',
+          700: '#7745ad',
+          800: '#5f3689',
+          900: '#482868',
+        },
+        ink: '#231f2b', // cor de texto/tinta de alto contraste
       },
       fontFamily: {
         sans: ['Poppins', 'system-ui', 'sans-serif'], // Fonte do CSS
       },
       boxShadow: {
         'fefelina': '0 8px 25px rgba(0, 0, 0, 0.1)', // Sombra do CSS
-        'fefelina-hover': '0 15px 40px rgba(226, 142, 96, 0.15)', // Sombra hover do CSS
+        'fefelina-hover': '0 15px 40px rgba(255, 159, 108, 0.15)', // Sombra hover (peach-vivid)
       },
     },
   },

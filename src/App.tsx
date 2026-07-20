@@ -1,29 +1,42 @@
+import { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { PermissionsProvider } from './contexts/PermissionsContext'
-import LoginPage from './pages/LoginPage'
-import DashboardEnhanced from './pages/DashboardEnhanced'
-import ClientsPage from './pages/ClientsPage'
-import ClientProfilePage from './pages/ClientProfilePage'
-import PetsPage from './pages/PetsPage'
-import ServicesPage from './pages/ServicesPage'
-import VisitsPage from './pages/VisitsPage'
-import AgendaPage from './pages/AgendaPage'
-import LeadsPage from './pages/LeadsPage'
-import FinancesPage from './pages/FinancesPage'
-import RelatoriosPage from './pages/RelatoriosPage'
-import FinanceiroPage from './pages/FinanceiroPage'
-import SetupPage from './pages/SetupPage'
-import MyProfilePage from './pages/MyProfilePage'
-import ChangePasswordPage from './pages/ChangePasswordPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import HomeRedirect from './components/HomeRedirect'
+import CatLoader from './components/CatLoader'
+
+// Rotas carregadas sob demanda (code-splitting) para reduzir o bundle inicial
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const DashboardEnhanced = lazy(() => import('./pages/DashboardEnhanced'))
+const ClientsPage = lazy(() => import('./pages/ClientsPage'))
+const ClientProfilePage = lazy(() => import('./pages/ClientProfilePage'))
+const PetsPage = lazy(() => import('./pages/PetsPage'))
+const ServicesPage = lazy(() => import('./pages/ServicesPage'))
+const VisitsPage = lazy(() => import('./pages/VisitsPage'))
+const AgendaPage = lazy(() => import('./pages/AgendaPage'))
+const LeadsPage = lazy(() => import('./pages/LeadsPage'))
+const FinancesPage = lazy(() => import('./pages/FinancesPage'))
+const RelatoriosPage = lazy(() => import('./pages/RelatoriosPage'))
+const FinanceiroPage = lazy(() => import('./pages/FinanceiroPage'))
+const SetupPage = lazy(() => import('./pages/SetupPage'))
+const MyProfilePage = lazy(() => import('./pages/MyProfilePage'))
+const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'))
+
+function RouteFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <CatLoader size="lg" text="Carregando..." />
+    </div>
+  )
+}
 
 function App() {
   return (
     <Router basename="/fefelina-admin">
       <PermissionsProvider>
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         {/* Rotas públicas */}
         <Route path="/login" element={<LoginPage />} />
@@ -154,6 +167,7 @@ function App() {
           }
         />
       </Routes>
+      </Suspense>
       <Toaster 
         position="top-right"
         toastOptions={{

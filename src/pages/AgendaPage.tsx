@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase, Visit as VisitType } from '../lib/supabase'
 import { format, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -303,8 +303,8 @@ export default function AgendaPage() {
     
     if (visit.responsavel === 'andre') {
       return visit.status === 'realizada'
-        ? 'bg-orange-50 border-orange-300 text-orange-700 opacity-75'
-        : 'bg-orange-100 border-orange-400 text-orange-900'
+        ? 'bg-primary-50 border-primary-300 text-primary-700 opacity-75'
+        : 'bg-primary-100 border-primary-400 text-primary-900'
     }
     
     // Tasks em azul escuro (sem responsável atribuído)
@@ -820,7 +820,7 @@ export default function AgendaPage() {
                           } ${getVisitColor(visit)} ${
                             hasConflict ? 'border-2 border-red-500' : ''
                           } ${
-                            visit.isLastVisit ? 'border-l-4 border-l-orange-500' : ''
+                            visit.isLastVisit ? 'border-l-4 border-l-primary-500' : ''
                           }`}
                           style={{
                             left: leftPosition,
@@ -994,7 +994,7 @@ export default function AgendaPage() {
                             } ${getVisitColor(visit)} ${
                               hasConflict ? 'border-2 border-red-500' : ''
                             } ${
-                              visit.isLastVisit ? 'border-l-4 border-l-orange-500' : ''
+                              visit.isLastVisit ? 'border-l-4 border-l-primary-500' : ''
                             }`}
                             style={{
                               left: leftPosition,
@@ -1267,7 +1267,7 @@ export default function AgendaPage() {
                       <span className={`inline-flex px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${
                         selectedVisit.tipo_visita === 'inteira' 
                           ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-orange-100 text-orange-800'
+                          : 'bg-primary-100 text-primary-800'
                       }`}>
                         {selectedVisit.tipo_visita === 'inteira' ? 'Inteira' : 'Meia'}
                       </span>
@@ -1408,7 +1408,7 @@ export default function AgendaPage() {
               label: 'Atribuir a André (Laranja)',
               icon: '👤',
               onClick: () => handleAssignResponsavel(cardContextMenu.visit.id, 'andre'),
-              color: 'text-orange-700'
+              color: 'text-primary-700'
             },
             {
               label: 'Remover Atribuição',

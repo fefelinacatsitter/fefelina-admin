@@ -1,37 +1,16 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Copy } from 'lucide-react'
+import { Copy, Eye, Pencil, CheckCircle2, MoreVertical, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import CatLoader from '../components/CatLoader'
 import ClientCombobox from '../components/ClientCombobox'
+import PaginationControls from '../components/PaginationControls'
 import { useFieldMask } from '../hooks/useFieldMask'
 import { usePermissions } from '../contexts/PermissionsContext'
 import Avatar from '../components/Avatar'
+import { useServicesData, type Service, type Client } from '../hooks/useServicesData'
 
-interface Service {
-  id: string
-  client_id: string
-  nome_servico?: string
-  data_inicio: string
-  data_fim: string
-  status_pagamento: 'pendente' | 'pendente_plataforma' | 'pago_parcialmente' | 'pago'
-  desconto_plataforma_default: number
-  total_visitas: number
-  total_valor: number
-  total_a_receber: number
-  valor_pago: number
-  created_at: string
-  assigned_user_id?: string
-  clients?: {
-    nome: string
-    valor_diaria: number
-    valor_duas_visitas: number
-  }
-  assigned_user?: {
-    full_name: string
-    email: string
-  }
-}
+export type { Service, Client }
 
 interface Visit {
   id?: string
@@ -45,12 +24,38 @@ interface Visit {
   desconto_plataforma: number
 }
 
-interface Client {
-  id: string
-  nome: string
-  valor_diaria: number
-  valor_duas_visitas: number
-  credito_disponivel?: number
+type ServiceSortColumn = 'nome_servico' | 'data_inicio' | 'total_visitas' | 'total_valor' | 'status_pagamento'
+
+interface SortableThProps {
+  label: string
+  column: ServiceSortColumn
+  sortColumn: ServiceSortColumn | null
+  sortDirection: 'asc' | 'desc'
+  onSort: (column: ServiceSortColumn) => void
+  align?: 'left' | 'center' | 'right'
+}
+
+function SortableTh({ label, column, sortColumn, sortDirection, onSort, align = 'left' }: SortableThProps) {
+  const isActive = sortColumn === column
+  const alignClass = align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start'
+  const textAlignClass = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
+
+  return (
+    <th className={`px-4 py-3 text-xs font-medium text-gray-500 ${textAlignClass}`}>
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className={`inline-flex items-center gap-1 ${alignClass} w-full hover:text-gray-700 transition-colors`}
+      >
+        {label}
+        {isActive ? (
+          sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+        ) : (
+          <ChevronsUpDown className="w-3.5 h-3.5 text-gray-300" />
+        )}
+      </button>
+    </th>
+  )
 }
 
 // Funções auxiliares para validação de data
@@ -137,12 +142,35 @@ export default function ServicesPage() {
   const canUpdateService = canUpdate('services')
   const canDeleteService = canDelete('services')
   
-  const [services, setServices] = useState<Service[]>([])
-  const [clients, setClients] = useState<Client[]>([])
-  const [users, setUsers] = useState<{id: string, full_name: string, email: string, avatar_url?: string}[]>([])
-  const [usersMap, setUsersMap] = useState<Record<string, {full_name: string, avatar_url?: string}>>({})
+  const {
+    services,
+    clients,
+    users,
+    usersMap,
+    loading,
+    selectedFilter,
+    setSelectedFilter,
+    filterStartDate,
+    setFilterStartDate,
+    filterEndDate,
+    setFilterEndDate,
+    searchQuery,
+    setSearchQuery,
+    page,
+    setPage,
+    pageSize,
+    totalCount,
+    sortColumn,
+    sortDirection,
+    toggleSort,
+    fetchServices,
+    getAvailableUsers,
+  } = useServicesData()
+
+  const [openActionsMenuId, setOpenActionsMenuId] = useState<string | null>(null)
+  const [showDateFilter, setShowDateFilter] = useState(false)
+
   const [filteredUsers, setFilteredUsers] = useState<{id: string, full_name: string, email: string, avatar_url?: string}[]>([])
-  const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [deletingService, setDeletingService] = useState<string | null>(null)
@@ -162,12 +190,6 @@ export default function ServicesPage() {
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [selectedServiceForMenu, setSelectedServiceForMenu] = useState<Service | null>(null)
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
-  
-  // Estados para filtros
-  const [selectedFilter, setSelectedFilter] = useState<'ativos' | 'concluidos' | 'todos'>('ativos')
-  const [filterStartDate, setFilterStartDate] = useState('')
-  const [filterEndDate, setFilterEndDate] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
   
   const [formData, setFormData] = useState<{
     nome_servico: string
@@ -190,11 +212,20 @@ export default function ServicesPage() {
   const [multiVisitEndDate, setMultiVisitEndDate] = useState('');
   const [multiVisitTipo, setMultiVisitTipo] = useState<'inteira' | 'meia'>('inteira');
 
+  // Fecha o menu de ações da tabela ao clicar fora dele
   useEffect(() => {
-    fetchServices()
-    fetchClients()
-    fetchUsers()
-  }, [selectedFilter, filterStartDate, filterEndDate])
+    if (!openActionsMenuId) return
+    const handleClickOutside = () => setOpenActionsMenuId(null)
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [openActionsMenuId])
+
+  // Recolhe o filtro de período ao sair do quick filter "Concluídos"
+  useEffect(() => {
+    if (selectedFilter !== 'concluidos') {
+      setShowDateFilter(false)
+    }
+  }, [selectedFilter])
 
   // Atualizar usuários disponíveis quando cliente selecionado mudar
   useEffect(() => {
@@ -213,220 +244,6 @@ export default function ServicesPage() {
     }
     updateAvailableUsers()
   }, [formData.client_id, users])
-
-  const fetchServices = async () => {
-    try {
-      let query = supabase
-        .from('services')
-        .select(`
-          *,
-          clients (
-            nome,
-            valor_diaria,
-            valor_duas_visitas
-          )
-        `)
-
-      // Aplicar ordenação baseada no filtro selecionado
-      if (selectedFilter === 'concluidos' || selectedFilter === 'todos') {
-        // Para serviços concluídos e todos: ordenar por data_inicio decrescente (mais recentes primeiro)
-        query = query.order('data_inicio', { ascending: false })
-      } else {
-        // Para serviços ativos: manter ordenação por created_at decrescente
-        query = query.order('created_at', { ascending: false })
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-      
-      // Obter data de hoje
-      const today = new Date()
-      const year = today.getFullYear()
-      const month = String(today.getMonth() + 1).padStart(2, '0')
-      const day = String(today.getDate()).padStart(2, '0')
-      const todayStr = `${year}-${month}-${day}`
-      
-      let filteredServices = data || []
-      
-      // Aplicar filtros
-      switch (selectedFilter) {
-        case 'ativos':
-          // Serviços ativos: data_fim >= hoje OU status_pagamento !== 'pago'
-          filteredServices = filteredServices.filter(service => 
-            service.data_fim >= todayStr || service.status_pagamento !== 'pago'
-          )
-          break
-        case 'concluidos':
-          // Serviços concluídos: data_fim < hoje E status_pagamento = 'pago'
-          filteredServices = filteredServices.filter(service => 
-            service.data_fim < todayStr && service.status_pagamento === 'pago'
-          )
-          
-          // Se não houver filtro de data específico, limitar aos últimos 6 meses
-          if (!filterStartDate && !filterEndDate) {
-            const sixMonthsAgo = new Date()
-            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-            const sixMonthsAgoStr = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}-${String(sixMonthsAgo.getDate()).padStart(2, '0')}`
-            
-            filteredServices = filteredServices.filter(service => 
-              service.data_inicio >= sixMonthsAgoStr
-            )
-          }
-          break
-        case 'todos':
-          // Todos os serviços - sem filtro por status, mas com limite de período
-          // Se não houver filtro de data específico, limitar aos últimos 6 meses
-          if (!filterStartDate && !filterEndDate) {
-            const sixMonthsAgo = new Date()
-            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-            const sixMonthsAgoStr = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}-${String(sixMonthsAgo.getDate()).padStart(2, '0')}`
-            
-            filteredServices = filteredServices.filter(service => 
-              service.data_inicio >= sixMonthsAgoStr
-            )
-          }
-          break
-      }
-      
-      // Aplicar filtro por data se especificado
-      if (filterStartDate) {
-        filteredServices = filteredServices.filter(service => 
-          service.data_inicio >= filterStartDate
-        )
-      }
-      
-      if (filterEndDate) {
-        filteredServices = filteredServices.filter(service => 
-          service.data_fim <= filterEndDate
-        )
-      }
-      
-      // Buscar dados dos usuários assignados
-      const userIds = [...new Set(filteredServices.map(s => s.assigned_user_id).filter(Boolean))]
-      if (userIds.length > 0) {
-        const { data: usersData } = await supabase
-          .from('user_profiles')
-          .select('user_id, full_name, email')
-          .in('user_id', userIds)
-        
-        // Mapear usuários para os serviços
-        filteredServices = filteredServices.map(service => ({
-          ...service,
-          assigned_user: service.assigned_user_id 
-            ? usersData?.find(u => u.user_id === service.assigned_user_id)
-            : null
-        }))
-      }
-      
-      setServices(filteredServices)
-    } catch (error) {
-      console.error('Erro ao buscar serviços:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Função para filtrar serviços por busca de cliente
-  const getFilteredServices = () => {
-    if (!searchQuery.trim()) {
-      return services
-    }
-    
-    const query = searchQuery.toLowerCase().trim()
-    return services.filter(service => 
-      service.clients?.nome.toLowerCase().includes(query) ||
-      service.nome_servico?.toLowerCase().includes(query)
-    )
-  }
-
-  const fetchClients = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('id, nome, valor_diaria, valor_duas_visitas, credito_disponivel')
-        .order('nome')
-
-      if (error) throw error
-      setClients(data || [])
-    } catch (error) {
-      console.error('Erro ao buscar clientes:', error)
-    }
-  }
-
-  const fetchUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('user_id, full_name, email, avatar_url')
-        .eq('is_active', true)
-        .order('full_name')
-
-      if (error) throw error
-      
-      const usersData = data?.map(u => ({ 
-        id: u.user_id, 
-        full_name: u.full_name, 
-        email: u.email,
-        avatar_url: u.avatar_url
-      })) || []
-      
-      setUsers(usersData)
-      
-      // Criar mapa para acesso rápido pelo ID
-      const map: Record<string, {full_name: string, avatar_url?: string}> = {}
-      usersData.forEach(user => {
-        map[user.id] = {
-          full_name: user.full_name,
-          avatar_url: user.avatar_url
-        }
-      })
-      setUsersMap(map)
-    } catch (error) {
-      console.error('Erro ao buscar usuários:', error)
-    }
-  }
-
-  // Filtrar usuários que têm acesso ao cliente selecionado
-  const getAvailableUsers = async (clientId: string) => {
-    if (!clientId) return users
-
-    try {
-      // Buscar compartilhamentos deste cliente
-      const { data: shares, error } = await supabase
-        .from('record_sharing')
-        .select('shared_with_user_id')
-        .eq('record_id', clientId)
-        .eq('record_type', 'client')
-
-      if (error) throw error
-
-      const sharedUserIds = new Set(shares?.map(s => s.shared_with_user_id) || [])
-      
-      // Buscar quais usuários são admin
-      const { data: userProfiles } = await supabase
-        .from('user_profiles')
-        .select('user_id, profile:profiles!inner(is_admin)')
-        .eq('is_active', true)
-      
-      const adminUserIds = new Set(
-        userProfiles
-          ?.filter(up => {
-            const profile = Array.isArray(up.profile) ? up.profile[0] : up.profile
-            return profile?.is_admin === true
-          })
-          .map(up => up.user_id) || []
-      )
-      
-      // Retornar: TODOS os admins + parceiros que têm compartilhamento
-      return users.filter(user => {
-        return adminUserIds.has(user.id) || sharedUserIds.has(user.id)
-      })
-    } catch (error) {
-      console.error('Erro ao verificar compartilhamentos:', error)
-      return users
-    }
-  }
 
   const calculateVisitValue = (client: Client, tipo: 'inteira' | 'meia') => {
     return tipo === 'inteira' ? client.valor_diaria : (client.valor_duas_visitas / 2)
@@ -1115,7 +932,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
         </div>
         {searchQuery && (
           <p className="mt-2 text-sm text-gray-600">
-            {getFilteredServices().length} serviço(s) encontrado(s)
+            {totalCount} serviço(s) encontrado(s)
           </p>
         )}
       </div>
@@ -1127,9 +944,9 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedFilter('ativos')}
-              className={`px-4 py-2 text-sm font-medium rounded-md ${
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                 selectedFilter === 'ativos'
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-primary-500 text-ink'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
               }`}
             >
@@ -1137,31 +954,26 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
             </button>
             <button
               onClick={() => setSelectedFilter('concluidos')}
-              className={`px-4 py-2 text-sm font-medium rounded-md ${
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                 selectedFilter === 'concluidos'
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-primary-500 text-ink'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
               }`}
             >
               Concluídos
-              {selectedFilter === 'concluidos' && !filterStartDate && !filterEndDate && (
-                <span className="ml-1 text-xs opacity-75">(6m)</span>
-              )}
             </button>
-            <button
-              onClick={() => setSelectedFilter('todos')}
-              className={`px-4 py-2 text-sm font-medium rounded-md ${
-                selectedFilter === 'todos'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              Todos
-            </button>
+            {selectedFilter === 'concluidos' && !showDateFilter && (
+              <button
+                onClick={() => setShowDateFilter(true)}
+                className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 underline decoration-dotted"
+              >
+                Filtrar por período
+              </button>
+            )}
           </div>
           
-          {/* Filtros por data (apenas quando "concluidos" ou "todos" estiver selecionado) */}
-          {(selectedFilter === 'concluidos' || selectedFilter === 'todos') && (
+          {/* Filtros por data (opcional, apenas quando "concluidos" estiver selecionado e o usuário abrir) */}
+          {selectedFilter === 'concluidos' && showDateFilter && (
             <div className="flex flex-col sm:flex-row gap-2 items-center">
               <span className="text-sm text-gray-600 whitespace-nowrap">Período:</span>
               <input
@@ -1209,26 +1021,29 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                 className="text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="Data fim"
               />
-              {(filterStartDate || filterEndDate) && (
-                <button
-                  onClick={() => {
-                    setFilterStartDate('')
-                    setFilterEndDate('')
-                  }}
-                  className="text-sm text-gray-500 hover:text-gray-700 px-2 py-1 rounded"
-                >
-                  Limpar
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  setFilterStartDate('')
+                  setFilterEndDate('')
+                  setShowDateFilter(false)
+                }}
+                className="text-sm text-gray-500 hover:text-gray-700 px-2 py-1 rounded"
+              >
+                Fechar
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {services.length === 0 ? (
+      {loading && services.length === 0 ? (
+        <div className="mt-8 flex justify-center">
+          <CatLoader size="md" variant="paws" text="Carregando serviços..." />
+        </div>
+      ) : totalCount === 0 && !searchQuery ? (
         <div className="mt-8 card-fefelina">
           <div className="empty-state-fefelina">
-            <div className="mx-auto h-16 w-16 text-primary-400 mb-4">
+            <div className="mx-auto h-16 w-16 text-gray-300 mb-4">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
               </svg>
@@ -1245,7 +1060,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
             </button>
           </div>
         </div>
-      ) : getFilteredServices().length === 0 ? (
+      ) : totalCount === 0 ? (
         <div className="mt-8 card-fefelina">
           <div className="empty-state-fefelina">
             <div className="mx-auto h-16 w-16 text-gray-400 mb-4">
@@ -1266,121 +1081,201 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
           </div>
         </div>
       ) : (
-        <div className="mt-8 grid grid-cols-1 gap-3">
-          {getFilteredServices().map((service) => (
-            <div key={service.id} className="card-fefelina">
-              <div 
-                className="p-3 cursor-pointer"
+        <>
+          {/* Mobile - Cards */}
+          <div className="mt-8 md:hidden grid grid-cols-1 gap-3">
+            {services.map((service) => (
+              <div
+                key={service.id}
+                className="card-fefelina p-4 cursor-pointer"
                 onClick={() => openDetailsModal(service)}
                 onTouchStart={() => handleMobilePress(service)}
                 onTouchEnd={handleMobileRelease}
                 onTouchCancel={handleMobileRelease}
               >
-                {/* Layout horizontal: Info do serviço | Métricas | Status | Ações */}
-                <div className="flex flex-col md:flex-row md:items-center gap-2">
-                  {/* Informações do serviço */}
-                  <div className="flex-1 min-w-0 pr-3">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate mb-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">
                       {service.nome_servico || `Serviço para ${service.clients?.nome}`}
                     </h3>
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
-                      <span className="font-medium">{service.clients?.nome}</span>
-                      <span className="text-gray-400">•</span>
-                      <span className="text-gray-500">{formatDate(service.data_inicio)} - {formatDate(service.data_fim)}</span>
-                      {service.assigned_user_id && usersMap[service.assigned_user_id] && (
-                        <>
-                          <span className="text-gray-400">•</span>
-                          <div className="group relative inline-flex items-center gap-1">
-                            <Avatar
-                              avatarId={usersMap[service.assigned_user_id].avatar_url}
-                              name={usersMap[service.assigned_user_id].full_name}
-                              size="xs"
-                              className="border border-gray-200"
-                            />
-                            <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 whitespace-nowrap">
-                              <div className="bg-gray-900 text-white text-xs rounded py-1 px-2">
-                                Responsável: {usersMap[service.assigned_user_id].full_name}
-                              </div>
-                              <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">{service.clients?.nome}</p>
                   </div>
-                  
-                  {/* Métricas centralizadas - lado a lado no desktop, empilhadas no mobile */}
-                  <div className="flex flex-col md:flex-row items-center justify-center gap-3 px-2 min-w-0 md:min-w-[200px] w-full md:w-auto">
-                    <div className="text-center">
-                      <div className="text-gray-500 font-medium mb-0.5 text-xs">Visitas</div>
-                      <div className="font-semibold text-gray-900 text-sm">{service.total_visitas}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-gray-500 font-medium mb-0.5 text-xs">Total</div>
-                      <div className="font-semibold text-gray-900 text-sm">{maskField('total_valor', formatCurrency(service.total_valor))}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-gray-500 font-medium mb-0.5 text-xs">A Receber</div>
-                      <div className="font-semibold text-primary-600 text-sm">{maskField('total_a_receber', formatCurrency(service.total_a_receber))}</div>
-                    </div>
-                  </div>
-                  
-                  {/* Status e botões de ação - área fixa à direita */}
-                  <div className="flex flex-col md:flex-col items-center space-y-2 md:space-y-2 flex-shrink-0 pl-0 md:pl-4">
-                    <div className="flex flex-col items-center space-y-1">
-                      {getPaymentStatusBadge(service.status_pagamento)}
-                    </div>
-                    
-                    {/* Botões visíveis apenas no desktop - Lado a lado */}
-                    <div className="hidden md:flex flex-row items-center gap-1.5">
-                      {canUpdateService && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openModal(service)
-                          }}
-                          className="inline-flex items-center px-2 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                        >
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                          Editar
-                        </button>
-                      )}
-                      
-                      {service.status_pagamento !== 'pago' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            markServiceAsPaid(service.id)
-                          }}
-                          className="inline-flex items-center px-2 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 transition-colors"
-                        >
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Marcar Pago
-                        </button>
-                      )}
-                    </div>
+                  {getPaymentStatusBadge(service.status_pagamento)}
+                </div>
 
-                    {/* Indicador visual para mobile mostrando que o card é clicável */}
-                    <div className="flex md:hidden items-center justify-center mt-2">
-                      <div className="flex items-center text-xs text-gray-400">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        Toque para ver detalhes • Mantenha pressionado para ações
-                      </div>
+                <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                  <span>{formatDate(service.data_inicio)} - {formatDate(service.data_fim)}</span>
+                  {service.assigned_user_id && usersMap[service.assigned_user_id] && (
+                    <div className="flex items-center gap-1">
+                      <Avatar
+                        avatarId={usersMap[service.assigned_user_id].avatar_url}
+                        name={usersMap[service.assigned_user_id].full_name}
+                        size="xs"
+                        className="border border-gray-200"
+                      />
+                      <span className="truncate max-w-[90px]">{usersMap[service.assigned_user_id].full_name}</span>
                     </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100 text-center">
+                  <div>
+                    <div className="text-[11px] text-gray-500">Visitas</div>
+                    <div className="font-semibold text-gray-900 text-sm">{service.total_visitas}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-gray-500">Total</div>
+                    <div className="font-semibold text-gray-900 text-sm">{maskField('total_valor', formatCurrency(service.total_valor))}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-gray-500">A Receber</div>
+                    <div className="font-semibold text-gray-900 text-sm">{maskField('total_a_receber', formatCurrency(service.total_a_receber))}</div>
                   </div>
                 </div>
+
+                {(canUpdateService || service.status_pagamento !== 'pago') && (
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                    {canUpdateService && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openModal(service)
+                        }}
+                        className="flex-1 inline-flex items-center justify-center px-2 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Editar
+                      </button>
+                    )}
+                    {service.status_pagamento !== 'pago' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          markServiceAsPaid(service.id)
+                        }}
+                        className="flex-1 inline-flex items-center justify-center px-2 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 transition-colors"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Marcar Pago
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-center mt-2 text-[11px] text-gray-400">
+                  Mantenha pressionado para mais ações
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+
+          {/* Desktop - Tabela */}
+          <div className="mt-8 hidden md:block overflow-visible shadow-sm ring-1 ring-black ring-opacity-5 rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <SortableTh label="Serviço" column="nome_servico" sortColumn={sortColumn} sortDirection={sortDirection} onSort={toggleSort} />
+                  <SortableTh label="Período" column="data_inicio" sortColumn={sortColumn} sortDirection={sortDirection} onSort={toggleSort} />
+                  <SortableTh label="Visitas" column="total_visitas" sortColumn={sortColumn} sortDirection={sortDirection} onSort={toggleSort} align="center" />
+                  <SortableTh label="Total" column="total_valor" sortColumn={sortColumn} sortDirection={sortDirection} onSort={toggleSort} align="right" />
+                  <SortableTh label="Status" column="status_pagamento" sortColumn={sortColumn} sortDirection={sortDirection} onSort={toggleSort} />
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {services.map((service) => (
+                  <tr
+                    key={service.id}
+                    onClick={() => openDetailsModal(service)}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <td className="px-4 py-3 max-w-[220px]">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {service.nome_servico || `Serviço para ${service.clients?.nome}`}
+                      </div>
+                      <div className="text-xs text-gray-500 truncate">{service.clients?.nome}</div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+                      {formatDate(service.data_inicio)} - {formatDate(service.data_fim)}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-900">{service.total_visitas}</td>
+                    <td className="px-4 py-3 text-right text-sm text-gray-900">
+                      {maskField('total_valor', formatCurrency(service.total_valor))}
+                    </td>
+                    <td className="px-4 py-3">{getPaymentStatusBadge(service.status_pagamento)}</td>
+                    <td className="px-4 py-3 text-right relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOpenActionsMenuId(prev => (prev === service.id ? null : service.id))
+                        }}
+                        title="Ações"
+                        className="inline-flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+
+                      {openActionsMenuId === service.id && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute right-4 top-full mt-1 z-20 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 py-1 text-left"
+                        >
+                          <button
+                            onClick={() => {
+                              setOpenActionsMenuId(null)
+                              openDetailsModal(service)
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <Eye className="w-4 h-4 text-gray-400" />
+                            Visualizar serviço
+                          </button>
+                          {canUpdateService && (
+                            <button
+                              onClick={() => {
+                                setOpenActionsMenuId(null)
+                                openModal(service)
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <Pencil className="w-4 h-4 text-gray-400" />
+                              Editar
+                            </button>
+                          )}
+                          {service.status_pagamento !== 'pago' && (
+                            <button
+                              onClick={() => {
+                                setOpenActionsMenuId(null)
+                                markServiceAsPaid(service.id)
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <CheckCircle2 className="w-4 h-4 text-gray-400" />
+                              Marcar como pago
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
+
+      <PaginationControls
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={setPage}
+        loading={loading}
+      />
 
       {/* Modal */}
       {showModal && (
@@ -1389,7 +1284,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeModal}></div>
             
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-              <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
+              <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 flex justify-between items-center">
                 <h3 className="text-base leading-6 font-medium text-gray-900">
                   {editingService ? 'Editar Serviço' : 'Novo Serviço'}
                 </h3>
@@ -1520,9 +1415,9 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                     </div>
                   )}
 
-                  <div className="md:col-span-2 bg-primary-50 p-2.5 rounded-lg">
-                    <h5 className="text-xs font-medium text-primary-900 mb-1.5">ℹ️ Informações automáticas</h5>
-                    <ul className="text-xs text-primary-800 space-y-0.5">
+                  <div className="md:col-span-2 bg-gray-50 border border-gray-200 p-2.5 rounded-lg">
+                    <h5 className="text-xs font-medium text-gray-700 mb-1.5">ℹ️ Informações automáticas</h5>
+                    <ul className="text-xs text-gray-600 space-y-0.5">
                       <li>• <strong>Período:</strong> Calculado baseado na primeira e última visita</li>
                       <li>• <strong>Totais:</strong> Calculados baseado nas visitas cadastradas</li>
                     </ul>
@@ -1538,7 +1433,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                         type="button"
                         onClick={addVisit}
                         disabled={!selectedClient}
-                        className="inline-flex items-center px-2.5 py-1.5 shadow-sm text-xs font-medium rounded text-white bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="inline-flex items-center px-2.5 py-1.5 shadow-sm text-xs font-medium rounded text-ink bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -1581,7 +1476,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                           type="button"
                           onClick={handleGenerateMultipleVisits}
                           disabled={!selectedClient || !multiVisitStartDate || !multiVisitEndDate}
-                          className="inline-flex items-center px-2.5 py-1.5 shadow-sm text-xs font-medium rounded text-white bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap transition-colors"
+                          className="inline-flex items-center px-2.5 py-1.5 shadow-sm text-xs font-medium rounded text-ink bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap transition-colors"
                         >
                           Gerar Visitas
                         </button>
@@ -1703,7 +1598,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                 {/* Resumo dos Totais */}
                 {visits.length > 0 && (
                   <div className="border-t pt-3 space-y-3">
-                    <div className="bg-primary-50 rounded-lg p-2.5">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-2.5">
                       <h5 className="text-xs font-medium text-gray-900 mb-2">Resumo do Serviço</h5>
                       <div className="grid grid-cols-3 gap-3 text-xs">
                         <div>
@@ -1716,7 +1611,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                         </div>
                         <div>
                           <span className="text-gray-600">A Receber:</span>
-                          <span className="font-semibold ml-1 text-primary-600">{formatCurrency(totalAReceber)}</span>
+                          <span className="font-semibold ml-1 text-gray-900">{formatCurrency(totalAReceber)}</span>
                         </div>
                       </div>
                     </div>
@@ -1729,9 +1624,9 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                       const valorFinal = totalValor - creditoAUsar
 
                       return !editingService && creditoDisponivel > 0 ? (
-                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-3">
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                           <div className="flex items-start gap-2">
-                            <div className="flex-shrink-0 p-1.5 bg-green-500 rounded-lg">
+                            <div className="flex-shrink-0 p-1.5 bg-green-600 rounded-lg">
                               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
@@ -1753,7 +1648,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                                 </div>
                                 <div className="flex justify-between items-center pt-1 mt-1 border-t-2 border-green-300">
                                   <span className="font-medium text-gray-900">Valor final:</span>
-                                  <span className="text-sm font-bold text-primary-600">{formatCurrency(valorFinal)}</span>
+                                  <span className="text-sm font-bold text-gray-900">{formatCurrency(valorFinal)}</span>
                                 </div>
                               </div>
                               {creditoAUsar > 0 && (
@@ -1781,11 +1676,11 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                   <button
                     type="submit"
                     disabled={editingService ? updating : submitting}
-                    className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-ink rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                   >
                     {(editingService ? updating : submitting) ? (
                       <>
-                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-ink"></div>
                         Salvando...
                       </>
                     ) : (
@@ -1857,7 +1752,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeDetailsModal}></div>
             
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-              <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
+              <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 flex justify-between items-center">
                 <div>
                   <h3 className="text-base leading-6 font-medium text-gray-900">
                     Detalhes do Serviço
@@ -1928,7 +1823,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                 </div>
 
                 {/* Resumo Financeiro */}
-                <div className="bg-primary-50 rounded-lg p-3">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                   <h4 className="text-sm font-medium text-gray-900 mb-3">Resumo Financeiro</h4>
                   <div className={`grid grid-cols-1 ${viewingService.status_pagamento === 'pago_parcialmente' ? 'md:grid-cols-5' : 'md:grid-cols-3'} gap-3`}>
                     <div className="text-center">
@@ -1942,7 +1837,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                       <div className="text-xs text-gray-600">Valor Total</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xl font-bold text-primary-600">{maskField('total_a_receber', formatCurrency(viewingService.total_a_receber))}</div>
+                      <div className="text-xl font-bold text-gray-900">{maskField('total_a_receber', formatCurrency(viewingService.total_a_receber))}</div>
                       <div className="text-xs text-gray-600">Valor a Receber</div>
                     </div>
                     
@@ -1956,7 +1851,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                           <div className="text-xs text-gray-600">Valor Pago</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xl font-bold text-orange-600">
+                          <div className="text-xl font-bold text-gray-900">
                             {maskField('saldo_restante', formatCurrency(viewingService.total_a_receber - (viewingService.valor_pago || 0)))}
                           </div>
                           <div className="text-xs text-gray-600">Saldo Restante</div>
@@ -1972,7 +1867,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                   
                   {loadingDetails ? (
                     <div className="flex justify-center items-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                     </div>
                   ) : viewingVisits.length === 0 ? (
                     <div className="text-center py-8 text-gray-500 text-sm">
@@ -2140,7 +2035,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                           closeDetailsModal()
                           openModal(viewingService)
                         }}
-                        className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors"
+                        className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-ink rounded-md text-sm font-medium transition-colors"
                       >
                         Editar Serviço
                       </button>

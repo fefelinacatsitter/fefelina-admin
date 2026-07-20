@@ -200,6 +200,20 @@ export default function DashboardEnhanced() {
     return revenueHistory
   }
 
+  // Memoizado: só reprocessa o histórico de receita quando ele muda ou quando
+  // o usuário troca o período selecionado, em vez de refiltrar/agrupar a cada
+  // re-render do componente.
+  // IMPORTANTE: precisa ficar antes do "if (loading) return" abaixo — hooks do
+  // React (useMemo, useState, etc.) nunca podem ser chamados condicionalmente,
+  // senão o número de hooks muda entre renders (loading -> não loading) e o
+  // React quebra com o erro #310 ("Rendered more hooks than during the
+  // previous render").
+  const revenueChartData = useMemo(() => getRevenueChartData(), [revenueHistory, revenueRange])
+  const revenueChartTotal = useMemo(
+    () => revenueChartData.reduce((sum, r) => sum + r.receita, 0),
+    [revenueChartData]
+  )
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -210,14 +224,6 @@ export default function DashboardEnhanced() {
 
   const revenueGrowth = getGrowthPercentage(stats.monthlyRevenue, stats.lastMonthRevenue)
   const visitsGrowth = getGrowthPercentage(stats.monthlyVisits, stats.lastMonthVisits)
-  // Memoizado: só reprocessa o histórico de receita quando ele muda ou quando
-  // o usuário troca o período selecionado, em vez de refiltrar/agrupar a cada
-  // re-render do componente.
-  const revenueChartData = useMemo(() => getRevenueChartData(), [revenueHistory, revenueRange])
-  const revenueChartTotal = useMemo(
-    () => revenueChartData.reduce((sum, r) => sum + r.receita, 0),
-    [revenueChartData]
-  )
 
   return (
     <div className="space-y-6">

@@ -2,9 +2,12 @@
 import { supabase, CaixaMovimento } from '../lib/supabase'
 import { fetchAllRows } from '../lib/paginatedFetch'
 import CatLoader from '../components/CatLoader'
+import { useConfirmDialog } from '../components/ConfirmDialog'
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function FinanceiroPage() {
+  const { confirm, ConfirmDialogElement } = useConfirmDialog()
   const [movimentos, setMovimentos] = useState<CaixaMovimento[]>([])
   const [saldoAtual, setSaldoAtual] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -156,13 +159,13 @@ export default function FinanceiroPage() {
     e.preventDefault()
 
     if (!isValidDate(formData.data)) {
-      alert('Por favor, insira uma data válida')
+      toast.error('Por favor, insira uma data válida')
       return
     }
 
     const valor = parseValueFromInput(formData.valor)
     if (isNaN(valor) || valor <= 0) {
-      alert('Por favor, insira um valor válido')
+      toast.error('Por favor, insira um valor válido')
       return
     }
 
@@ -218,7 +221,7 @@ export default function FinanceiroPage() {
       fetchMovimentos(true)
     } catch (error) {
       console.error('Erro ao salvar movimento:', error)
-      alert('Erro ao salvar movimento')
+      toast.error('Erro ao salvar movimento')
     }
   }
 
@@ -237,7 +240,7 @@ export default function FinanceiroPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este movimento?')) return
+    if (!(await confirm('Tem certeza que deseja excluir este movimento?', { danger: true }))) return
 
     try {
       const { error } = await supabase
@@ -249,7 +252,7 @@ export default function FinanceiroPage() {
       fetchMovimentos()
     } catch (error) {
       console.error('Erro ao excluir movimento:', error)
-      alert('Erro ao excluir movimento')
+      toast.error('Erro ao excluir movimento')
     }
   }
 
@@ -648,6 +651,7 @@ export default function FinanceiroPage() {
           </div>
         </div>
       )}
+      {ConfirmDialogElement}
     </div>
   )
 }

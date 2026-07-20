@@ -8,6 +8,7 @@ import PreEncontroAgendaModal from '../components/PreEncontroAgendaModal'
 import PreEncontroDetalhesModal from '../components/PreEncontroDetalhesModal'
 import TaskModal from '../components/TaskModal'
 import ContextMenu from '../components/ContextMenu'
+import { useConfirmDialog } from '../components/ConfirmDialog'
 import { usePermissions } from '../contexts/PermissionsContext'
 import Avatar from '../components/Avatar'
 
@@ -29,6 +30,7 @@ type ViewMode = 'day' | 'week'
 
 export default function AgendaPage() {
   const { isAdmin } = usePermissions()
+  const { confirm, ConfirmDialogElement } = useConfirmDialog()
   
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
@@ -455,7 +457,6 @@ export default function AgendaPage() {
     // Importante: usar changedTouches[0] para pegar a última posição do dedo
     const touch = e.changedTouches[0]
     if (!touch) {
-      console.log('Touch não encontrado')
       setDraggingVisit(null)
       setIsDraggingTouch(false)
       targetElement.style.opacity = '1'
@@ -469,20 +470,16 @@ export default function AgendaPage() {
 
     // Pegar o elemento na posição onde o dedo foi levantado
     const element = document.elementFromPoint(touch.clientX, touch.clientY)
-    console.log('Elemento encontrado:', element)
     
     // Restaurar visibilidade
     targetElement.style.visibility = 'visible'
     
     // Encontrar o elemento drop zone mais próximo
     const dropZone = element?.closest('[data-drop-zone]') as HTMLElement
-    console.log('Drop zone:', dropZone)
     
     if (dropZone) {
       const day = dropZone.getAttribute('data-day')
       const time = dropZone.getAttribute('data-time')
-      
-      console.log('Day:', day, 'Time:', time)
       
       if (day && time) {
         const newDate = day
@@ -490,7 +487,6 @@ export default function AgendaPage() {
 
         // Não fazer nada se soltar no mesmo lugar
         if (draggingVisit.data === newDate && draggingVisit.horario.substring(0, 5) === newTime) {
-          console.log('Mesma posição, não reagendar')
           setDraggingVisit(null)
           setIsDraggingTouch(false)
           targetElement.style.opacity = '1'
@@ -502,8 +498,6 @@ export default function AgendaPage() {
         if (scrollContainer) {
           setScrollPosition(scrollContainer.scrollTop)
         }
-
-        console.log('Reagendando de', draggingVisit.data, draggingVisit.horario, 'para', newDate, newTime)
 
         try {
           const { error } = await supabase
@@ -525,11 +519,7 @@ export default function AgendaPage() {
           console.error('Erro ao reagendar visita:', error)
           toast.error('Erro ao reagendar visita')
         }
-      } else {
-        console.log('Day ou time não encontrados')
       }
-    } else {
-      console.log('Drop zone não encontrado - touch fora da área válida')
     }
     
     setDraggingVisit(null)
@@ -632,8 +622,9 @@ export default function AgendaPage() {
     if (!cardContextMenu) return
 
     const nomeContato = cardContextMenu.visit.leads?.nome || cardContextMenu.visit.clients?.nome || 'esta pessoa'
-    const confirmDelete = window.confirm(
-      `Deseja realmente cancelar o pré-encontro com ${nomeContato}?`
+    const confirmDelete = await confirm(
+      `Deseja realmente cancelar o pré-encontro com ${nomeContato}?`,
+      { danger: true }
     )
 
     if (!confirmDelete) {
@@ -662,8 +653,9 @@ export default function AgendaPage() {
     if (!cardContextMenu) return
 
     const titulo = cardContextMenu.visit.titulo || 'esta task'
-    const confirmDelete = window.confirm(
-      `Deseja realmente excluir a task "${titulo}"?`
+    const confirmDelete = await confirm(
+      `Deseja realmente excluir a task "${titulo}"?`,
+      { danger: true }
     )
 
     if (!confirmDelete) {
@@ -1433,6 +1425,7 @@ export default function AgendaPage() {
           onClose={() => setCardContextMenu(null)}
         />
       )}
+      {ConfirmDialogElement}
     </div>
   )
 }

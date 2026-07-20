@@ -559,7 +559,7 @@ export default function FinancesPage() {
         <div className="mt-4 sm:mt-0 flex space-x-3">
           <button 
             onClick={() => setShowValues(!showValues)}
-            className="btn-secondary"
+            className="btn-fefelina-secondary"
             title={showValues ? 'Ocultar valores' : 'Mostrar valores'}
           >
             {showValues ? (
@@ -574,7 +574,7 @@ export default function FinancesPage() {
               </>
             )}
           </button>
-          <button className="btn-secondary">
+          <button className="btn-fefelina-secondary">
             <Download className="w-4 h-4 mr-2" />
             Exportar
           </button>
@@ -838,7 +838,7 @@ export default function FinancesPage() {
 
       {/* Modal de Detalhes do Serviço */}
       {showServiceModal && selectedService && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Detalhes do Serviço</h3>
@@ -907,7 +907,7 @@ export default function FinancesPage() {
                   setShowServiceModal(false)
                   setSelectedService(null)
                 }}
-                className="btn-secondary"
+                className="btn-fefelina-secondary"
               >
                 Fechar
               </button>

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import { Copy, Eye, Pencil, CheckCircle2, MoreVertical, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
@@ -1133,40 +1133,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                   </div>
                 </div>
 
-                {(canUpdateService || service.status_pagamento !== 'pago') && (
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-                    {canUpdateService && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openModal(service)
-                        }}
-                        className="flex-1 inline-flex items-center justify-center px-2 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                      >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        Editar
-                      </button>
-                    )}
-                    {service.status_pagamento !== 'pago' && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          markServiceAsPaid(service.id)
-                        }}
-                        className="flex-1 inline-flex items-center justify-center px-2 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 transition-colors"
-                      >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Marcar Pago
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-center mt-2 text-[11px] text-gray-400">
+                <div className="flex items-center justify-center mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-400">
                   Mantenha pressionado para mais ações
                 </div>
               </div>
@@ -1281,7 +1248,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
       {showModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto pt-16 md:pt-0">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeModal}></div>
+            <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={closeModal}></div>
             
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 flex justify-between items-center">
@@ -1696,7 +1663,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
 
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center pt-16 md:pt-0">
+        <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center pt-16 md:pt-0">
           <div className="relative mx-auto p-6 border w-full max-w-md shadow-fefelina-hover rounded-2xl bg-white">
             <div className="text-center">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
@@ -1749,7 +1716,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
       {showDetailsModal && viewingService && (
         <div className="fixed inset-0 z-50 overflow-y-auto pt-16 md:pt-0">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeDetailsModal}></div>
+            <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={closeDetailsModal}></div>
             
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 flex justify-between items-center">
@@ -1880,19 +1847,19 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                         <table className="min-w-full divide-y divide-gray-300">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
                                 Data/Horário
                               </th>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
                                 Tipo
                               </th>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
                                 Valor
                               </th>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
                                 Desconto
                               </th>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
                                 Status
                               </th>
                             </tr>
@@ -2050,7 +2017,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
 
       {/* Menu de Contexto Mobile */}
       {showMobileMenu && selectedServiceForMenu && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-end justify-center md:hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-end justify-center md:hidden">
           <div className="relative mx-auto p-6 border w-full max-w-sm shadow-fefelina-hover rounded-t-2xl bg-white">
             <div className="text-center">
               <div className="mb-4">

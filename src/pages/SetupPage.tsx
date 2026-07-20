@@ -1,7 +1,8 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Shield, Settings, Check, X, AlertCircle, UserPlus, Copy, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 import FieldPermissionsSetup from '../components/FieldPermissionsSetup';
 
 interface Profile {
@@ -49,6 +50,7 @@ const RESOURCES = [
 ];
 
 export default function SetupPage() {
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
   const [activeTab, setActiveTab] = useState<Tab>('users');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -192,7 +194,7 @@ export default function SetupPage() {
   };
 
   const sendMagicLink = async (userEmail: string, userName: string) => {
-    if (!confirm(`Enviar link de acesso para ${userEmail}?\n\nO usuário receberá um email com link para fazer login.`)) {
+    if (!(await confirm(`Enviar link de acesso para ${userEmail}?\n\nO usuário receberá um email com link para fazer login.`))) {
       return;
     }
 
@@ -313,9 +315,7 @@ export default function SetupPage() {
       }
 
       // 2. Criar user_profile usando função segura
-      console.log('Criando user_profile para:', authData.user.id);
-      
-      const { data: profileData, error: profileError } = await supabase
+      const { error: profileError } = await supabase
         .rpc('create_user_profile', {
           p_user_id: authData.user.id,
           p_profile_id: newUserForm.profile_id,
@@ -357,8 +357,6 @@ export default function SetupPage() {
         
         throw new Error(`Erro ao criar perfil: ${profileError.message}`);
       }
-
-      console.log('User_profile criado com sucesso:', profileData);
 
       // Sucesso - mostrar credenciais
       setNewUserCredentials({
@@ -520,19 +518,19 @@ export default function SetupPage() {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                             Usuário
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                             Perfil
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                             Status
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                             Cadastro
                           </th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">
                             Ações
                           </th>
                         </tr>
@@ -709,19 +707,19 @@ export default function SetupPage() {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                             Recurso
                           </th>
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500">
                             Visualizar
                           </th>
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500">
                             Criar
                           </th>
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500">
                             Editar
                           </th>
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500">
                             Excluir
                           </th>
                         </tr>
@@ -977,6 +975,7 @@ export default function SetupPage() {
           </div>
         </div>
       )}
+      {ConfirmDialogElement}
     </div>
   );
 }

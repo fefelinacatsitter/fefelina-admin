@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import CatLoader from '../components/CatLoader'
 import { useFieldMask } from '../hooks/useFieldMask'
 import { usePermissions } from '../contexts/PermissionsContext'
+import { useConfirmDialog } from '../components/ConfirmDialog'
 import { Pencil } from 'lucide-react'
 
 // Função para formatar telefone brasileiro
@@ -44,6 +45,7 @@ const formatPhone = (value: string): string => {
 
 export default function ClientsPage() {
   const navigate = useNavigate()
+  const { confirm, ConfirmDialogElement } = useConfirmDialog()
   const { maskField } = useFieldMask('clients')
   const { userProfile, canCreate, canUpdate } = usePermissions()
   const canCreateClient = canCreate('clients')
@@ -382,7 +384,7 @@ export default function ClientsPage() {
   }
 
   const handleDeletePet = async (petId: string) => {
-    if (!confirm('Tem certeza que deseja excluir este pet?')) return
+    if (!(await confirm('Tem certeza que deseja excluir este pet?', { danger: true }))) return
 
     try {
       const { error } = await supabase
@@ -1329,7 +1331,7 @@ export default function ClientsPage() {
       {showViewModal && viewingClient && (
         <div className="fixed inset-0 z-50 overflow-y-auto pt-16 md:pt-0">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeViewModal}></div>
+            <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={closeViewModal}></div>
             
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
               <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
@@ -1479,6 +1481,7 @@ export default function ClientsPage() {
           </div>
         </div>
       )}
+      {ConfirmDialogElement}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useState, useEffect, useMemo } from 'react'
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { useState, useMemo } from 'react'
+import { Menu, X } from 'lucide-react'
 import UserMenu from './UserMenu'
 import { usePermissions } from '../contexts/PermissionsContext'
 
@@ -36,20 +36,6 @@ export default function Layout({ children }: LayoutProps) {
     })
   }, [canRead, isAdmin])
 
-  // Detectar iPad e tablets (até 1280px para incluir iPad landscape)
-  useEffect(() => {
-    const checkIsTablet = () => {
-      const width = window.innerWidth
-      const isTablet = width < 1280
-      // Útil para ajustes específicos de tablet/iPad no futuro
-      console.log('Tablet/iPad mode:', isTablet, 'Width:', width)
-    }
-
-    checkIsTablet()
-    window.addEventListener('resize', checkIsTablet)
-    return () => window.removeEventListener('resize', checkIsTablet)
-  }, [])
-
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">
       {/* Mobile & iPad sidebar overlay */}
@@ -67,7 +53,7 @@ export default function Layout({ children }: LayoutProps) {
                 className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white bg-white bg-opacity-20 hover:bg-opacity-30 transition-all"
                 onClick={() => setSidebarOpen(false)}
               >
-                <XMarkIcon className="h-6 w-6 text-white" />
+                <X className="h-6 w-6 text-white" />
               </button>
             </div>
             <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
@@ -153,7 +139,7 @@ export default function Layout({ children }: LayoutProps) {
               className="px-4 border-r border-gray-200 text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 xl:hidden"
               onClick={() => setSidebarOpen(true)}
             >
-              <Bars3Icon className="h-6 w-6" />
+              <Menu className="h-6 w-6" />
             </button>
             <div className="flex-1 px-4 flex justify-between items-center">
               <div className="flex items-center">

@@ -6,6 +6,7 @@ import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import HomeRedirect from './components/HomeRedirect'
 import CatLoader from './components/CatLoader'
+import ErrorBoundary from './components/ErrorBoundary'
 
 // Rotas carregadas sob demanda (code-splitting) para reduzir o bundle inicial
 const LoginPage = lazy(() => import('./pages/LoginPage'))
@@ -32,8 +33,20 @@ function RouteFallback() {
   )
 }
 
+function NotFoundPage() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full py-24 text-center">
+      <h1 className="text-3xl font-semibold text-gray-900">Página não encontrada</h1>
+      <p className="mt-2 text-sm text-gray-600">
+        A página que você tentou acessar não existe ou foi movida.
+      </p>
+    </div>
+  )
+}
+
 function App() {
   return (
+    <ErrorBoundary>
     <Router basename="/fefelina-admin">
       <PermissionsProvider>
       <Suspense fallback={<RouteFallback />}>
@@ -161,6 +174,9 @@ function App() {
                   />
                   
                   <Route path="/profile" element={<MyProfilePage />} />
+
+                  {/* Rota curinga: qualquer URL autenticada desconhecida */}
+                  <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>
@@ -206,6 +222,7 @@ function App() {
       />
       </PermissionsProvider>
     </Router>
+    </ErrorBoundary>
   )
 }
 

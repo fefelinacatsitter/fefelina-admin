@@ -7,6 +7,7 @@ import PreEncontroModal from '../components/PreEncontroModal'
 import ConvertLeadModal from '../components/ConvertLeadModal'
 import CatLoader from '../components/CatLoader'
 import Avatar from '../components/Avatar'
+import { useConfirmDialog } from '../components/ConfirmDialog'
 import {
   DndContext,
   DragEndEvent,
@@ -189,6 +190,7 @@ function DroppableColumn({ status, children, isActive }: DroppableColumnProps) {
 }
 
 export default function LeadsPage() {
+  const { confirm, ConfirmDialogElement } = useConfirmDialog()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -350,7 +352,7 @@ export default function LeadsPage() {
   }
 
   const handleDeletePreEncontro = async (visitId: string) => {
-    if (!confirm('Deseja realmente cancelar este pré-encontro?')) return
+    if (!(await confirm('Deseja realmente cancelar este pré-encontro?', { danger: true }))) return
 
     try {
       const { error } = await supabase
@@ -679,7 +681,7 @@ export default function LeadsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este lead?')) return
+    if (!(await confirm('Tem certeza que deseja excluir este lead?', { danger: true }))) return
 
     try {
       const { error } = await supabase
@@ -1647,6 +1649,7 @@ export default function LeadsPage() {
           </div>
         </div>
       )}
+      {ConfirmDialogElement}
     </div>
   )
 }

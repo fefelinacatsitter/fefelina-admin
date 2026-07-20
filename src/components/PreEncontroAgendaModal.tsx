@@ -111,9 +111,6 @@ export default function PreEncontroAgendaModal({
       if (clientsResult.error) throw clientsResult.error
       if (usersResult.error) throw usersResult.error
       
-      console.log('Leads com status pre_encontro:', leadsResult.data)
-      console.log('Total de leads encontradas:', leadsResult.data?.length || 0)
-      
       setLeads(leadsResult.data || [])
       setClients(clientsResult.data || [])
       setUsers((usersResult.data || []).map(u => ({

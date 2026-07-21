@@ -125,6 +125,7 @@ export default function ClientProfilePage() {
   
   // Estados para modal de Pet
   const [showPetModal, setShowPetModal] = useState(false)
+  const [editingPet, setEditingPet] = useState<Pet | null>(null)
   const [petFormData, setPetFormData] = useState({
     nome: '',
     caracteristica: '',
@@ -632,7 +633,7 @@ export default function ClientProfilePage() {
 
   const getRelationshipLevel = (score: number) => {
     if (score >= 80) return { label: 'Excelente', color: 'text-green-600', bg: 'bg-green-100', icon: '🌟' }
-    if (score >= 60) return { label: 'Ótimo', color: 'text-blue-600', bg: 'bg-blue-100', icon: '😊' }
+    if (score >= 60) return { label: 'Ótimo', color: 'text-lilac-600', bg: 'bg-lilac-100', icon: '😊' }
     if (score >= 40) return { label: 'Bom', color: 'text-yellow-600', bg: 'bg-yellow-100', icon: '👍' }
     if (score >= 20) return { label: 'Regular', color: 'text-primary-600', bg: 'bg-primary-100', icon: '🤔' }
     return { label: 'Novo', color: 'text-gray-600', bg: 'bg-gray-100', icon: '🌱' }
@@ -681,18 +682,30 @@ export default function ClientProfilePage() {
   }
 
   // Funções para modal de Pet
-  const openPetModal = () => {
-    setPetFormData({
-      nome: '',
-      caracteristica: '',
-      observacoes: '',
-      client_id: id || ''
-    })
+  const openPetModal = (pet?: Pet) => {
+    if (pet) {
+      setEditingPet(pet)
+      setPetFormData({
+        nome: pet.nome,
+        caracteristica: pet.caracteristica || '',
+        observacoes: pet.observacoes || '',
+        client_id: pet.client_id
+      })
+    } else {
+      setEditingPet(null)
+      setPetFormData({
+        nome: '',
+        caracteristica: '',
+        observacoes: '',
+        client_id: id || ''
+      })
+    }
     setShowPetModal(true)
   }
 
   const closePetModal = () => {
     setShowPetModal(false)
+    setEditingPet(null)
     setPetFormData({
       nome: '',
       caracteristica: '',
@@ -712,13 +725,29 @@ export default function ClientProfilePage() {
     setSubmittingPet(true)
 
     try {
-      const { error } = await supabase
-        .from('pets')
-        .insert([petFormData])
-      
-      if (error) throw error
-      
-      toast.success(`Pet "${petFormData.nome}" adicionado com sucesso!`)
+      if (editingPet) {
+        const { error } = await supabase
+          .from('pets')
+          .update({
+            nome: petFormData.nome,
+            caracteristica: petFormData.caracteristica,
+            observacoes: petFormData.observacoes
+          })
+          .eq('id', editingPet.id)
+
+        if (error) throw error
+
+        toast.success(`Pet "${petFormData.nome}" atualizado com sucesso!`)
+      } else {
+        const { error } = await supabase
+          .from('pets')
+          .insert([petFormData])
+
+        if (error) throw error
+
+        toast.success(`Pet "${petFormData.nome}" adicionado com sucesso!`)
+      }
+
       await fetchClientData() // Recarregar dados
       closePetModal()
     } catch (error: any) {
@@ -995,7 +1024,7 @@ export default function ClientProfilePage() {
             
             <button
               onClick={sendEmail}
-              className="inline-flex items-center px-2 py-1.5 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50 transition-colors"
+              className="inline-flex items-center px-2 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
             >
               <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1028,7 +1057,7 @@ export default function ClientProfilePage() {
               <>
                 <button
                   onClick={() => setShowShareModal(true)}
-                  className="inline-flex items-center px-2 py-1.5 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50 transition-colors"
+                  className="inline-flex items-center px-2 py-1.5 border border-primary-300 rounded-md text-xs font-medium text-primary-700 bg-white hover:bg-primary-50 transition-colors"
                 >
                   <Share2 className="w-3.5 h-3.5 mr-1.5" />
                   Compartilhar
@@ -1036,7 +1065,7 @@ export default function ClientProfilePage() {
                 
                 <button
                   onClick={() => setShowSharedWithModal(true)}
-                  className="inline-flex items-center px-2 py-1.5 border border-purple-300 rounded-md text-xs font-medium text-purple-700 bg-white hover:bg-purple-50 transition-colors"
+                  className="inline-flex items-center px-2 py-1.5 border border-lilac-300 rounded-md text-xs font-medium text-lilac-700 bg-white hover:bg-lilac-50 transition-colors"
                 >
                   <Users className="w-3.5 h-3.5 mr-1.5" />
                   Compartilhados
@@ -1136,7 +1165,7 @@ export default function ClientProfilePage() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Pets ({pets.length})</h3>
             <button
-              onClick={openPetModal}
+              onClick={() => openPetModal()}
               className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-full p-1.5 transition-colors"
               title="Adicionar Pet"
             >
@@ -1177,6 +1206,15 @@ export default function ClientProfilePage() {
                         <p className="text-xs text-gray-500 mt-1 italic">{pet.observacoes}</p>
                       )}
                     </div>
+                    <button
+                      onClick={() => openPetModal(pet)}
+                      className="text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-md p-1 transition-colors flex-shrink-0"
+                      title="Editar pet"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1253,8 +1291,8 @@ export default function ClientProfilePage() {
         {/* Total de Serviços */}
         <div className="card-fefelina p-5">
           <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 bg-purple-100 rounded-lg">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex-shrink-0 p-3 bg-lilac-100 rounded-lg">
+              <svg className="w-6 h-6 text-lilac-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
             </div>
@@ -1268,8 +1306,8 @@ export default function ClientProfilePage() {
         {/* Total de Visitas */}
         <div className="card-fefelina p-5">
           <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 bg-blue-100 rounded-lg">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex-shrink-0 p-3 bg-primary-100 rounded-lg">
+              <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
@@ -1439,14 +1477,14 @@ export default function ClientProfilePage() {
 
             {/* Alertas sobre pets */}
             {pets.length === 0 && (
-              <div className="p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+              <div className="p-3 bg-gray-50 border-l-4 border-gray-400 rounded">
                 <div className="flex items-start">
-                  <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-blue-800">Nenhum pet cadastrado</p>
-                    <p className="text-xs text-blue-700 mt-1">Solicite o cadastro para melhor atendimento</p>
+                    <p className="text-sm font-medium text-gray-800">Nenhum pet cadastrado</p>
+                    <p className="text-xs text-gray-600 mt-1">Solicite o cadastro para melhor atendimento</p>
                   </div>
                 </div>
               </div>
@@ -1454,28 +1492,28 @@ export default function ClientProfilePage() {
 
             {/* Alertas sobre dados de contato */}
             {!client.telefone && (
-              <div className="p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+              <div className="p-3 bg-gray-50 border-l-4 border-gray-400 rounded">
                 <div className="flex items-start">
-                  <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-blue-800">Telefone não cadastrado</p>
-                    <p className="text-xs text-blue-700 mt-1">Adicione para contato via WhatsApp</p>
+                    <p className="text-sm font-medium text-gray-800">Telefone não cadastrado</p>
+                    <p className="text-xs text-gray-600 mt-1">Adicione para contato via WhatsApp</p>
                   </div>
                 </div>
               </div>
             )}
 
             {!client.email && (
-              <div className="p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+              <div className="p-3 bg-gray-50 border-l-4 border-gray-400 rounded">
                 <div className="flex items-start">
-                  <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-blue-800">Email não cadastrado</p>
-                    <p className="text-xs text-blue-700 mt-1">Adicione para envio de propostas</p>
+                    <p className="text-sm font-medium text-gray-800">Email não cadastrado</p>
+                    <p className="text-xs text-gray-600 mt-1">Adicione para envio de propostas</p>
                   </div>
                 </div>
               </div>
@@ -1483,14 +1521,14 @@ export default function ClientProfilePage() {
 
             {/* Ações sugeridas baseadas no score */}
             {relationshipScore >= 80 && (
-              <div className="p-3 bg-purple-50 border-l-4 border-purple-500 rounded">
+              <div className="p-3 bg-lilac-50 border-l-4 border-lilac-500 rounded">
                 <div className="flex items-start">
-                  <svg className="w-5 h-5 text-purple-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-5 h-5 text-lilac-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-purple-800">Cliente VIP</p>
-                    <p className="text-xs text-purple-700 mt-1">Ofereça benefícios exclusivos e prioridade</p>
+                    <p className="text-sm font-medium text-lilac-800">Cliente VIP</p>
+                    <p className="text-xs text-lilac-700 mt-1">Ofereça benefícios exclusivos e prioridade</p>
                   </div>
                 </div>
               </div>
@@ -1522,9 +1560,9 @@ export default function ClientProfilePage() {
                   r="56"
                   stroke={
                     relationshipScore >= 80 ? '#10b981' :
-                    relationshipScore >= 60 ? '#3b82f6' :
+                    relationshipScore >= 60 ? '#a876e3' :
                     relationshipScore >= 40 ? '#eab308' :
-                    relationshipScore >= 20 ? '#f97316' : '#6b7280'
+                    relationshipScore >= 20 ? '#e8814a' : '#6b7280'
                   }
                   strokeWidth="8"
                   fill="none"
@@ -1558,7 +1596,7 @@ export default function ClientProfilePage() {
           
           <div className="space-y-4">
             {/* Padrão de Contratação */}
-            <div className="border-l-4 border-blue-500 pl-4">
+            <div className="border-l-4 border-primary-500 pl-4">
               <h4 className="font-semibold text-gray-900 mb-2">📊 Padrão de Contratação</h4>
               {peakMonth ? (
                 <p className="text-sm text-gray-600">
@@ -1588,7 +1626,7 @@ export default function ClientProfilePage() {
             </div>
 
             {/* Frequência */}
-            <div className="border-l-4 border-purple-500 pl-4">
+            <div className="border-l-4 border-lilac-500 pl-4">
               <h4 className="font-semibold text-gray-900 mb-2">📅 Frequência</h4>
               {services.length > 1 ? (
                 <p className="text-sm text-gray-600">
@@ -1731,9 +1769,9 @@ export default function ClientProfilePage() {
                       )}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {format(parseISO(service.data_inicio), 'dd \d\e MMM', { locale: ptBR })}
+                      {format(parseISO(service.data_inicio), "dd 'de' MMM", { locale: ptBR })}
                       {' - '}
-                      {format(parseISO(service.data_fim), 'dd \d\e MMM \d\e yyyy', { locale: ptBR })}
+                      {format(parseISO(service.data_fim), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {service.total_visitas}
@@ -2052,7 +2090,7 @@ export default function ClientProfilePage() {
                       value={formData.nome}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
 
@@ -2065,7 +2103,7 @@ export default function ClientProfilePage() {
                         value={formData.telefone}
                         onChange={handleInputChange}
                         placeholder="+55(47)99999-9999"
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
                   )}
@@ -2080,7 +2118,7 @@ export default function ClientProfilePage() {
                         value={formData.valor_diaria}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
                   )}
@@ -2095,7 +2133,7 @@ export default function ClientProfilePage() {
                         value={formData.valor_duas_visitas}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
                   )}
@@ -2108,7 +2146,7 @@ export default function ClientProfilePage() {
                       value={formData.veterinario_confianca}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
 
@@ -2120,7 +2158,7 @@ export default function ClientProfilePage() {
                       onChange={handleInputChange}
                       required
                       rows={2}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -2159,7 +2197,7 @@ export default function ClientProfilePage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="modal-fefelina max-w-md w-full">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="section-title-fefelina">Novo Pet</h2>
+              <h2 className="section-title-fefelina">{editingPet ? 'Editar Pet' : 'Novo Pet'}</h2>
               <button
                 onClick={closePetModal}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -2230,7 +2268,7 @@ export default function ClientProfilePage() {
                       Salvando...
                     </>
                   ) : (
-                    'Adicionar Pet'
+                    editingPet ? 'Salvar Alterações' : 'Adicionar Pet'
                   )}
                 </button>
               </div>

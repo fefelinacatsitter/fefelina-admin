@@ -108,14 +108,18 @@ export default function RelatoriosPage() {
         inicioMes = dataInicio
         finalMes = dataFim
       } else if (selectedPeriod === 'ano') {
+        // "Este Ano" deve cobrir o ano inteiro (inclusive meses futuros com
+        // visitas já agendadas), não parar na data de hoje
         dataInicio = `${anoAtual}-01-01`
-        dataFim = hoje.toISOString().split('T')[0]
+        dataFim = `${anoAtual}-12-31`
         inicioMes = dataInicio
         finalMes = dataFim
       } else {
         // selectedPeriod === 'tudo'
+        // "Todo Período" deve incluir também visitas/serviços futuros já
+        // agendados - não limitar a data final em "hoje"
         dataInicio = '2000-01-01'
-        dataFim = hoje.toISOString().split('T')[0]
+        dataFim = '2100-12-31'
         inicioMes = dataInicio
         finalMes = dataFim
       }
@@ -336,24 +340,28 @@ export default function RelatoriosPage() {
         .map(([horario, quantidade]) => ({ horario, quantidade }))
         .sort((a, b) => b.quantidade - a.quantidade)
 
-      // Calcular estatísticas do período selecionado - somar TODAS as visitas dos serviços que começaram no período
+      // Calcular estatísticas do período selecionado:
+      // total de visitas = agendadas + realizadas (canceladas não entram no total)
       const visitasDoPeriodo = visitasPeriodoData || []
+      const visitasAtivasPeriodo = visitasDoPeriodo.filter(
+        (v: any) => v.status === 'agendada' || v.status === 'realizada'
+      )
       const visitasRealizadasPeriodo = visitasDoPeriodo.filter((v: any) => v.status === 'realizada')
       
       const receitaPeriodo = visitasRealizadasPeriodo
         .reduce((acc: number, v: any) => acc + v.valor * (1 - (v.desconto_plataforma || 0) / 100), 0)
       
       const visitasRealizadas = visitasRealizadasPeriodo.length
-      const visitasAgendadas = visitasDoPeriodo.filter((v: any) => v.status === 'agendada').length
+      const visitasAgendadas = visitasAtivasPeriodo.filter((v: any) => v.status === 'agendada').length
       const ticketMedio = visitasRealizadas > 0 ? receitaPeriodo / visitasRealizadas : 0
 
       // Tipos de visita
-      const visitasInteiras = visitasDoPeriodo.filter((v: any) => v.tipo_visita === 'inteira').length
-      const visitasMeias = visitasDoPeriodo.filter((v: any) => v.tipo_visita === 'meia').length
+      const visitasInteiras = visitasAtivasPeriodo.filter((v: any) => v.tipo_visita === 'inteira').length
+      const visitasMeias = visitasAtivasPeriodo.filter((v: any) => v.tipo_visita === 'meia').length
 
       setStats({
         totalClientesAtivos: clientesResult.count || 0,
-        totalVisitasMes: visitasDoPeriodo.length,
+        totalVisitasMes: visitasAtivasPeriodo.length,
         receitaMes: receitaPeriodo,
         visitasRealizadas,
         visitasAgendadas,
@@ -440,33 +448,33 @@ export default function RelatoriosPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <div className="stats-card-fefelina">
           <div className="text-center">
-            <div className="icon-fefelina bg-blue-500 mx-auto mb-2">
+            <div className="icon-fefelina bg-primary-500 mx-auto mb-2">
               <span>📅</span>
             </div>
             <dt className="text-sm font-medium text-gray-500">Visitas {getPeriodLabel()}</dt>
             <dd className="text-2xl font-bold text-gray-900">{stats.totalVisitasMes}</dd>
-            <p className="text-xs text-emerald-600 mt-1">{stats.visitasRealizadas} realizadas</p>
+            <p className="text-xs text-primary-700 mt-1">{stats.visitasRealizadas} realizadas</p>
           </div>
         </div>
 
         <div className="stats-card-fefelina">
           <div className="text-center">
-            <div className="icon-fefelina bg-green-500 mx-auto mb-2">
+            <div className="icon-fefelina bg-primary-700 mx-auto mb-2">
               <span>💰</span>
             </div>
             <dt className="text-sm font-medium text-gray-500">Receita {getPeriodLabel()}</dt>
-            <dd className="text-xl font-bold text-green-600">{formatCurrency(stats.receitaMes)}</dd>
+            <dd className="text-xl font-bold text-primary-700">{formatCurrency(stats.receitaMes)}</dd>
             <p className="text-xs text-gray-400 mt-1">Ticket: {formatCurrency(stats.ticketMedio)}</p>
           </div>
         </div>
 
         <div className="stats-card-fefelina">
           <div className="text-center">
-            <div className="icon-fefelina bg-purple-500 mx-auto mb-2">
+            <div className="icon-fefelina bg-lilac-500 mx-auto mb-2">
               <span>✨</span>
             </div>
             <dt className="text-sm font-medium text-gray-500">Clientes Novos</dt>
-            <dd className="text-2xl font-bold text-purple-600">{stats.clientesNovos}</dd>
+            <dd className="text-2xl font-bold text-lilac-700">{stats.clientesNovos}</dd>
             <p className="text-xs text-gray-400 mt-1">{getPeriodLabel().replace('d', 'n').replace('D', 'N')}</p>
           </div>
         </div>
@@ -476,13 +484,13 @@ export default function RelatoriosPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         
         {/* Ranking de Clientes por Valor */}
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="card-fefelina">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium text-gray-900">Top Clientes por Valor</h3>
             <select
               value={showTopClients}
               onChange={(e) => setShowTopClients(Number(e.target.value))}
-              className="text-sm border-gray-300 rounded-md px-2 py-1"
+              className="input-fefelina max-w-24 py-1 text-sm"
             >
               <option value={5}>Top 5</option>
               <option value={10}>Top 10</option>
@@ -505,7 +513,7 @@ export default function RelatoriosPage() {
                   </div>
                 </div>
                 <div className="text-right ml-2 flex-shrink-0">
-                  <p className="font-semibold text-green-600 text-sm">{formatCurrency(cliente.valorTotal)}</p>
+                  <p className="font-semibold text-primary-700 text-sm">{formatCurrency(cliente.valorTotal)}</p>
                   <p className="text-xs text-gray-500">{formatCurrency(cliente.valorTotal / cliente.totalVisitas)}/visita</p>
                 </div>
               </div>
@@ -517,7 +525,7 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Tipos de Visita */}
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="card-fefelina">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Tipos de Visita {getPeriodLabel()}</h3>
           <div className="space-y-4 mb-6">
             <div className="flex items-center justify-between">
@@ -541,7 +549,7 @@ export default function RelatoriosPage() {
               <div className="flex items-center">
                 <div className="w-32 bg-gray-200 rounded-full h-3 mr-3">
                   <div 
-                    className="bg-purple-500 h-3 rounded-full transition-all" 
+                    className="bg-lilac-500 h-3 rounded-full transition-all" 
                     style={{ 
                       width: `${tiposVisita.inteira + tiposVisita.meia > 0 
                         ? (tiposVisita.meia / (tiposVisita.inteira + tiposVisita.meia)) * 100 
@@ -560,7 +568,7 @@ export default function RelatoriosPage() {
                 <p className="text-xs text-gray-500 mt-1">Total de Visitas</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.receitaMes)}</p>
+                <p className="text-2xl font-bold text-primary-700">{formatCurrency(stats.receitaMes)}</p>
                 <p className="text-xs text-gray-500 mt-1">Receita Total</p>
               </div>
             </div>
@@ -571,7 +579,7 @@ export default function RelatoriosPage() {
       {/* Nova Seção: Dias da Semana e Horários de Pico */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Dias da Semana Mais Movimentados */}
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="card-fefelina">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Dias Mais Movimentados {getPeriodLabel()}</h3>
           <div className="space-y-3">
             {diasSemana.map((dia) => {
@@ -583,7 +591,7 @@ export default function RelatoriosPage() {
                   <div className="flex-1 mx-3">
                     <div className="w-full bg-gray-200 rounded-full h-6">
                       <div 
-                        className="bg-blue-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
+                        className="bg-primary-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
                         style={{ width: `${percentage}%` }}
                       >
                         <span className="text-white text-xs font-semibold">
@@ -605,13 +613,13 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Horários de Pico */}
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="card-fefelina">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Horários de Pico {getPeriodLabel()}</h3>
           <div className="space-y-3">
             {horariosPico.map((horario, index) => {
               const maxVisitas = Math.max(...horariosPico.map(h => h.quantidade))
               const percentage = maxVisitas > 0 ? (horario.quantidade / maxVisitas) * 100 : 0
-              const colors = ['bg-primary-500', 'bg-yellow-500', 'bg-green-500', 'bg-blue-500']
+              const colors = ['bg-primary-500', 'bg-lilac-500', 'bg-primary-700', 'bg-lilac-700']
               return (
                 <div key={horario.horario} className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-32">{horario.horario}</span>
@@ -641,7 +649,7 @@ export default function RelatoriosPage() {
       </div>
 
       {/* Evolução Mensal */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="card-fefelina">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Evolução dos Últimos 12 Meses</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full">
@@ -657,7 +665,7 @@ export default function RelatoriosPage() {
                 <tr key={mes.mes} className="hover:bg-gray-50">
                   <td className="py-3 text-sm text-gray-900 font-medium">{formatMonth(mes.mes)}</td>
                   <td className="py-3 text-sm text-right text-gray-900">{mes.quantidade}</td>
-                  <td className="py-3 text-sm text-right text-green-600 font-semibold">{formatCurrency(mes.receita)}</td>
+                  <td className="py-3 text-sm text-right text-primary-700 font-semibold">{formatCurrency(mes.receita)}</td>
                 </tr>
               ))}
               {visitasPorMes.length === 0 && (
@@ -675,7 +683,7 @@ export default function RelatoriosPage() {
                   <td className="py-3 text-sm text-right font-bold text-gray-900">
                     {visitasPorMes.reduce((acc, m) => acc + m.quantidade, 0)}
                   </td>
-                  <td className="py-3 text-sm text-right font-bold text-green-600">
+                  <td className="py-3 text-sm text-right font-bold text-primary-700">
                     {formatCurrency(visitasPorMes.reduce((acc, m) => acc + m.receita, 0))}
                   </td>
                 </tr>

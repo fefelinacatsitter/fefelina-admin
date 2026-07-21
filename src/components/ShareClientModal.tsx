@@ -116,7 +116,7 @@ export default function ShareClientModal({
               <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
                 <div className="flex items-center justify-between mb-4">
                   <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 flex items-center">
-                    <Share2 className="h-5 w-5 mr-2 text-purple-600" />
+                    <Share2 className="h-5 w-5 mr-2 text-primary-600" />
                     Compartilhar Cliente
                   </Dialog.Title>
                   <button
@@ -142,7 +142,7 @@ export default function ShareClientModal({
                         id="user"
                         value={selectedUserId}
                         onChange={(e) => setSelectedUserId(e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                         disabled={loading}
                       >
                         <option value="">Escolha um usuário...</option>
@@ -186,7 +186,7 @@ export default function ShareClientModal({
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                    className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                     disabled={loading}
                   >
                     Cancelar
@@ -195,7 +195,7 @@ export default function ShareClientModal({
                     type="button"
                     onClick={handleShare}
                     disabled={loading || !selectedUserId || success}
-                    className="inline-flex justify-center rounded-md border border-transparent bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Compartilhando...' : 'Compartilhar'}
                   </button>

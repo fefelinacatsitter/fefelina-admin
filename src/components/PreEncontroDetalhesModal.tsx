@@ -194,8 +194,8 @@ export default function PreEncontroDetalhesModal({ visit, onClose }: PreEncontro
           )}
 
           {/* Info sobre pré-encontro */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-xs text-blue-800">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <p className="text-xs text-gray-700">
               <span className="font-semibold">💡 Dica:</span> {isClient 
                 ? 'Este é um pré-encontro com um cliente que já fechou serviço. Use este tempo para conhecer o cliente e os gatinhos dele pessoalmente.'
                 : 'Este é um pré-encontro com um lead. Use este tempo para conhecer o cliente em potencial e apresentar seus serviços.'}

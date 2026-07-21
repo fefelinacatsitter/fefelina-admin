@@ -819,19 +819,19 @@ export default function SetupPage() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 rounded-t-lg flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900 flex items-center">
+                <UserPlus className="w-5 h-5 mr-2 text-primary-600" />
+                Cadastrar Novo Usuário
+              </h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <UserPlus className="w-6 h-6 mr-2 text-primary-500" />
-                  Cadastrar Novo Usuário
-                </h3>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
 
               <form onSubmit={handleCreateUser} className="space-y-4">
                 <div>
@@ -937,6 +937,9 @@ export default function SetupPage() {
       {showSuccessModal && newUserCredentials && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="bg-gradient-to-r from-green-50 to-green-100 border-b border-green-200 px-6 py-3 rounded-t-lg">
+              <h3 className="text-base font-semibold text-gray-900">Conta criada com sucesso!</h3>
+            </div>
             <div className="p-6">
               <div className="flex items-center justify-center mb-4">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
@@ -944,10 +947,6 @@ export default function SetupPage() {
                 </div>
               </div>
 
-              <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
-                Conta criada com sucesso!
-              </h3>
-              
               <p className="text-sm text-gray-600 text-center mb-6">
                 Anote as credenciais abaixo e repasse para o usuário:
               </p>

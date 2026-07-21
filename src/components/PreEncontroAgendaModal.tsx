@@ -401,7 +401,7 @@ export default function PreEncontroAgendaModal({
               type="date"
               value={formData.data}
               onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               required
             />
           </div>
@@ -416,7 +416,7 @@ export default function PreEncontroAgendaModal({
               type="time"
               value={formData.horario}
               onChange={(e) => setFormData({ ...formData, horario: e.target.value })}
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               required
             />
             <p className="text-xs text-gray-500 mt-1.5">
@@ -433,7 +433,7 @@ export default function PreEncontroAgendaModal({
             <select
               value={formData.assigned_user_id}
               onChange={(e) => setFormData({ ...formData, assigned_user_id: e.target.value })}
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               required
             >
               <option value="">Selecione um responsável</option>
@@ -465,7 +465,7 @@ export default function PreEncontroAgendaModal({
             <textarea
               value={formData.observacoes}
               onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
               rows={3}
               placeholder="Ex: Primeiro contato, conhecer os gatinhos, ver a casa..."
             />

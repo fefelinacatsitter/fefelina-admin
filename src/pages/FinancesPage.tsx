@@ -840,8 +840,8 @@ export default function FinancesPage() {
       {showServiceModal && selectedService && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Detalhes do Serviço</h3>
+            <div className="px-6 py-3 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900">Detalhes do Serviço</h3>
               <button
                 onClick={() => {
                   setShowServiceModal(false)

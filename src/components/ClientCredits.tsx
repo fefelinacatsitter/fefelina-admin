@@ -179,11 +179,28 @@ export default function ClientCredits({ clientId, clientName, currentCredit, onU
       {/* Modal de Adicionar/Remover Crédito */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold mb-4">
-              {tipo === 'adicao' ? '💰 Adicionar Crédito' : '↩️ Remover Crédito'}
-            </h3>
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className={`px-6 py-3 border-b flex justify-between items-center rounded-t-lg bg-gradient-to-r ${
+              tipo === 'adicao' ? 'from-green-50 to-green-100 border-green-200' : 'from-red-50 to-red-100 border-red-200'
+            }`}>
+              <h3 className="text-base font-semibold text-gray-900">
+                {tipo === 'adicao' ? '💰 Adicionar Crédito' : '↩️ Remover Crédito'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowModal(false)
+                  setValor('')
+                  setDescricao('')
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
+            <div className="p-6">
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -258,11 +275,12 @@ export default function ClientCredits({ clientId, clientName, currentCredit, onU
               </button>
               <button
                 onClick={handleAddCredit}
-                className="btn-fefelina-primary flex-1"
+                className="btn-fefelina flex-1"
                 disabled={loading || !valor || parseFloat(valor) <= 0}
               >
                 {loading ? 'Processando...' : 'Confirmar'}
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -272,9 +290,19 @@ export default function ClientCredits({ clientId, clientName, currentCredit, onU
       {showHistory && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
-            <div className="p-6 border-b">
-              <h3 className="text-lg font-semibold">📜 Histórico de Créditos</h3>
-              <p className="text-sm text-gray-600 mt-1">{clientName}</p>
+            <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 rounded-t-lg flex justify-between items-center">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">📜 Histórico de Créditos</h3>
+                <p className="text-sm text-gray-600 mt-0.5">{clientName}</p>
+              </div>
+              <button
+                onClick={() => setShowHistory(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">

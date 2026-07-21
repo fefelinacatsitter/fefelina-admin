@@ -1251,7 +1251,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
             <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={closeModal}></div>
             
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 flex justify-between items-center">
+              <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
                 <h3 className="text-base leading-6 font-medium text-gray-900">
                   {editingService ? 'Editar Serviço' : 'Novo Serviço'}
                 </h3>
@@ -1719,7 +1719,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
             <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={closeDetailsModal}></div>
             
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 flex justify-between items-center">
+              <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
                 <div>
                   <h3 className="text-base leading-6 font-medium text-gray-900">
                     Detalhes do Serviço

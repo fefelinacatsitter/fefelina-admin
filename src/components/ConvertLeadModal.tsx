@@ -91,7 +91,7 @@ export default function ConvertLeadModal({ lead, onClose, onConvert }: ConvertLe
                   min="0"
                   value={valorDiaria}
                   onChange={(e) => setValorDiaria(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Ex: 100.00"
                   required
                   disabled={loading}
@@ -108,7 +108,7 @@ export default function ConvertLeadModal({ lead, onClose, onConvert }: ConvertLe
                   min="0"
                   value={valorDuasVisitas}
                   onChange={(e) => setValorDuasVisitas(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Ex: 180.00"
                   required
                   disabled={loading}

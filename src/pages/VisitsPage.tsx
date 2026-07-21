@@ -1075,8 +1075,8 @@ export default function VisitsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end md:hidden">
           <div className="bg-white w-full rounded-t-2xl shadow-xl max-h-[80vh] overflow-y-auto">
             {/* Header do Modal */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Informações do Cliente</h3>
+            <div className="sticky top-0 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-4 py-3 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900">Informações do Cliente</h3>
               <button
                 onClick={() => {
                   setShowMobileClientInfo(false)

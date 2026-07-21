@@ -2632,7 +2632,7 @@ export default function ClientProfilePage() {
       {showSharedWithModal && client && (
         <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
           <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-xl">
-            <div className="sticky top-0 bg-gradient-to-r from-purple-50 to-purple-100 border-b border-purple-200 px-6 py-4 flex justify-between items-center rounded-t-lg">
+            <div className="sticky top-0 bg-gradient-to-r from-lilac-50 to-lilac-100 border-b border-lilac-200 px-6 py-4 flex justify-between items-center rounded-t-lg">
               <h3 className="text-lg font-semibold text-gray-900">
                 Compartilhamentos - {client.nome}
               </h3>

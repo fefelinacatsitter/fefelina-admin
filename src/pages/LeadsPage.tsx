@@ -1047,7 +1047,7 @@ export default function LeadsPage() {
                   required
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
 
@@ -1060,7 +1060,7 @@ export default function LeadsPage() {
                   value={formData.telefone}
                   onChange={(e) => setFormData({ ...formData, telefone: formatPhoneInput(e.target.value) })}
                   placeholder="+55(47)99999-9999"
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
 
@@ -1075,7 +1075,7 @@ export default function LeadsPage() {
                       type="date"
                       value={formData.periodo_inicio}
                       onChange={(e) => setFormData({ ...formData, periodo_inicio: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -1084,7 +1084,7 @@ export default function LeadsPage() {
                       type="date"
                       value={formData.periodo_fim}
                       onChange={(e) => setFormData({ ...formData, periodo_fim: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -1098,7 +1098,7 @@ export default function LeadsPage() {
                   type="text"
                   value={formData.endereco}
                   onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
 
@@ -1112,7 +1112,7 @@ export default function LeadsPage() {
                     step="0.01"
                     value={formData.valor_orcamento}
                     onChange={(e) => setFormData({ ...formData, valor_orcamento: e.target.value })}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
 
@@ -1123,7 +1123,7 @@ export default function LeadsPage() {
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as LeadStatus })}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
                     {(Object.keys(STATUS_CONFIG) as LeadStatus[]).map(status => (
                       <option key={status} value={status}>
@@ -1159,7 +1159,7 @@ export default function LeadsPage() {
                   rows={3}
                   value={formData.observacoes}
                   onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
 
@@ -1251,7 +1251,7 @@ export default function LeadsPage() {
                       <DollarSign className="w-3.5 h-3.5" />
                       Valor do Orçamento
                     </label>
-                    <p className="text-lg font-bold text-purple-600 mt-1.5">
+                    <p className="text-lg font-bold text-primary-600 mt-1.5">
                       {formatCurrency(selectedLead.valor_orcamento)}
                     </p>
                   </div>
@@ -1262,7 +1262,7 @@ export default function LeadsPage() {
                       <select
                         value={detailStatus}
                         onChange={(e) => setDetailStatus(e.target.value as LeadStatus)}
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       >
                         {(Object.keys(STATUS_CONFIG) as LeadStatus[]).map(status => (
                           <option key={status} value={status}>
@@ -1356,7 +1356,7 @@ export default function LeadsPage() {
                                     type="date"
                                     value={editData?.data || ''}
                                     onChange={(e) => handlePreEncontroFieldChange('data', e.target.value)}
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                   />
                                 ) : (
                                   new Date(encontro.data + 'T00:00:00').toLocaleDateString('pt-BR')
@@ -1370,7 +1370,7 @@ export default function LeadsPage() {
                                     type="time"
                                     value={editData?.horario || ''}
                                     onChange={(e) => handlePreEncontroFieldChange('horario', e.target.value)}
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                   />
                                 ) : (
                                   `${encontro.horario.substring(0, 5)} - ${calcularHorarioFim(encontro.horario, encontro.duracao_minutos || 30)}`
@@ -1383,7 +1383,7 @@ export default function LeadsPage() {
                                   <select
                                     value={editData?.assigned_user_id || ''}
                                     onChange={(e) => handlePreEncontroFieldChange('assigned_user_id', e.target.value)}
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                   >
                                     <option value="">Sem responsável</option>
                                     {users.map((user) => (
@@ -1414,7 +1414,7 @@ export default function LeadsPage() {
                                   <select
                                     value={editData?.status || 'agendada'}
                                     onChange={(e) => handlePreEncontroFieldChange('status', e.target.value)}
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                   >
                                     <option value="agendada">Agendado</option>
                                     <option value="realizada">Realizado</option>
@@ -1442,7 +1442,7 @@ export default function LeadsPage() {
                                     value={editData?.observacoes || ''}
                                     onChange={(e) => handlePreEncontroFieldChange('observacoes', e.target.value)}
                                     placeholder="Observações..."
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                   />
                                 ) : (
                                   <span className="max-w-xs truncate block" title={encontro.observacoes || ''}>

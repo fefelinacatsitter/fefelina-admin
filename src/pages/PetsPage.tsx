@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import ClientCombobox from '../components/ClientCombobox'
@@ -39,6 +39,7 @@ export default function PetsPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingPet, setEditingPet] = useState<Pet | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<Pet | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     nome: '',
     caracteristica: '',
@@ -201,6 +202,23 @@ export default function PetsPage() {
     })
   }
 
+  const filteredPets = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) return pets
+    return pets.filter((pet) => {
+      const haystack = [
+        pet.nome,
+        pet.caracteristica,
+        pet.observacoes,
+        pet.clients?.nome
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(term)
+    })
+  }, [pets, searchTerm])
+
   if (loading) {
     return (
       <div>
@@ -239,6 +257,47 @@ export default function PetsPage() {
         )}
       </div>
 
+      {pets.length > 0 && (
+        <div className="mt-6">
+          <label htmlFor="pet-search" className="block text-sm font-medium text-gray-700 mb-2">
+            Buscar Pet
+          </label>
+          <div className="relative max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              id="pet-search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por nome do pet, tutor ou característica..."
+              className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm"
+            />
+            {searchTerm && (
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="h-5 w-5 text-gray-400 hover:text-gray-600"
+                >
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+          {searchTerm && (
+            <p className="mt-2 text-sm text-gray-500">
+              {filteredPets.length} pet(s) encontrado(s) para "{searchTerm}"
+            </p>
+          )}
+        </div>
+      )}
+
       {pets.length === 0 ? (
         <div className="mt-8 card-fefelina">
           <div className="empty-state-fefelina">
@@ -259,9 +318,23 @@ export default function PetsPage() {
             </button>
           </div>
         </div>
+      ) : filteredPets.length === 0 ? (
+        <div className="mt-8 card-fefelina">
+          <div className="empty-state-fefelina">
+            <div className="mx-auto h-16 w-16 text-primary-400 mb-4">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum pet encontrado</h3>
+            <p className="text-gray-500">
+              Nenhum pet corresponde à busca "{searchTerm}".
+            </p>
+          </div>
+        </div>
       ) : (
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {pets.map((pet) => (
+          {filteredPets.map((pet) => (
             <div key={pet.id} className="card-fefelina">
               <div className="flex justify-between items-start mb-4">
                 <div>

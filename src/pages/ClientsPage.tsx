@@ -11,20 +11,20 @@ import { usePermissions } from '../contexts/PermissionsContext'
 import { useConfirmDialog } from '../components/ConfirmDialog'
 import { Pencil } from 'lucide-react'
 
-// Função para formatar telefone brasileiro
+// FunÃ§Ã£o para formatar telefone brasileiro
 const formatPhone = (value: string): string => {
-  // Remove tudo que não é número
+  // Remove tudo que nÃ£o ï¿½ nÃºmero
   const numbers = value.replace(/\D/g, '')
   
-  // Se não tem números, retorna vazio (não deixa o + sozinho)
+  // Se nÃ£o tem nÃºmeros, retorna vazio (nÃ£o deixa o + sozinho)
   if (numbers.length === 0) {
     return ''
   }
   
-  // Limita a 13 dígitos (55 + 2 DDD + 9 número)
+  // Limita a 13 dÃ­gitos (55 + 2 DDD + 9 nÃºmero)
   const limited = numbers.slice(0, 13)
   
-  // Aplica a máscara +55(XX)XXXXX-XXXX ou +55(XX)XXXX-XXXX
+  // Aplica a mÃ¡scara +55(XX)XXXXX-XXXX ou +55(XX)XXXX-XXXX
   if (limited.length <= 2) {
     return `+${limited}`
   } else if (limited.length <= 4) {
@@ -36,7 +36,7 @@ const formatPhone = (value: string): string => {
     if (phone.length <= 4) {
       return `+${limited.slice(0, 2)}(${limited.slice(2, 4)})${phone}`
     } else {
-      // Se tem 9 dígitos (celular) ou 8 (fixo)
+      // Se tem 9 dÃ­gitos (celular) ou 8 (fixo)
       const separator = phone.length === 9 ? 5 : 4
       return `+${limited.slice(0, 2)}(${limited.slice(2, 4)})${phone.slice(0, separator)}-${phone.slice(separator)}`
     }
@@ -65,7 +65,7 @@ export default function ClientsPage() {
   const [totalCount, setTotalCount] = useState(0)
   const pageSize = 20
   
-  // Modal de visualização para não-admins
+  // Modal de visualizaï¿½ï¿½o para nÃ£o-admins
   const [showViewModal, setShowViewModal] = useState(false)
   const [viewingClient, setViewingClient] = useState<Client | null>(null)
   const [viewingPets, setViewingPets] = useState<Pet[]>([])
@@ -91,7 +91,7 @@ export default function ClientsPage() {
     { nome: '', caracteristica: '', observacoes: '' }
   ])
 
-  // Volta para a primeira página sempre que o filtro de busca (já com debounce) mudar
+  // Volta para a primeira pÃ¡gina sempre que o filtro de busca (jÃ¡ com debounce) mudar
   useEffect(() => {
     setPage(1)
   }, [debouncedSearchTerm, sortBy])
@@ -105,10 +105,10 @@ export default function ClientsPage() {
     
     try {
       if (sortBy === 'recent_services') {
-        // Esta ordenação depende de agregação (última visita realizada) que não
-        // existe como coluna no banco, então ainda precisamos buscar todos os
-        // clientes para calcular e ordenar no cliente. A paginação, nesse caso,
-        // é aplicada apenas na exibição (fatiamento do array já ordenado).
+        // Esta ordenaï¿½ï¿½o depende de agregaÃ§Ã£o (Ãºltima visita realizada) que nÃ£o
+        // existe como coluna no banco, entÃ£o ainda precisamos buscar todos os
+        // clientes para calcular e ordenar no cliente. A paginaÃ§Ã£o, nesse caso,
+        // ï¿½ aplicada apenas na exibiÃ§Ã£o (fatiamento do array jÃ¡ ordenado).
         const data = await fetchAllRows(
           supabase
             .from('clients')
@@ -134,7 +134,7 @@ export default function ClientsPage() {
             
             if (client.services?.length > 0) {
               client.services.forEach((service: any) => {
-                // Verificar visitas realizadas do serviço
+                // Verificar visitas realizadas do serviÃ§o
                 if (service.visits?.length > 0) {
                   service.visits.forEach((visit: any) => {
                     if (visit.status === 'realizada') {
@@ -146,7 +146,7 @@ export default function ClientsPage() {
                   })
                 }
                 
-                // Se não houver visitas realizadas, usar a data fim do serviço como fallback
+                // Se nÃ£o houver visitas realizadas, usar a data fim do serviÃ§o como fallback
                 if (latestDate === 0 && service.data_fim) {
                   const serviceEndDate = new Date(service.data_fim).getTime()
                   if (serviceEndDate > latestDate) {
@@ -154,7 +154,7 @@ export default function ClientsPage() {
                   }
                 }
                 
-                // Se ainda não houver data, usar data_inicio como último fallback
+                // Se ainda nÃ£o houver data, usar data_inicio como Ãºltimo fallback
                 if (latestDate === 0 && service.data_inicio) {
                   const serviceStartDate = new Date(service.data_inicio).getTime()
                   if (serviceStartDate > latestDate) {
@@ -170,7 +170,7 @@ export default function ClientsPage() {
           const aLatestActivity = getLatestActivityDate(a)
           const bLatestActivity = getLatestActivityDate(b)
           
-          // Se ambos têm atividade, ordenar por data mais recente
+          // Se ambos tÃªm atividade, ordenar por data mais recente
           if (aLatestActivity > 0 && bLatestActivity > 0) {
             return bLatestActivity - aLatestActivity
           }
@@ -187,7 +187,7 @@ export default function ClientsPage() {
           return a.nome.localeCompare(b.nome)
         })
         
-        // Aplica a busca (por nome) e a paginação no array já ordenado
+        // Aplica a busca (por nome) e a paginaÃ§Ã£o no array jÃ¡ ordenado
         const term = debouncedSearchTerm.trim().toLowerCase()
         const filtered = term
           ? sortedClients.filter(c => c.nome.toLowerCase().includes(term))
@@ -197,7 +197,7 @@ export default function ClientsPage() {
         const from = (page - 1) * pageSize
         setClients(filtered.slice(from, from + pageSize))
       } else {
-        // Ordenar alfabeticamente - paginação e busca feitas diretamente no servidor
+        // Ordenar alfabeticamente - paginaÃ§Ã£o e busca feitas diretamente no servidor
         const from = (page - 1) * pageSize
         const to = from + pageSize - 1
         
@@ -226,15 +226,15 @@ export default function ClientsPage() {
     setLoading(false)
   }
 
-  // Função para lidar com clique no cliente
+  // FunÃ§Ã£o para lidar com clique no cliente
   const handleClientClick = async (client: Client) => {
     const isAdmin = userProfile?.profile?.name === 'Administrador'
     
     if (isAdmin) {
-      // Admin vai para a página completa
+      // Admin vai para a pÃ¡gina completa
       navigate(`/clients/${client.id}`)
     } else {
-      // Outros perfis abrem a modal de visualização
+      // Outros perfis abrem a modal de visualizaï¿½ï¿½o
       setViewingClient(client)
       
       // Buscar pets do cliente
@@ -264,9 +264,9 @@ export default function ClientsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Prevenir múltiplos envios
+    // Prevenir mÃºltiplos envios
     if (submitting) {
-      toast.error('Aguarde, o cliente está sendo salvo...')
+      toast.error('Aguarde, o cliente estÃ¡ sendo salvo...')
       return
     }
 
@@ -291,7 +291,7 @@ export default function ClientsPage() {
         throw clientError
       }
 
-      // 2. Inserir os pets (apenas os que têm nome preenchido)
+      // 2. Inserir os pets (apenas os que tÃªm nome preenchido)
       const petsToInsert = pets.filter(pet => pet.nome.trim() !== '')
       
       if (petsToInsert.length > 0) {
@@ -311,7 +311,7 @@ export default function ClientsPage() {
         }
       }
 
-      // 3. Sucesso - limpar formulário e recarregar lista
+      // 3. Sucesso - limpar formulÃ¡rio e recarregar lista
       toast.success(
         petsToInsert.length > 0 
           ? `Cliente "${formData.nome}" e ${petsToInsert.length} pet(s) adicionados com sucesso!`
@@ -341,7 +341,7 @@ export default function ClientsPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     
-    // Aplica máscara de telefone
+    // Aplica mÃ¡scara de telefone
     if (name === 'telefone') {
       setFormData({
         ...formData,
@@ -365,7 +365,7 @@ export default function ClientsPage() {
     setPets([{ nome: '', caracteristica: '', observacoes: '' }, ...pets])
   }
 
-  // Funções para gerenciar pets individuais
+  // FunÃ§Ãµes para gerenciar pets individuais
   const handleAddPet = () => {
     if (!editingClient) return
     setPetFormData({ nome: '', caracteristica: '', observacoes: '' })
@@ -394,7 +394,7 @@ export default function ClientsPage() {
 
       if (error) throw error
 
-      toast.success('Pet excluído com sucesso!')
+      toast.success('Pet excluÃ­do com sucesso!')
       
       // Atualizar lista de pets
       setClientPets(clientPets.filter(p => p.id !== petId))
@@ -448,7 +448,7 @@ export default function ClientsPage() {
 
         toast.success('Pet adicionado com sucesso!')
         
-        // Adicionar à lista
+        // Adicionar Ã  lista
         setClientPets([...clientPets, data])
       }
 
@@ -500,9 +500,9 @@ export default function ClientsPage() {
     
     if (!editingClient) return
     
-    // Prevenir múltiplos envios
+    // Prevenir mÃºltiplos envios
     if (updating) {
-      toast.error('Aguarde, as alterações estão sendo salvas...')
+      toast.error('Aguarde, as alteraï¿½ï¿½es estÃ£o sendo salvas...')
       return
     }
 
@@ -547,7 +547,7 @@ export default function ClientsPage() {
         }
       }
 
-      // 3. Sucesso - limpar formulário e recarregar lista
+      // 3. Sucesso - limpar formulÃ¡rio e recarregar lista
       toast.success(
         newPetsToInsert.length > 0 
           ? `Cliente "${formData.nome}" atualizado e ${newPetsToInsert.length} novo(s) pet(s) adicionado(s)!`
@@ -652,7 +652,7 @@ export default function ClientsPage() {
                     </div>
                     
                     <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor Diária (R$)</label>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor DiÃ¡ria (R$)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -678,7 +678,7 @@ export default function ClientsPage() {
                     </div>
                     
                     <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Endereço Completo</label>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">EndereÃ§o Completo</label>
                       <textarea
                         name="endereco_completo"
                         value={formData.endereco_completo}
@@ -690,7 +690,7 @@ export default function ClientsPage() {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Veterinário de Confiança</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">VeterinÃ¡rio de ConfianÃ§a</label>
                       <input
                         type="text"
                         name="veterinario_confianca"
@@ -744,7 +744,7 @@ export default function ClientsPage() {
                             </div>
                             
                             <div>
-                              <label className="block text-sm font-medium text-gray-600 mb-1">Características</label>
+                              <label className="block text-sm font-medium text-gray-600 mb-1">CaracterÃ­sticas</label>
                               <input
                                 type="text"
                                 value={pet.caracteristica}
@@ -755,7 +755,7 @@ export default function ClientsPage() {
                             </div>
                             
                             <div>
-                              <label className="block text-sm font-medium text-gray-600 mb-1">Observações</label>
+                              <label className="block text-sm font-medium text-gray-600 mb-1">ObservaÃ§Ãµes</label>
                               <textarea
                                 value={pet.observacoes}
                                 onChange={(e) => handlePetChange(index, 'observacoes', e.target.value)}
@@ -830,7 +830,7 @@ export default function ClientsPage() {
             
             <div className="p-6">
               <form onSubmit={handleEditSubmit}>
-                {/* Informações do Cliente em 2 colunas */}
+                {/* InformaÃ§Ãµes do Cliente em 2 colunas */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Nome</label>
@@ -857,7 +857,7 @@ export default function ClientsPage() {
                   </div>
                   
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor Diária (R$)</label>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Valor DiÃ¡ria (R$)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -883,7 +883,7 @@ export default function ClientsPage() {
                   </div>
                   
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Veterinário de Confiança</label>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">VeterinÃ¡rio de ConfianÃ§a</label>
                     <input
                       type="text"
                       name="veterinario_confianca"
@@ -895,7 +895,7 @@ export default function ClientsPage() {
                   </div>
                   
                   <div className="md:col-span-2">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Endereço Completo</label>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">EndereÃ§o Completo</label>
                     <textarea
                       name="endereco_completo"
                       value={formData.endereco_completo}
@@ -936,13 +936,13 @@ export default function ClientsPage() {
                               Nome
                             </th>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                              Características
+                              CaracterÃ­sticas
                             </th>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                              Observações
+                              ObservaÃ§Ãµes
                             </th>
                             <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                              Ações
+                              AÃ§Ãµes
                             </th>
                           </tr>
                         </thead>
@@ -1009,7 +1009,7 @@ export default function ClientsPage() {
                         Salvando...
                       </>
                     ) : (
-                      'Salvar Alterações'
+                      'Salvar AlteraÃ§Ãµes'
                     )}
                   </button>
                 </div>
@@ -1019,7 +1019,7 @@ export default function ClientsPage() {
         </div>
       )}
 
-      {/* Controles de Busca e Ordenação - Responsivos */}
+      {/* Controles de Busca e OrdenaÃ§Ã£o - Responsivos */}
       <div className="mt-6 mb-4 space-y-4 sm:space-y-0 sm:flex sm:items-end sm:justify-between">
         {/* Campo de Busca */}
         <div className="flex-1 max-w-md">
@@ -1061,7 +1061,7 @@ export default function ClientsPage() {
           )}
         </div>
 
-        {/* Seletor de Ordenação */}
+        {/* Seletor de OrdenaÃ§Ã£o */}
         <div className="flex-shrink-0">
           <label htmlFor="sort" className="block text-sm font-medium text-gray-700 mb-2">
             Ordenar por
@@ -1072,13 +1072,13 @@ export default function ClientsPage() {
             onChange={(e) => setSortBy(e.target.value as 'recent_services' | 'alphabetical')}
             className="block w-full pl-3 pr-10 py-2 text-sm border border-gray-300 bg-white rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
           >
-            <option value="recent_services">Serviços Recentes</option>
-            <option value="alphabetical">Ordem Alfabética</option>
+            <option value="recent_services">ServiÃ§os Recentes</option>
+            <option value="alphabetical">Ordem AlfabÃ©tica</option>
           </select>
         </div>
       </div>
 
-      {/* Versão Mobile - Cards */}
+      {/* VersÃ£o Mobile - Cards */}
       <div className="mt-8 md:hidden space-y-4">
         {loading ? (
           <div className="text-center text-gray-500 py-4">Carregando...</div>
@@ -1110,7 +1110,7 @@ export default function ClientsPage() {
               
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Diária:</span>
+                  <span className="text-gray-600">DiÃ¡ria:</span>
                   <span className="font-medium">{maskField('valor_diaria', `R$ ${client.valor_diaria.toFixed(2)}`)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -1118,12 +1118,12 @@ export default function ClientsPage() {
                   <span className="font-medium">{maskField('valor_duas_visitas', `R$ ${client.valor_duas_visitas.toFixed(2)}`)}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Endereço:</span>
+                  <span className="text-gray-600">EndereÃ§o:</span>
                   <p className="text-gray-900 mt-1">{client.endereco_completo}</p>
                 </div>
                 {client.veterinario_confianca && (
                   <div>
-                    <span className="text-gray-600">Veterinário:</span>
+                    <span className="text-gray-600">VeterinÃ¡rio:</span>
                     <p className="text-gray-900 mt-1">{client.veterinario_confianca}</p>
                   </div>
                 )}
@@ -1133,7 +1133,7 @@ export default function ClientsPage() {
         )}
       </div>
 
-      {/* Versão Desktop - Tabela */}
+      {/* VersÃ£o Desktop - Tabela */}
       <div className="mt-8 hidden md:flex flex-col">
         <div className="overflow-x-auto">
           <div className="inline-block min-w-full py-2 align-middle">
@@ -1145,16 +1145,16 @@ export default function ClientsPage() {
                       Nome
                     </th>
                     <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500">
-                      Diária
+                      DiÃ¡ria
                     </th>
                     <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500">
                       2 Visitas
                     </th>
                     <th className="w-[30%] px-4 py-3 text-left text-xs font-medium text-gray-500">
-                      Endereço
+                      EndereÃ§o
                     </th>
                     <th className="w-[26%] relative px-4 py-3">
-                      <span className="sr-only">Ações</span>
+                      <span className="sr-only">AÃ§Ãµes</span>
                     </th>
                   </tr>
                 </thead>
@@ -1226,7 +1226,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* Paginação (também usada na visão mobile) */}
+      {/* Paginaï¿½ï¿½o (tambÃ©m usada na visÃ£o mobile) */}
       <div className="md:hidden mt-4">
         <PaginationControls
           page={page}
@@ -1278,7 +1278,7 @@ export default function ClientsPage() {
 
                 <div>
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
-                    Características
+                    CaracterÃ­sticas
                   </label>
                   <input
                     type="text"
@@ -1291,14 +1291,14 @@ export default function ClientsPage() {
 
                 <div>
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
-                    Observações
+                    ObservaÃ§Ãµes
                   </label>
                   <textarea
                     value={petFormData.observacoes}
                     onChange={(e) => setPetFormData({ ...petFormData, observacoes: e.target.value })}
                     rows={3}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Ex: É assustado, gosta de brincar, alérgico a..."
+                    placeholder="Ex: Ã‰ assustado, gosta de brincar, alÃ©rgico a..."
                   />
                 </div>
 
@@ -1327,7 +1327,7 @@ export default function ClientsPage() {
         </div>
       )}
 
-      {/* Modal de Visualização para Não-Admins */}
+      {/* Modal de VisualizaÃ§Ã£o para Nï¿½o-Admins */}
       {showViewModal && viewingClient && (
         <div className="fixed inset-0 z-50 overflow-y-auto pt-16 md:pt-0">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -1337,10 +1337,10 @@ export default function ClientsPage() {
               <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-3 flex justify-between items-center">
                 <div>
                   <h3 className="text-base leading-6 font-medium text-gray-900">
-                    Informações do Cliente
+                    InformaÃ§Ãµes do Cliente
                   </h3>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Visualização dos dados compartilhados
+                    VisualizaÃ§Ã£o dos dados compartilhados
                   </p>
                 </div>
                 <button onClick={closeViewModal} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -1351,7 +1351,7 @@ export default function ClientsPage() {
               </div>
 
               <div className="px-6 py-4 space-y-4">
-                {/* Informações Básicas */}
+                {/* InformaÃ§Ãµes BÃ¡sicas */}
                 <div className="bg-gray-50 rounded-lg p-3">
                   <h4 className="text-sm font-medium text-gray-900 mb-3">Dados do Cliente</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1363,19 +1363,19 @@ export default function ClientsPage() {
                     <div>
                       <label className="block text-xs font-medium text-gray-700">Telefone</label>
                       <div className="mt-0.5 text-sm text-gray-900">
-                        {maskField('telefone', viewingClient.telefone || '—')}
+                        {maskField('telefone', viewingClient.telefone || '-')}
                       </div>
                     </div>
 
                     <div>
                       <label className="block text-xs font-medium text-gray-700">Email</label>
                       <div className="mt-0.5 text-sm text-gray-900">
-                        {maskField('email', viewingClient.email || '—')}
+                        {maskField('email', viewingClient.email || '-')}
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-700">Valor Diária</label>
+                      <label className="block text-xs font-medium text-gray-700">Valor DiÃ¡ria</label>
                       <div className="mt-0.5 text-sm text-gray-900">
                         {maskField('valor_diaria', `R$ ${viewingClient.valor_diaria.toFixed(2)}`)}
                       </div>
@@ -1390,22 +1390,22 @@ export default function ClientsPage() {
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-gray-200">
-                    <label className="block text-xs font-medium text-gray-700">Endereço Completo</label>
+                    <label className="block text-xs font-medium text-gray-700">EndereÃ§o Completo</label>
                     <div className="mt-0.5 text-sm text-gray-900">
-                      {maskField('endereco_completo', viewingClient.endereco_completo || '—')}
+                      {maskField('endereco_completo', viewingClient.endereco_completo || '-')}
                     </div>
                   </div>
 
                   <div className="mt-3">
-                    <label className="block text-xs font-medium text-gray-700">Veterinário de Confiança</label>
+                    <label className="block text-xs font-medium text-gray-700">VeterinÃ¡rio de ConfianÃ§a</label>
                     <div className="mt-0.5 text-sm text-gray-900">
-                      {maskField('veterinario_confianca', viewingClient.veterinario_confianca || '—')}
+                      {maskField('veterinario_confianca', viewingClient.veterinario_confianca || '-')}
                     </div>
                   </div>
 
                   {viewingClient.observacoes && (
                     <div className="mt-3">
-                      <label className="block text-xs font-medium text-gray-700">Observações</label>
+                      <label className="block text-xs font-medium text-gray-700">ObservaÃ§Ãµes</label>
                       <div className="mt-0.5 text-sm text-gray-900">
                         {maskField('observacoes', viewingClient.observacoes)}
                       </div>
@@ -1440,10 +1440,10 @@ export default function ClientsPage() {
                               Nome
                             </th>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                              Características
+                              CaracterÃ­sticas
                             </th>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                              Observações
+                              ObservaÃ§Ãµes
                             </th>
                           </tr>
                         </thead>
@@ -1454,10 +1454,10 @@ export default function ClientsPage() {
                                 {pet.nome}
                               </td>
                               <td className="px-3 py-2.5 text-sm text-gray-600">
-                                {pet.caracteristica || '—'}
+                                {pet.caracteristica || '-'}
                               </td>
                               <td className="px-3 py-2.5 text-sm text-gray-600">
-                                {pet.observacoes || '—'}
+                                {pet.observacoes || '-'}
                               </td>
                             </tr>
                           ))}
@@ -1468,7 +1468,7 @@ export default function ClientsPage() {
                 </div>
               </div>
 
-              {/* Botão Fechar */}
+              {/* BotÃ£o Fechar */}
               <div className="bg-gray-50 px-6 py-3 flex justify-end border-t border-gray-200">
                 <button
                   onClick={closeViewModal}

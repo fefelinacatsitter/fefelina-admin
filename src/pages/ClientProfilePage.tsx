@@ -9,6 +9,8 @@ import CatLoader from '../components/CatLoader'
 import ShareClientModal from '../components/ShareClientModal'
 import { SharedWithList } from '../components/SharedWithList'
 import ClientCredits from '../components/ClientCredits'
+import MarkdownEditor from '../components/MarkdownEditor'
+import MarkdownContent from '../components/MarkdownContent'
 import { usePermissions } from '../contexts/PermissionsContext'
 import { useFieldMask } from '../hooks/useFieldMask'
 import { Share2, Users } from 'lucide-react'
@@ -1140,7 +1142,7 @@ export default function ClientProfilePage() {
                 </button>
               </div>
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{client.notas}</p>
+                <MarkdownContent content={client.notas} />
               </div>
             </div>
           )}
@@ -1914,14 +1916,13 @@ export default function ClientProfilePage() {
 
               <div className="px-6 py-4 overflow-y-auto flex-1">
                 <p className="text-sm text-gray-600 mb-4">
-                  Use este espaço para registrar informações importantes sobre o cliente, observações de atendimento, preferências, histórico de conversas, etc.
+                  Use este espaço para registrar informações importantes sobre o cliente, observações de atendimento, preferências, histórico de conversas, etc. Você pode usar <strong>**negrito**</strong>, <em>*itálico*</em>, <span className="line-through">~~riscado~~</span> e listas.
                 </p>
-                
-                <textarea
+
+                <MarkdownEditor
                   value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  onChange={setNotes}
                   rows={12}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                   placeholder="Digite suas notas aqui...&#10;&#10;Exemplos:&#10;- Preferências de horário&#10;- Histórico de comunicação&#10;- Observações importantes&#10;- Datas especiais"
                   autoFocus
                 />
@@ -1938,7 +1939,7 @@ export default function ClientProfilePage() {
                 <button
                   type="button"
                   onClick={saveNotes}
-                  disabled={savingNotes}
+                  disabled={savingNotes || notes === (client.notas || '')}
                   className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {savingNotes ? (

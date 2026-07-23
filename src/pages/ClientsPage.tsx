@@ -9,6 +9,7 @@ import CatLoader from '../components/CatLoader'
 import { useFieldMask } from '../hooks/useFieldMask'
 import { usePermissions } from '../contexts/PermissionsContext'
 import { useConfirmDialog } from '../components/ConfirmDialog'
+import MarkdownContent from '../components/MarkdownContent'
 import { Pencil } from 'lucide-react'
 
 // Função para formatar telefone brasileiro
@@ -1415,8 +1416,8 @@ export default function ClientsPage() {
                   {viewingClient.notas && (
                     <div className="mt-3 pt-3 border-t border-gray-200">
                       <label className="block text-xs font-medium text-gray-700 mb-1.5">Notas Internas</label>
-                      <div className="mt-0.5 text-sm text-gray-900 whitespace-pre-wrap bg-primary-50 border border-primary-100 rounded-md p-3">
-                        {maskField('notas', viewingClient.notas)}
+                      <div className="mt-0.5 bg-primary-50 border border-primary-100 rounded-md p-3">
+                        <MarkdownContent content={String(maskField('notas', viewingClient.notas))} />
                       </div>
                     </div>
                   )}

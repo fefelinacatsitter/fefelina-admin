@@ -7,11 +7,12 @@ import {
 } from 'recharts'
 import { 
   ChevronDown,
-  Download, CreditCard, Clock, CheckCircle, X, Eye, EyeOff
+  Download, CreditCard, Clock, CheckCircle, X
 } from 'lucide-react'
 import CatLoader from '../components/CatLoader'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { useValuesVisibility } from '../contexts/ValuesVisibilityContext'
 
 interface FinancialData {
   monthlyRevenue: Array<{
@@ -106,11 +107,7 @@ export default function FinancesPage() {
     recentTransactions: []
   })
   const [loading, setLoading] = useState(true)
-  const [showValues, setShowValues] = useState(() => {
-    // Carregar preferência salva do localStorage (padrão: true se não houver)
-    const saved = localStorage.getItem('fefelina_showFinanceValues')
-    return saved !== null ? saved === 'true' : true
-  })
+  const { showValues, formatCurrency } = useValuesVisibility()
   // Tipo de visualização do gráfico: por mês (últimos 13 meses) ou por ano (últimos 5 anos).
   // Já é aplicado imediatamente ao clicar, sem necessidade de um botão "Aplicar".
   const [viewType, setViewType] = useState<'month' | 'year'>('month')
@@ -148,11 +145,6 @@ export default function FinancesPage() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  // Salvar preferência de visualização no localStorage
-  useEffect(() => {
-    localStorage.setItem('fefelina_showFinanceValues', showValues.toString())
-  }, [showValues])
 
   useEffect(() => {
     // Carga inicial da página (executa uma única vez ao montar)
@@ -468,16 +460,6 @@ export default function FinancesPage() {
     return sortedKeys.map(key => grouped[key])
   }
 
-  const formatCurrency = (value: number) => {
-    if (!showValues) {
-      return 'R$ ••••••'
-    }
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value)
-  }
-
   const formatDate = (dateString: string) => {
     const [year, month, day] = dateString.split('-').map(Number)
     const date = new Date(year, month - 1, day)
@@ -557,23 +539,6 @@ export default function FinancesPage() {
           <div className="divider-fefelina"></div>
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-3">
-          <button 
-            onClick={() => setShowValues(!showValues)}
-            className="btn-fefelina-secondary"
-            title={showValues ? 'Ocultar valores' : 'Mostrar valores'}
-          >
-            {showValues ? (
-              <>
-                <EyeOff className="w-4 h-4 mr-2" />
-                Ocultar Valores
-              </>
-            ) : (
-              <>
-                <Eye className="w-4 h-4 mr-2" />
-                Mostrar Valores
-              </>
-            )}
-          </button>
           <button className="btn-fefelina-secondary">
             <Download className="w-4 h-4 mr-2" />
             Exportar

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useValuesVisibility } from '../contexts/ValuesVisibilityContext'
 import { supabase } from '../lib/supabase'
 import { Plus, Minus, History, DollarSign } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -22,6 +23,7 @@ interface CreditHistory {
 }
 
 export default function ClientCredits({ clientId, clientName, currentCredit, onUpdate }: ClientCreditsProps) {
+  const { formatCurrency } = useValuesVisibility()
   const [showModal, setShowModal] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [tipo, setTipo] = useState<'adicao' | 'estorno'>('adicao')
@@ -98,13 +100,6 @@ export default function ClientCredits({ clientId, clientName, currentCredit, onU
       console.error('Erro ao carregar histórico:', error)
       toast.error('Erro ao carregar histórico')
     }
-  }
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value)
   }
 
   const formatDate = (date: string) => {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useValuesVisibility } from '../contexts/ValuesVisibilityContext'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { format, parseISO } from 'date-fns'
@@ -74,6 +75,7 @@ export default function ClientProfilePage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { userProfile, canUpdate, canDelete } = usePermissions()
+  const { formatCurrency } = useValuesVisibility()
   
   // Verificar se é admin - somente admin pode acessar esta página
   useEffect(() => {
@@ -457,13 +459,6 @@ export default function ClientProfilePage() {
       )
       setPeakMonth(peak.month)
     }
-  }
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value)
   }
 
   // Função para formatar telefone brasileiro

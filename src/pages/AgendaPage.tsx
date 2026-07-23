@@ -10,6 +10,7 @@ import TaskModal from '../components/TaskModal'
 import ContextMenu from '../components/ContextMenu'
 import { useConfirmDialog } from '../components/ConfirmDialog'
 import { usePermissions } from '../contexts/PermissionsContext'
+import { useValuesVisibility } from '../contexts/ValuesVisibilityContext'
 import Avatar from '../components/Avatar'
 
 interface Visit extends VisitType {
@@ -30,6 +31,7 @@ type ViewMode = 'day' | 'week'
 
 export default function AgendaPage() {
   const { isAdmin } = usePermissions()
+  const { formatCurrency } = useValuesVisibility()
   const { confirm, ConfirmDialogElement } = useConfirmDialog()
   
   const [visits, setVisits] = useState<Visit[]>([])
@@ -1268,7 +1270,7 @@ export default function AgendaPage() {
                   <div>
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Valor da Visita</label>
                     <p className="text-sm md:text-base font-medium text-gray-900 mt-1">
-                      R$ {selectedVisit.valor.toFixed(2)}
+                      {formatCurrency(selectedVisit.valor)}
                     </p>
                   </div>
                 </div>
@@ -1277,7 +1279,7 @@ export default function AgendaPage() {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <label className="text-xs font-semibold text-green-700 uppercase tracking-wide">Valor a Receber</label>
                   <p className="text-xl md:text-2xl font-bold text-green-600 mt-1">
-                    R$ {(selectedVisit.valor * (1 - selectedVisit.desconto_plataforma / 100)).toFixed(2)}
+                    {formatCurrency(selectedVisit.valor * (1 - selectedVisit.desconto_plataforma / 100))}
                   </p>
                   {selectedVisit.desconto_plataforma > 0 && (
                     <p className="text-xs text-green-600 mt-1">

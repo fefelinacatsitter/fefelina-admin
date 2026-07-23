@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react'
+import { useValuesVisibility } from '../contexts/ValuesVisibilityContext'
 import { supabase } from '../lib/supabase'
 import { fetchAllRows } from '../lib/paginatedFetch'
 import CatLoader from '../components/CatLoader'
@@ -41,6 +42,7 @@ interface HorarioPicoStats {
 }
 
 export default function RelatoriosPage() {
+  const { formatCurrency } = useValuesVisibility()
   const [stats, setStats] = useState<RelatorioStats>({
     totalClientesAtivos: 0,
     totalVisitasMes: 0,
@@ -383,13 +385,6 @@ export default function RelatoriosPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value)
   }
 
   const formatMonth = (mesString: string) => {

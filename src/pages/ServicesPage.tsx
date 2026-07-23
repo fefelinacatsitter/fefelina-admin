@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useValuesVisibility } from '../contexts/ValuesVisibilityContext'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import { Copy, Eye, Pencil, CheckCircle2, MoreVertical, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
@@ -133,6 +134,7 @@ const isValidDate = (dateString: string): boolean => {
 }
 
 export default function ServicesPage() {
+  const { formatCurrency } = useValuesVisibility()
   // Field-Level Security e Permissões
   const { maskField } = useFieldMask('services')
   const { maskField: maskVisitField } = useFieldMask('visits')
@@ -786,13 +788,6 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
   const closeMobileMenu = () => {
     setShowMobileMenu(false)
     setSelectedServiceForMenu(null)
-  }
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value)
   }
 
   const formatDate = (dateString: string) => {

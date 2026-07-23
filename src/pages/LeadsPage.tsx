@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useValuesVisibility } from '../contexts/ValuesVisibilityContext'
 import { supabase, Lead, Visit } from '../lib/supabase'
 import { fetchAllRows } from '../lib/paginatedFetch'
 import toast from 'react-hot-toast'
@@ -190,6 +191,7 @@ function DroppableColumn({ status, children, isActive }: DroppableColumnProps) {
 }
 
 export default function LeadsPage() {
+  const { formatCurrency: formatCurrencyBase } = useValuesVisibility()
   const { confirm, ConfirmDialogElement } = useConfirmDialog()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
@@ -808,10 +810,7 @@ export default function LeadsPage() {
 
   const formatCurrency = (value: number | null) => {
     if (!value) return 'Não informado'
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value)
+    return formatCurrencyBase(value)
   }
 
   const formatDate = (date: string | null) => {

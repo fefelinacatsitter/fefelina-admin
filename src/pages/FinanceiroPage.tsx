@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react'
+import { useValuesVisibility } from '../contexts/ValuesVisibilityContext'
 import { supabase, CaixaMovimento } from '../lib/supabase'
 import { fetchAllRows } from '../lib/paginatedFetch'
 import CatLoader from '../components/CatLoader'
@@ -7,6 +8,7 @@ import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function FinanceiroPage() {
+  const { formatCurrency } = useValuesVisibility()
   const { confirm, ConfirmDialogElement } = useConfirmDialog()
   const [movimentos, setMovimentos] = useState<CaixaMovimento[]>([])
   const [saldoAtual, setSaldoAtual] = useState(0)
@@ -254,13 +256,6 @@ export default function FinanceiroPage() {
       console.error('Erro ao excluir movimento:', error)
       toast.error('Erro ao excluir movimento')
     }
-  }
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value)
   }
 
   const formatDate = (dateString: string) => {

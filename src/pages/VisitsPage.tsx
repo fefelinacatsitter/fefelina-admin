@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react'
+import { useValuesVisibility } from '../contexts/ValuesVisibilityContext'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchAllRows } from '../lib/paginatedFetch'
@@ -121,6 +122,7 @@ interface ClientQuickInfo {
 
 export default function VisitsPage() {
   const navigate = useNavigate()
+  const { formatCurrency } = useValuesVisibility()
   
   // Field-Level Security e Permissões
   const { maskField } = useFieldMask('visits')
@@ -460,12 +462,7 @@ export default function VisitsPage() {
     }
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value)
-  }
+
 
   const formatDate = (dateString: string) => {
     // Criar data corretamente para evitar problemas de fuso horário

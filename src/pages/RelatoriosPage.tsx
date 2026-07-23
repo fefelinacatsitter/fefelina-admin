@@ -25,6 +25,11 @@ interface ClienteRanking {
   ultimaVisita: string
 }
 
+interface ClienteNovo {
+  nome: string
+  createdAt: string
+}
+
 interface VisitasPorMes {
   mes: string
   quantidade: number
@@ -57,6 +62,7 @@ export default function RelatoriosPage() {
   })
 
   const [clientesRanking, setClientesRanking] = useState<ClienteRanking[]>([])
+  const [clientesNovosList, setClientesNovosList] = useState<ClienteNovo[]>([])
   const [visitasPorMes, setVisitasPorMes] = useState<VisitasPorMes[]>([])
   const [tiposVisita, setTiposVisita] = useState({ inteira: 0, meia: 0 })
   const [diasSemana, setDiasSemana] = useState<DiaSemanaStats[]>([])
@@ -154,11 +160,14 @@ export default function RelatoriosPage() {
       ])
 
       // Clientes novos no período
-      const { count: clientesNovosCount } = await supabase
-        .from('clients')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', inicioMes)
-        .lte('created_at', finalMes)
+      const clientesNovosData = await fetchAllRows(
+        supabase
+          .from('clients')
+          .select('nome, created_at')
+          .gte('created_at', inicioMes)
+          .lte('created_at', finalMes)
+      )
+      const clientesNovosCount = clientesNovosData?.length || 0
 
       // Buscar ranking de clientes com última visita (filtrando pela data_inicio do serviço)
       const clientesRankingData = await fetchAllRows(
@@ -374,7 +383,12 @@ export default function RelatoriosPage() {
         totalPets: petsResult.count || 0
       })
 
+      const clientesNovosOrdenados = (clientesNovosData || [])
+        .map((c: any) => ({ nome: c.nome, createdAt: c.created_at }))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+
       setClientesRanking(ranking)
+      setClientesNovosList(clientesNovosOrdenados)
       setVisitasPorMes(visitasPorMesArray)
       setTiposVisita({ inteira: visitasInteiras, meia: visitasMeias })
       setDiasSemana(diasArray)
@@ -463,7 +477,7 @@ export default function RelatoriosPage() {
           </div>
         </div>
 
-        <div className="stats-card-fefelina">
+        <div className="stats-card-fefelina relative group cursor-help">
           <div className="text-center">
             <div className="icon-fefelina bg-lilac-500 mx-auto mb-2">
               <span>✨</span>
@@ -472,6 +486,22 @@ export default function RelatoriosPage() {
             <dd className="text-2xl font-bold text-lilac-700">{stats.clientesNovos}</dd>
             <p className="text-xs text-gray-400 mt-1">{getPeriodLabel().replace('d', 'n').replace('D', 'N')}</p>
           </div>
+
+          {clientesNovosList.length > 0 && (
+            <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity absolute z-20 top-full left-1/2 -translate-x-1/2 mt-2 w-64 max-h-64 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-left">
+              <p className="text-xs font-semibold text-gray-500 mb-2">Clientes novos {getPeriodLabel()}</p>
+              <ul className="space-y-1">
+                {clientesNovosList.map((cliente, index) => (
+                  <li key={cliente.nome + index} className="text-sm text-gray-800 flex justify-between gap-2">
+                    <span className="truncate">{cliente.nome}</span>
+                    <span className="text-xs text-gray-400 flex-shrink-0">
+                      {format(parseISO(cliente.createdAt), 'dd/MM/yy')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 

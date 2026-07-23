@@ -505,7 +505,7 @@ export default function FinancesPage() {
             y={0}
             width={width + 4}
             height="100%"
-            fill="rgba(59, 130, 246, 0.08)"
+            fill="rgba(255, 159, 108, 0.15)"
             rx={4}
           />
         )}
@@ -680,7 +680,7 @@ export default function FinancesPage() {
               <BarChart 
                 data={financialData.monthlyRevenue}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis 
                   dataKey="month" 
                   tick={{ fontSize: 12 }}
@@ -694,7 +694,7 @@ export default function FinancesPage() {
                 <Tooltip 
                   formatter={(value) => [formatCurrency(Number(value)), '']}
                   labelStyle={{ color: '#374151' }}
-                  cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
+                  cursor={{ fill: 'rgba(255, 159, 108, 0.12)' }}
                 />
                 <Bar 
                   dataKey="received" 

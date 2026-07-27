@@ -225,12 +225,14 @@ export default function RelatoriosPage() {
             data,
             valor,
             desconto_plataforma,
-            status,
-            service_id,
-            services!inner(data_inicio)
+            status
           `)
             .eq('status', 'realizada')
-            .gte('services.data_inicio', `${anoAtual - 1}-${String(mesAtual).padStart(2, '0')}-01`)
+            // Filtra e agrupa pela DATA DA VISITA (e não pela data_inicio do serviço),
+            // para ficar consistente com a página Financeiro: um serviço que começa em
+            // um mês mas tem visitas em meses seguintes deve ter cada visita contabilizada
+            // no mês em que ela realmente aconteceu.
+            .gte('data', `${anoAtual - 1}-${String(mesAtual).padStart(2, '0')}-01`)
         ),
         fetchAllRows(
           supabase
@@ -294,14 +296,15 @@ export default function RelatoriosPage() {
         ? (clientesUnicos30.size / clientesUnicos90.size) * 100 
         : 0
 
-      // Processar visitas por mês (usando data_inicio do serviço) - somar TODAS as visitas
+      // Processar visitas por mês (usando a data da própria visita) - cada visita conta
+      // no mês em que efetivamente ocorreu, igual à página Financeiro
       const mesesMap = new Map<string, { quantidade: number; receita: number }>()
       
       if (visitasPorMesData) {
         visitasPorMesData.forEach((visit: any) => {
-          const dataInicio = visit.services?.data_inicio
-          if (dataInicio) {
-            const [year, month] = dataInicio.split('-')
+          const dataVisita = visit.data
+          if (dataVisita) {
+            const [year, month] = dataVisita.split('-')
             const chave = `${year}-${month}`
             const valorLiquido = visit.valor * (1 - (visit.desconto_plataforma || 0) / 100)
             

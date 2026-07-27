@@ -49,6 +49,9 @@ export default function AgendaPage() {
   const [filterByUser, setFilterByUser] = useState<string>(isAdmin ? 'all-admins' : 'my-agenda')
   const [users, setUsers] = useState<{id: string, full_name: string, email: string, avatar_url?: string, is_admin: boolean}[]>([])
   const [usersMap, setUsersMap] = useState<Record<string, {full_name: string, avatar_url?: string}>>({})
+  // Cacheia o ID do usuário atual (evita chamar supabase.auth.getUser() a cada
+  // fetchVisits(), que roda toda vez que uma visita é reagendada)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   
   // Estados para pré-encontros
   const [showPreEncontroModal, setShowPreEncontroModal] = useState(false)
@@ -101,6 +104,12 @@ export default function AgendaPage() {
       fetchUsers()
     }
   }, [isAdmin])
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUserId(user?.id || null)
+    })
+  }, [])
 
   useEffect(() => {
     fetchVisits()
@@ -160,9 +169,9 @@ export default function AgendaPage() {
     }
   }
 
-  const fetchVisits = async () => {
+  const fetchVisits = async (options?: { silent?: boolean }) => {
     try {
-      setLoading(true)
+      if (!options?.silent) setLoading(true)
       
       let startDate: Date
       let endDate: Date
@@ -197,10 +206,10 @@ export default function AgendaPage() {
           query = query.in('assigned_user_id', adminUserIds)
         }
       } else if (filterByUser === 'my-agenda') {
-        // Minha agenda: apenas visitas atribuídas ao usuário atual
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          query = query.eq('assigned_user_id', user.id)
+        // Minha agenda: apenas visitas atribuídas ao usuário atual (usa o ID
+        // cacheado no mount em vez de chamar supabase.auth.getUser() aqui)
+        if (currentUserId) {
+          query = query.eq('assigned_user_id', currentUserId)
         }
       } else {
         // Filtrar por usuário específico selecionado no dropdown
@@ -268,7 +277,7 @@ export default function AgendaPage() {
     } catch (error) {
       console.error('Erro ao buscar visitas:', error)
     } finally {
-      setLoading(false)
+      if (!options?.silent) setLoading(false)
     }
   }
 
@@ -516,7 +525,7 @@ export default function AgendaPage() {
           }
 
           toast.success('Visita reagendada com sucesso!')
-          await fetchVisits()
+          await fetchVisits({ silent: true })
         } catch (error) {
           console.error('Erro ao reagendar visita:', error)
           toast.error('Erro ao reagendar visita')
@@ -568,7 +577,7 @@ export default function AgendaPage() {
       if (error) throw error
 
       toast.success('Horário alterado com sucesso!')
-      await fetchVisits() // Recarregar visitas
+      await fetchVisits({ silent: true }) // Recarregar visitas sem piscar a página inteira
     } catch (error) {
       console.error('Erro ao reagendar visita:', error)
       toast.error('Erro ao reagendar visita')

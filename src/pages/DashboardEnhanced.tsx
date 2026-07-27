@@ -7,7 +7,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts'
-import { format, startOfMonth, subMonths } from 'date-fns'
+import { format, parseISO, startOfMonth, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 interface DashboardStats {
@@ -16,6 +16,11 @@ interface DashboardStats {
   monthlyVisits: number
   lastMonthVisits: number
   clientesNovos: number
+}
+
+interface ClienteNovo {
+  nome: string
+  createdAt: string
 }
 
 interface UpcomingVisit {
@@ -51,6 +56,7 @@ export default function DashboardEnhanced() {
   const [revenueHistory, setRevenueHistory] = useState<RevenuePoint[]>([])
   const [revenueRange, setRevenueRange] = useState<RevenueRangeOption>('year')
   const [visitTypeData, setVisitTypeData] = useState<any[]>([])
+  const [clientesNovosList, setClientesNovosList] = useState<ClienteNovo[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -70,7 +76,7 @@ export default function DashboardEnhanced() {
         fetchAllRows(
           supabase.from('visits').select('data, valor, desconto_plataforma, tipo_visita').eq('status', 'realizada')
         ),
-        supabase.from('clients').select('*', { count: 'exact', head: true }).gte('created_at', format(mesAtual, 'yyyy-MM-dd')),
+        supabase.from('clients').select('nome, created_at', { count: 'exact' }).gte('created_at', format(mesAtual, 'yyyy-MM-dd')),
         supabase
           .from('visits')
           .select(`
@@ -144,9 +150,14 @@ export default function DashboardEnhanced() {
         leads: Array.isArray(visit.leads) ? visit.leads[0] : visit.leads
       })) as UpcomingVisit[]
 
+      const clientesNovosOrdenados = (clientesNovosResult.data || [])
+        .map((c: any) => ({ nome: c.nome, createdAt: c.created_at }))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+
       setUpcomingVisits(mappedVisits)
       setRevenueHistory(history)
       setVisitTypeData(visitTypes)
+      setClientesNovosList(clientesNovosOrdenados)
 
     } catch (error) {
       console.error('Erro ao buscar dados do dashboard:', error)
@@ -265,7 +276,7 @@ export default function DashboardEnhanced() {
         </div>
 
         {/* Clientes Novos */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="relative group cursor-help bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Clientes Novos</p>
@@ -276,6 +287,22 @@ export default function DashboardEnhanced() {
               <span className="text-gray-500 text-2xl">✨</span>
             </div>
           </div>
+
+          {clientesNovosList.length > 0 && (
+            <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity absolute z-20 top-full left-1/2 -translate-x-1/2 mt-2 w-64 max-h-64 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-left">
+              <p className="text-xs font-semibold text-gray-500 mb-2">Clientes novos neste mês</p>
+              <ul className="space-y-1">
+                {clientesNovosList.map((cliente, index) => (
+                  <li key={cliente.nome + index} className="text-sm text-gray-800 flex justify-between gap-2">
+                    <span className="truncate">{cliente.nome}</span>
+                    <span className="text-xs text-gray-400 flex-shrink-0">
+                      {format(parseISO(cliente.createdAt), 'dd/MM/yy')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 

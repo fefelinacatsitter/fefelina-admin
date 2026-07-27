@@ -159,35 +159,97 @@ export default function RelatoriosPage() {
         supabase.from('pets').select('*', { count: 'exact' })
       ])
 
-      // Clientes novos no período
-      const clientesNovosData = await fetchAllRows(
-        supabase
-          .from('clients')
-          .select('nome, created_at')
-          .gte('created_at', inicioMes)
-          .lte('created_at', finalMes)
-      )
+      // Clientes novos no período, ranking de clientes, retenção 30/90 dias,
+      // visitas por mês e análise de dias/horários de pico são todas
+      // consultas independentes entre si — rodam em paralelo em vez de
+      // sequencialmente (cada uma antes só começava depois da anterior
+      // terminar, somando latência de rede desnecessária).
+      const hoje30dias = new Date()
+      hoje30dias.setDate(hoje30dias.getDate() - 30)
+      const hoje90dias = new Date()
+      hoje90dias.setDate(hoje90dias.getDate() - 90)
+
+      const [
+        clientesNovosData,
+        clientesRankingData,
+        clientesUltimos30,
+        clientesUltimos90,
+        visitasPorMesData,
+        visitasPeriodoAnalise
+      ] = await Promise.all([
+        fetchAllRows(
+          supabase
+            .from('clients')
+            .select('nome, created_at')
+            .gte('created_at', inicioMes)
+            .lte('created_at', finalMes)
+        ),
+        fetchAllRows(
+          supabase
+            .from('visits')
+            .select(`
+            client_id,
+            clients!inner(nome),
+            valor,
+            desconto_plataforma,
+            status,
+            data,
+            service_id,
+            services!inner(data_inicio)
+          `)
+            .eq('status', 'realizada')
+            .gte('services.data_inicio', dataInicio)
+            .lte('services.data_inicio', dataFim)
+            .not('client_id', 'is', null)
+        ),
+        fetchAllRows(
+          supabase
+            .from('visits')
+            .select('client_id')
+            .eq('status', 'realizada')
+            .gte('data', hoje30dias.toISOString().split('T')[0])
+            .not('client_id', 'is', null)
+        ),
+        fetchAllRows(
+          supabase
+            .from('visits')
+            .select('client_id')
+            .eq('status', 'realizada')
+            .gte('data', hoje90dias.toISOString().split('T')[0])
+            .not('client_id', 'is', null)
+        ),
+        fetchAllRows(
+          supabase
+            .from('visits')
+            .select(`
+            data,
+            valor,
+            desconto_plataforma,
+            status,
+            service_id,
+            services!inner(data_inicio)
+          `)
+            .eq('status', 'realizada')
+            .gte('services.data_inicio', `${anoAtual - 1}-${String(mesAtual).padStart(2, '0')}-01`)
+        ),
+        fetchAllRows(
+          supabase
+            .from('visits')
+            .select(`
+            data,
+            horario,
+            status,
+            service_id,
+            services!inner(data_inicio)
+          `)
+            .eq('status', 'realizada')
+            .gte('services.data_inicio', dataInicio)
+            .lte('services.data_inicio', dataFim)
+        )
+      ])
+
       const clientesNovosCount = clientesNovosData?.length || 0
 
-      // Buscar ranking de clientes com última visita (filtrando pela data_inicio do serviço)
-      const clientesRankingData = await fetchAllRows(
-        supabase
-          .from('visits')
-          .select(`
-          client_id,
-          clients!inner(nome),
-          valor,
-          desconto_plataforma,
-          status,
-          data,
-          service_id,
-          services!inner(data_inicio)
-        `)
-          .eq('status', 'realizada')
-          .gte('services.data_inicio', dataInicio)
-          .lte('services.data_inicio', dataFim)
-          .not('client_id', 'is', null)
-      )
 
       // Processar ranking de clientes - somar TODAS as visitas dos serviços que começaram no período
       const clientesMap = new Map<string, { totalVisitas: number; valorTotal: number; ultimaVisita: string; nome: string }>()
@@ -226,50 +288,11 @@ export default function RelatoriosPage() {
         .sort((a, b) => b.valorTotal - a.valorTotal)
 
       // Taxa de retenção (clientes que tiveram visitas nos últimos 30 dias vs últimos 90 dias)
-      const hoje30dias = new Date()
-      hoje30dias.setDate(hoje30dias.getDate() - 30)
-      const hoje90dias = new Date()
-      hoje90dias.setDate(hoje90dias.getDate() - 90)
-
-      const clientesUltimos30 = await fetchAllRows(
-        supabase
-          .from('visits')
-          .select('client_id')
-          .eq('status', 'realizada')
-          .gte('data', hoje30dias.toISOString().split('T')[0])
-          .not('client_id', 'is', null)
-      )
-
-      const clientesUltimos90 = await fetchAllRows(
-        supabase
-          .from('visits')
-          .select('client_id')
-          .eq('status', 'realizada')
-          .gte('data', hoje90dias.toISOString().split('T')[0])
-          .not('client_id', 'is', null)
-      )
-
       const clientesUnicos30 = new Set(clientesUltimos30?.map(v => v.client_id) || [])
       const clientesUnicos90 = new Set(clientesUltimos90?.map(v => v.client_id) || [])
       const taxaRetencao = clientesUnicos90.size > 0 
         ? (clientesUnicos30.size / clientesUnicos90.size) * 100 
         : 0
-
-      // Buscar visitas por mês dos últimos 12 meses (por data_inicio do serviço)
-      const visitasPorMesData = await fetchAllRows(
-        supabase
-          .from('visits')
-          .select(`
-          data,
-          valor,
-          desconto_plataforma,
-          status,
-          service_id,
-          services!inner(data_inicio)
-        `)
-          .eq('status', 'realizada')
-          .gte('services.data_inicio', `${anoAtual - 1}-${String(mesAtual).padStart(2, '0')}-01`)
-      )
 
       // Processar visitas por mês (usando data_inicio do serviço) - somar TODAS as visitas
       const mesesMap = new Map<string, { quantidade: number; receita: number }>()
@@ -302,21 +325,6 @@ export default function RelatoriosPage() {
         .slice(-12)
 
       // Análise de dias da semana e horários de pico (período selecionado - por data_inicio do serviço)
-      const visitasPeriodoAnalise = await fetchAllRows(
-        supabase
-          .from('visits')
-          .select(`
-          data,
-          horario,
-          status,
-          service_id,
-          services!inner(data_inicio)
-        `)
-          .eq('status', 'realizada')
-          .gte('services.data_inicio', dataInicio)
-          .lte('services.data_inicio', dataFim)
-      )
-
       const diasMap = new Map<string, number>()
       const horariosMap = new Map<string, number>()
 

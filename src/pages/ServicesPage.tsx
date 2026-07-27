@@ -179,6 +179,10 @@ export default function ServicesPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [visits, setVisits] = useState<Visit[]>([])
+  // IDs das visitas carregadas originalmente ao abrir o modal de edição (usado
+  // para fazer diff no save — update/insert/delete pontuais em vez de apagar
+  // e recriar todas as visitas do serviço a cada salvamento).
+  const [originalVisitIds, setOriginalVisitIds] = useState<string[]>([])
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<Service | null>(null)
   
@@ -320,6 +324,7 @@ export default function ServicesPage() {
         valor_pago: 0
       })
       setVisits([])
+      setOriginalVisitIds([])
       setSelectedClient(null)
     }
     setShowModal(true)
@@ -341,6 +346,8 @@ export default function ServicesPage() {
       )
       
       setVisits(filteredVisits)
+      // Guarda os IDs originais para permitir diff (update/insert/delete pontuais) no save
+      setOriginalVisitIds(filteredVisits.map(v => v.id).filter((id): id is string => !!id))
     } catch (error) {
       console.error('Erro ao buscar visitas:', error)
     }
@@ -462,6 +469,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
       valor_pago: 0
     })
     setVisits([])
+    setOriginalVisitIds([])
     setSelectedClient(null)
   }
 
@@ -577,12 +585,64 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
         
         if (error) throw error
         savedService = data
-        
-        // Deletar visitas existentes e recriar
-        await supabase
-          .from('visits')
-          .delete()
-          .eq('service_id', editingService.id)
+
+        // Diff entre as visitas originais e as atuais do formulário, em vez
+        // de apagar e recriar TODAS as visitas do serviço a cada salvamento
+        // (isso deixava a edição lenta e, se o insert falhasse depois do
+        // delete, causava perda de dados/erro). Só update/insert/delete das
+        // linhas realmente alteradas/novas/removidas, e o delete só roda por
+        // último, depois que update/insert já tiverem sucesso.
+        const currentIds = new Set(visits.map(v => v.id).filter((id): id is string => !!id))
+
+        const visitsToUpdate = visits
+          .filter(v => v.id)
+          .map(visit => ({
+            ...visit,
+            service_id: savedService.id,
+            client_id: formData.client_id,
+            tipo_encontro: 'visita_servico',
+            desconto_plataforma: formData.desconto_plataforma_default
+          }))
+
+        const newVisitsToInsert = visits
+          .filter(v => !v.id)
+          .map(visit => {
+            const { id, ...visitWithoutId } = visit
+            return {
+              ...visitWithoutId,
+              service_id: savedService.id,
+              client_id: formData.client_id,
+              tipo_encontro: 'visita_servico',
+              desconto_plataforma: formData.desconto_plataforma_default
+            }
+          })
+
+        const idsToDelete = originalVisitIds.filter(id => !currentIds.has(id))
+
+        if (visitsToUpdate.length > 0) {
+          const { error: updateVisitsError } = await supabase
+            .from('visits')
+            .upsert(visitsToUpdate, { onConflict: 'id' })
+
+          if (updateVisitsError) throw updateVisitsError
+        }
+
+        if (newVisitsToInsert.length > 0) {
+          const { error: insertVisitsError } = await supabase
+            .from('visits')
+            .insert(newVisitsToInsert)
+
+          if (insertVisitsError) throw insertVisitsError
+        }
+
+        if (idsToDelete.length > 0) {
+          const { error: deleteVisitsError } = await supabase
+            .from('visits')
+            .delete()
+            .in('id', idsToDelete)
+
+          if (deleteVisitsError) throw deleteVisitsError
+        }
       } else {
         const { data, error } = await supabase
           .from('services')
@@ -592,28 +652,28 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
         
         if (error) throw error
         savedService = data
-      }
 
-      // Inserir visitas com o desconto atualizado
-      const visitsToInsert = visits.map(visit => {
-        // Remove o ID para permitir que o banco gere novos IDs
-        const { id, ...visitWithoutId } = visit
-        return {
-          ...visitWithoutId,
-          service_id: savedService.id,
-          client_id: formData.client_id,
-          tipo_encontro: 'visita_servico',
-          // Atualiza o desconto da plataforma com o valor padrão do serviço
-          desconto_plataforma: formData.desconto_plataforma_default
+        // Inserir visitas (serviço novo, todas as visitas são novas)
+        const visitsToInsert = visits.map(visit => {
+          // Remove o ID para permitir que o banco gere novos IDs
+          const { id, ...visitWithoutId } = visit
+          return {
+            ...visitWithoutId,
+            service_id: savedService.id,
+            client_id: formData.client_id,
+            tipo_encontro: 'visita_servico',
+            // Atualiza o desconto da plataforma com o valor padrão do serviço
+            desconto_plataforma: formData.desconto_plataforma_default
+          }
+        })
+
+        if (visitsToInsert.length > 0) {
+          const { error: visitsError } = await supabase
+            .from('visits')
+            .insert(visitsToInsert)
+
+          if (visitsError) throw visitsError
         }
-      })
-      
-      if (visitsToInsert.length > 0) {
-        const { error: visitsError } = await supabase
-          .from('visits')
-          .insert(visitsToInsert)
-        
-        if (visitsError) throw visitsError
       }
 
       // Registrar uso de crédito no histórico (apenas ao criar novo serviço)

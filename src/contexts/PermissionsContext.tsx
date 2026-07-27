@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 
 export interface Permission {
@@ -181,7 +181,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const canUpdate = (resource: string) => hasPermission(resource, 'update');
   const canDelete = (resource: string) => hasPermission(resource, 'delete');
 
-  const value = {
+  const value = useMemo(() => ({
     userProfile,
     permissions,
     loading,
@@ -192,7 +192,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     canUpdate,
     canDelete,
     refreshPermissions: () => loadPermissions(true),
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [userProfile, permissions, loading, isAdmin]);
 
   return (
     <PermissionsContext.Provider value={value}>

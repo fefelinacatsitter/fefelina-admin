@@ -130,6 +130,9 @@ export default function PreEncontroAgendaModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Previne múltiplos envios (duplo clique/toque)
+    if (loading) return
+    
     // Validação baseada no tipo
     if (tipoAssociacao === 'lead' && !formData.leadId) {
       toast.error('Selecione um lead')
@@ -178,13 +181,8 @@ export default function PreEncontroAgendaModal({
 
       toast.success('Pré-encontro agendado com sucesso!')
       
-      // Primeiro fecha o modal
       onClose()
-      
-      // Aguarda um pouco mais para garantir que o Supabase processe a inserção
-      setTimeout(() => {
-        onSuccess()
-      }, 300)
+      onSuccess()
     } catch (error: any) {
       console.error('Erro ao agendar pré-encontro:', error)
       toast.error('Erro ao agendar pré-encontro: ' + error.message)

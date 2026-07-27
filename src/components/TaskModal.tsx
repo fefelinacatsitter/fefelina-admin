@@ -127,6 +127,9 @@ export default function TaskModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Previne múltiplos envios (duplo clique/toque)
+    if (loading) return
+    
     if (!formData.titulo.trim()) {
       toast.error('Digite um título para a task')
       return

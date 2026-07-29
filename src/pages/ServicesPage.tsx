@@ -1479,14 +1479,23 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                           max="2100-12-31"
                           className="border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
                           value={multiVisitStartDate}
-                          onChange={e => setMultiVisitStartDate(e.target.value)}
+                          onChange={e => {
+                            const newStart = e.target.value
+                            setMultiVisitStartDate(newStart)
+                            // Mantém "até" sempre >= início: se estiver vazio ou anterior à
+                            // nova data de início, sincroniza para que o picker do campo "até"
+                            // já abra a partir da data de início selecionada.
+                            if (newStart && (!multiVisitEndDate || multiVisitEndDate < newStart)) {
+                              setMultiVisitEndDate(newStart)
+                            }
+                          }}
                           disabled={!selectedClient}
                           placeholder="Data início"
                         />
                         <span className="text-xs text-gray-500">até</span>
                         <input
                           type="date"
-                          min="1900-01-01"
+                          min={multiVisitStartDate || '1900-01-01'}
                           max="2100-12-31"
                           className="border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
                           value={multiVisitEndDate}

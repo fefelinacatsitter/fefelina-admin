@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useValuesVisibility } from '../contexts/ValuesVisibilityContext'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
@@ -217,6 +217,7 @@ export default function ServicesPage() {
   const [multiVisitStartDate, setMultiVisitStartDate] = useState('');
   const [multiVisitEndDate, setMultiVisitEndDate] = useState('');
   const [multiVisitTipo, setMultiVisitTipo] = useState<'inteira' | 'meia'>('inteira');
+  const multiVisitEndDateRef = useRef<HTMLInputElement>(null);
 
   // Fecha o menu de ações da tabela ao clicar fora dele
   useEffect(() => {
@@ -1482,11 +1483,24 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                           onChange={e => {
                             const newStart = e.target.value
                             setMultiVisitStartDate(newStart)
-                            // Mantém "até" sempre >= início: se estiver vazio ou anterior à
-                            // nova data de início, sincroniza para que o picker do campo "até"
-                            // já abra a partir da data de início selecionada.
-                            if (newStart && (!multiVisitEndDate || multiVisitEndDate < newStart)) {
-                              setMultiVisitEndDate(newStart)
+                            // Nunca pré-seleciona uma data em "até" — apenas limpa se a data
+                            // já escolhida deixou de ser válida (anterior ao novo início).
+                            if (newStart && multiVisitEndDate && multiVisitEndDate < newStart) {
+                              setMultiVisitEndDate('')
+                            }
+                            // Move o foco para o campo "até" e já abre o calendário nativo
+                            // (o `min` abaixo garante que não seja possível escolher uma data
+                            // anterior ao início). showPicker() é suportado no Chrome/Edge;
+                            // em navegadores sem suporte, o foco ainda é movido normalmente.
+                            if (newStart) {
+                              requestAnimationFrame(() => {
+                                const el = multiVisitEndDateRef.current
+                                if (!el) return
+                                el.focus()
+                                if (typeof el.showPicker === 'function') {
+                                  try { el.showPicker() } catch { /* ignora se o navegador bloquear */ }
+                                }
+                              })
                             }
                           }}
                           disabled={!selectedClient}
@@ -1494,6 +1508,7 @@ Será um prazer cuidar do(s) seu(s) gatinho(s)! 💙🐾`
                         />
                         <span className="text-xs text-gray-500">até</span>
                         <input
+                          ref={multiVisitEndDateRef}
                           type="date"
                           min={multiVisitStartDate || '1900-01-01'}
                           max="2100-12-31"

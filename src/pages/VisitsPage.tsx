@@ -734,7 +734,7 @@ export default function VisitsPage() {
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          Lead: {visit.leads?.nome || 'Sem nome'}
+                          {visit.client_id ? `Cliente: ${visit.clients?.nome || 'Sem nome'}` : `Lead: ${visit.leads?.nome || 'Sem nome'}`}
                         </div>
                         <div className="text-xs text-purple-600 mt-0.5">Pré-Encontro</div>
                       </>
@@ -897,7 +897,7 @@ export default function VisitsPage() {
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
-                              Lead: {visit.leads?.nome || 'Sem nome'}
+                              {visit.client_id ? `Cliente: ${visit.clients?.nome || 'Sem nome'}` : `Lead: ${visit.leads?.nome || 'Sem nome'}`}
                             </div>
                             <div className="text-xs text-purple-600 mt-0.5 flex items-center gap-1">
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-200 text-purple-800">

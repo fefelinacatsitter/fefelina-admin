@@ -9,6 +9,7 @@ import CatLoader from '../components/CatLoader'
 import { useFieldMask } from '../hooks/useFieldMask'
 import { usePermissions } from '../contexts/PermissionsContext'
 import Avatar from '../components/Avatar'
+import MarkdownContent from '../components/MarkdownContent'
 import { CheckCircle2 } from 'lucide-react'
 
 // Funções auxiliares para validação de data
@@ -1155,7 +1156,7 @@ export default function VisitsPage() {
                     </svg>
                     <div className="flex-1">
                       <h4 className="text-xs font-semibold text-yellow-900 uppercase mb-1">Notas Importantes</h4>
-                      <p className="text-sm text-gray-900 leading-relaxed whitespace-pre-wrap">{clientsQuickInfo[selectedClientId].notas}</p>
+                      <MarkdownContent content={clientsQuickInfo[selectedClientId].notas!} className="text-gray-900" />
                     </div>
                   </div>
                 </div>

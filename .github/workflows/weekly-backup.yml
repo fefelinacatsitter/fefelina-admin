@@ -37,17 +37,20 @@ jobs:
           cd .github/scripts
           node backup-database.js
 
-      - name: Checkout backup repository
-        uses: actions/checkout@v3
-        with:
-          repository: ${{ secrets.BACKUP_REPO }}
-          token: ${{ secrets.BACKUP_REPO_TOKEN }}
-          path: backup-repo
-
       - name: Publish backup (overwrite latest)
+        env:
+          BACKUP_REPO: ${{ secrets.BACKUP_REPO }}
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
         run: |
+          # Clona via git diretamente (em vez de actions/checkout) porque o
+          # repositório de backup pode estar completamente vazio (sem
+          # nenhum commit ainda) — nesse caso não existe branch "main" para
+          # o actions/checkout buscar, e ele falha. `git clone` funciona
+          # tanto num repositório vazio quanto num já populado.
+          git clone "https://x-access-token:${BACKUP_REPO_TOKEN}@github.com/${BACKUP_REPO}.git" backup-repo
           cp .github/scripts/backup-latest.json.enc backup-repo/backup-latest.json.enc
           cd backup-repo
+          git checkout -B main
           git config user.name "fefelina-backup-bot"
           git config user.email "actions@users.noreply.github.com"
           git add backup-latest.json.enc
@@ -55,5 +58,5 @@ jobs:
             echo "ℹ️  Nenhuma alteração no backup — nada para commitar."
           else
             git commit -m "chore: backup semanal $(date -u +'%Y-%m-%d')"
-            git push
+            git push origin main
           fi

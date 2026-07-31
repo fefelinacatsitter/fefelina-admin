@@ -1,0 +1,59 @@
+# Workflow para gerar backup semanal criptografado do banco de dados
+# e publicá-lo em um repositório Git privado dedicado a backups.
+name: Weekly Database Backup
+
+on:
+  schedule:
+    # Executa todo domingo às 06:00 UTC (03:00 horário de São Paulo)
+    - cron: '0 6 * * 0'
+
+  # Permite execução manual para testes
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          cd .github/scripts
+          npm install
+
+      - name: Generate encrypted database backup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: |
+          cd .github/scripts
+          node backup-database.js
+
+      - name: Checkout backup repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ secrets.BACKUP_REPO }}
+          token: ${{ secrets.BACKUP_REPO_TOKEN }}
+          path: backup-repo
+
+      - name: Publish backup (overwrite latest)
+        run: |
+          cp .github/scripts/backup-latest.json.enc backup-repo/backup-latest.json.enc
+          cd backup-repo
+          git config user.name "fefelina-backup-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add backup-latest.json.enc
+          if git diff --cached --quiet; then
+            echo "ℹ️  Nenhuma alteração no backup — nada para commitar."
+          else
+            git commit -m "chore: backup semanal $(date -u +'%Y-%m-%d')"
+            git push
+          fi

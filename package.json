@@ -12,7 +12,8 @@
     "lint": "tsc --noEmit",
     "check": "npm run lint && npm run build",
     "check-deploy": "node scripts/check-deploy.js",
-    "start": "npm run dev"
+    "start": "npm run dev",
+    "backup:local": "cd .github/scripts && node backup-database.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

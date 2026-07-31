@@ -60,6 +60,8 @@ copilot-instructions.md
 *.bak
 *.backup
 *.temp
+*.json.enc
+.github/scripts/backup-latest.json.enc
 
 # Arquivos de debug
 debug-*

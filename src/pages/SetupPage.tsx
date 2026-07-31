@@ -1,9 +1,24 @@
 import { useState, useEffect } from 'react';
-import { Users, Shield, Settings, Check, X, AlertCircle, UserPlus, Copy, Eye } from 'lucide-react';
+import { Users, Shield, Settings, Check, X, AlertCircle, UserPlus, Copy, Eye, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import FieldPermissionsSetup from '../components/FieldPermissionsSetup';
+import { fetchAllRows } from '../lib/paginatedFetch';
+
+// Tabelas incluídas na exportação manual de backup (mesmo conjunto usado no
+// backup automatizado semanal em .github/scripts/backup-database.js).
+const BACKUP_TABLES = [
+  'clients',
+  'pets',
+  'services',
+  'visits',
+  'leads',
+  'user_profiles',
+  'profiles',
+  'permissions',
+  'record_sharing',
+] as const;
 
 interface Profile {
   id: string;
@@ -99,6 +114,7 @@ export default function SetupPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [newUserCredentials, setNewUserCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [exportingBackup, setExportingBackup] = useState(false);
   const [newUserForm, setNewUserForm] = useState({
     full_name: '',
     email: '',
@@ -427,6 +443,48 @@ export default function SetupPage() {
     showMessage('success', 'Copiado para área de transferência');
   };
 
+  // Exporta um backup completo (todas as tabelas) em JSON para download
+  // direto no navegador do admin. Sem criptografia — o arquivo vai direto
+  // para a máquina de quem exportou, não é armazenado remotamente.
+  const handleExportBackup = async () => {
+    setExportingBackup(true);
+    try {
+      const tables: Record<string, any[]> = {};
+      const rowCounts: Record<string, number> = {};
+
+      for (const tableName of BACKUP_TABLES) {
+        const query = supabase.from(tableName).select('*');
+        const rows = await fetchAllRows(query);
+        tables[tableName] = rows;
+        rowCounts[tableName] = rows.length;
+      }
+
+      const payload = {
+        generatedAt: new Date().toISOString(),
+        rowCounts,
+        tables,
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const today = new Date().toISOString().slice(0, 10);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `fefelina-backup-manual-${today}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showMessage('success', 'Backup exportado com sucesso');
+    } catch (error: any) {
+      console.error('Erro ao exportar backup:', error);
+      showMessage('error', error.message || 'Erro ao exportar backup');
+    } finally {
+      setExportingBackup(false);
+    }
+  };
+
   // Mostrar loading enquanto carrega permissões
   if (permissionsLoading || loading) {
     return (
@@ -542,13 +600,25 @@ export default function SetupPage() {
                         Total: {users.length} usuário(s)
                       </p>
                     </div>
-                    <button
-                      onClick={() => setShowCreateModal(true)}
-                      className="btn-fefelina inline-flex items-center"
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Novo Usuário
-                    </button>
+                    <div className="flex gap-2">
+                      {isAdmin && (
+                        <button
+                          onClick={handleExportBackup}
+                          disabled={exportingBackup}
+                          className="btn-fefelina-secondary inline-flex items-center disabled:opacity-50"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          {exportingBackup ? 'Exportando...' : 'Exportar Backup'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="btn-fefelina inline-flex items-center"
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Novo Usuário
+                      </button>
+                    </div>
                   </div>
 
                   <div className="overflow-x-auto">

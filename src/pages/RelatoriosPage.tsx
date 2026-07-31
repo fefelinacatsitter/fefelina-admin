@@ -132,7 +132,9 @@ export default function RelatoriosPage() {
         finalMes = dataFim
       }
 
-      // Buscar estatísticas básicas (aplicando filtro de período pela data_inicio do serviço)
+      // Buscar estatísticas básicas (aplicando filtro de período pela DATA DA VISITA,
+      // e não pela data_inicio do serviço - um serviço iniciado no mês mas com visitas
+      // agendadas para meses seguintes não deve inflar a contagem "do mês atual")
       const [clientesResult, visitasPeriodoData, servicosResult, petsResult] = await Promise.all([
         supabase.from('clients').select('*', { count: 'exact' }),
         fetchAllRows(
@@ -146,11 +148,10 @@ export default function RelatoriosPage() {
             data,
             horario,
             client_id,
-            service_id,
-            services!inner(data_inicio)
+            service_id
           `)
-            .gte('services.data_inicio', inicioMes)
-            .lte('services.data_inicio', finalMes)
+            .gte('data', dataInicio)
+            .lte('data', dataFim)
         ),
         supabase
           .from('services')
@@ -193,13 +194,11 @@ export default function RelatoriosPage() {
             valor,
             desconto_plataforma,
             status,
-            data,
-            service_id,
-            services!inner(data_inicio)
+            data
           `)
             .eq('status', 'realizada')
-            .gte('services.data_inicio', dataInicio)
-            .lte('services.data_inicio', dataFim)
+            .gte('data', dataInicio)
+            .lte('data', dataFim)
             .not('client_id', 'is', null)
         ),
         fetchAllRows(
@@ -240,20 +239,20 @@ export default function RelatoriosPage() {
             .select(`
             data,
             horario,
-            status,
-            service_id,
-            services!inner(data_inicio)
+            status
           `)
             .eq('status', 'realizada')
-            .gte('services.data_inicio', dataInicio)
-            .lte('services.data_inicio', dataFim)
+            .gte('data', dataInicio)
+            .lte('data', dataFim)
         )
       ])
 
       const clientesNovosCount = clientesNovosData?.length || 0
 
 
-      // Processar ranking de clientes - somar TODAS as visitas dos serviços que começaram no período
+      // Processar ranking de clientes - somar as visitas REALIZADAS DENTRO do período
+      // (filtra pela data da própria visita, não pela data_inicio do serviço, para ficar
+      // consistente com o card de estatísticas e com a página Financeiro)
       const clientesMap = new Map<string, { totalVisitas: number; valorTotal: number; ultimaVisita: string; nome: string }>()
       
       if (clientesRankingData) {

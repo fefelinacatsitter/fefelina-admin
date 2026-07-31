@@ -41,6 +41,7 @@ interface RevenuePoint {
 }
 
 type RevenueRangeOption = 'year' | '12m' | '24m' | 'all'
+type RevenueGroupByOption = 'mes' | 'ano'
 
 export default function DashboardEnhanced() {
   const { formatCurrency } = useValuesVisibility()
@@ -55,6 +56,7 @@ export default function DashboardEnhanced() {
   const [upcomingVisits, setUpcomingVisits] = useState<UpcomingVisit[]>([])
   const [revenueHistory, setRevenueHistory] = useState<RevenuePoint[]>([])
   const [revenueRange, setRevenueRange] = useState<RevenueRangeOption>('year')
+  const [revenueGroupBy, setRevenueGroupBy] = useState<RevenueGroupByOption>('mes')
   const [visitTypeData, setVisitTypeData] = useState<any[]>([])
   const [clientesNovosList, setClientesNovosList] = useState<ClienteNovo[]>([])
   const [loading, setLoading] = useState(true)
@@ -187,34 +189,43 @@ export default function DashboardEnhanced() {
   const COLORS = ['#ff9f6c', '#a876e3', '#94a3b8', '#e8814a']
 
   const getRevenueChartData = (): RevenuePoint[] => {
+    let filtered: RevenuePoint[]
     if (revenueRange === 'year') {
       const yearPrefix = format(new Date(), 'yyyy')
-      return revenueHistory.filter(h => h.key.startsWith(yearPrefix))
+      filtered = revenueHistory.filter(h => h.key.startsWith(yearPrefix))
+    } else if (revenueRange === '12m') {
+      filtered = revenueHistory.slice(-12)
+    } else if (revenueRange === '24m') {
+      filtered = revenueHistory.slice(-24)
+    } else {
+      filtered = revenueHistory
     }
-    if (revenueRange === '12m') return revenueHistory.slice(-12)
-    if (revenueRange === '24m') return revenueHistory.slice(-24)
 
-    // 'all' - se houver muitos meses de histórico, agrupar por ano para manter o gráfico legível
-    if (revenueHistory.length > 36) {
+    // Agrupamento por ano: soma a receita de todos os meses de cada ano em uma
+    // única barra, em vez de uma barra por mês.
+    if (revenueGroupBy === 'ano') {
       const byYear = new Map<string, number>()
-      revenueHistory.forEach(h => {
+      filtered.forEach(h => {
         const year = h.key.slice(0, 4)
         byYear.set(year, (byYear.get(year) || 0) + h.receita)
       })
-      return Array.from(byYear.entries()).map(([year, receita]) => ({ key: year, label: year, receita }))
+      return Array.from(byYear.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([year, receita]) => ({ key: year, label: year, receita }))
     }
-    return revenueHistory
+
+    return filtered
   }
 
   // Memoizado: só reprocessa o histórico de receita quando ele muda ou quando
-  // o usuário troca o período selecionado, em vez de refiltrar/agrupar a cada
-  // re-render do componente.
+  // o usuário troca o período/agrupamento selecionado, em vez de refiltrar/
+  // agrupar a cada re-render do componente.
   // IMPORTANTE: precisa ficar antes do "if (loading) return" abaixo — hooks do
   // React (useMemo, useState, etc.) nunca podem ser chamados condicionalmente,
   // senão o número de hooks muda entre renders (loading -> não loading) e o
   // React quebra com o erro #310 ("Rendered more hooks than during the
   // previous render").
-  const revenueChartData = useMemo(() => getRevenueChartData(), [revenueHistory, revenueRange])
+  const revenueChartData = useMemo(() => getRevenueChartData(), [revenueHistory, revenueRange, revenueGroupBy])
   const revenueChartTotal = useMemo(
     () => revenueChartData.reduce((sum, r) => sum + r.receita, 0),
     [revenueChartData]
@@ -315,16 +326,42 @@ export default function DashboardEnhanced() {
               Total no período: <span className="font-medium text-gray-700">{formatCurrency(revenueChartTotal)}</span>
             </p>
           </div>
-          <select
-            value={revenueRange}
-            onChange={(e) => setRevenueRange(e.target.value as RevenueRangeOption)}
-            className="input-fefelina w-auto text-sm"
-          >
-            <option value="year">Este ano (mês a mês)</option>
-            <option value="12m">Últimos 12 meses</option>
-            <option value="24m">Últimos 24 meses</option>
-            <option value="all">Todo o período</option>
-          </select>
+          <div className="flex items-center gap-3">
+            <div className="inline-flex rounded-md border border-gray-200 overflow-hidden flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setRevenueGroupBy('mes')}
+                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                  revenueGroupBy === 'mes'
+                    ? 'bg-primary-600 text-ink'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Mês
+              </button>
+              <button
+                type="button"
+                onClick={() => setRevenueGroupBy('ano')}
+                className={`px-3 py-1.5 text-sm font-medium border-l border-gray-200 transition-colors ${
+                  revenueGroupBy === 'ano'
+                    ? 'bg-primary-600 text-ink'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Ano
+              </button>
+            </div>
+            <select
+              value={revenueRange}
+              onChange={(e) => setRevenueRange(e.target.value as RevenueRangeOption)}
+              className="input-fefelina w-auto text-sm"
+            >
+              <option value="year">Este ano</option>
+              <option value="12m">Últimos 12 meses</option>
+              <option value="24m">Últimos 24 meses</option>
+              <option value="all">Todo o período</option>
+            </select>
+          </div>
         </div>
         <ResponsiveContainer width="100%" height={320}>
           <BarChart data={revenueChartData}>

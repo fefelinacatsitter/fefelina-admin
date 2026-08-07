@@ -9,6 +9,9 @@ const OVERDUE_THRESHOLD_HOURS = 3
 // Janela de horas antes do horário agendado para lembrar de uma visita futura
 const UPCOMING_WINDOW_HOURS = 3
 
+// Dias antes do início de um serviço para lembrar de combinar a retirada da chave
+const KEY_REMINDER_DAYS_BEFORE = 5
+
 // Intervalo de revalidação automática (polling) — não há infra de realtime no projeto hoje
 const POLL_INTERVAL_MS = 5 * 60 * 1000 // 5 minutos
 
@@ -21,16 +24,17 @@ export type NotificationSeverity = 'info' | 'warning' | 'error'
 
 export interface AppNotification {
   id: string
-  type: 'overdue_visit' | 'upcoming_visit'
+  type: 'overdue_visit' | 'upcoming_visit' | 'service_key_reminder'
   title: string
   description: string
   severity: NotificationSeverity
   dueAt: Date
   dismissible: boolean
   meta: {
-    visitId: string
-    tipoEncontro: 'pre_encontro' | 'visita_servico' | 'task'
-    tipoVisita: 'inteira' | 'meia'
+    visitId?: string
+    serviceId?: string
+    tipoEncontro?: 'pre_encontro' | 'visita_servico' | 'task'
+    tipoVisita?: 'inteira' | 'meia'
   }
 }
 
@@ -180,6 +184,62 @@ async function checkUpcomingVisits(isAdmin: boolean, currentUserId?: string): Pr
   return notifications.sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())
 }
 
+/**
+ * "Checker" de lembrete de chave: busca serviços com status 'pendente' cujo início
+ * está a até KEY_REMINDER_DAYS_BEFORE dias de distância, para lembrar de combinar
+ * com o cliente a retirada da chave antes de começar o serviço. Dispensável.
+ */
+async function checkUpcomingServiceKeyPickup(isAdmin: boolean, currentUserId?: string): Promise<AppNotification[]> {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const limitDate = new Date(today)
+  limitDate.setDate(limitDate.getDate() + KEY_REMINDER_DAYS_BEFORE)
+  const toDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+  let query = supabase
+    .from('services')
+    .select('id, client_id, data_inicio, status, assigned_user_id, nome_servico, clients (nome)')
+    .eq('status', 'pendente')
+    .gte('data_inicio', toDateStr(today))
+    .lte('data_inicio', toDateStr(limitDate))
+
+  if (!isAdmin && currentUserId) {
+    query = query.eq('assigned_user_id', currentUserId)
+  }
+
+  const { data, error } = await query
+  if (error) {
+    console.error('Erro ao verificar lembretes de chave de serviço:', error)
+    return []
+  }
+
+  const notifications: AppNotification[] = []
+
+  for (const service of data || []) {
+    const dueAt = new Date(`${service.data_inicio}T00:00:00`)
+    if (isNaN(dueAt.getTime())) continue
+
+    const clientInfo = Array.isArray(service.clients) ? service.clients[0] : service.clients
+    const nome = clientInfo?.nome || 'Cliente'
+    const diffDays = Math.max(0, Math.round((dueAt.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)))
+    const dataFormatada = dueAt.toLocaleDateString('pt-BR')
+    const quandoTexto = diffDays === 0 ? 'hoje' : diffDays === 1 ? 'amanhã' : `em ${diffDays} dias`
+
+    notifications.push({
+      id: `service-key-${service.id}`,
+      type: 'service_key_reminder',
+      title: `Lembrete: chaves serviço ${nome}`,
+      description: `Início ${quandoTexto} (${dataFormatada}) — combine com o cliente a retirada da chave`,
+      severity: 'info',
+      dueAt,
+      dismissible: true,
+      meta: { serviceId: service.id },
+    })
+  }
+
+  return notifications.sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())
+}
+
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { userProfile, isAdmin, loading: permissionsLoading } = usePermissions()
   const [notifications, setNotifications] = useState<AppNotification[]>([])
@@ -206,6 +266,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       const checkers: Array<() => Promise<AppNotification[]>> = [
         () => checkOverdueVisits(isAdmin, userProfile.user_id),
         () => checkUpcomingVisits(isAdmin, userProfile.user_id),
+        () => checkUpcomingServiceKeyPickup(isAdmin, userProfile.user_id),
       ]
 
       const results = await Promise.all(checkers.map(checker => checker()))

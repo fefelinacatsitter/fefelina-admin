@@ -742,7 +742,8 @@ export default function FinancesPage() {
           </div>
         </div>
         <div className="overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+          {/* Tabela (desktop) */}
+          <table className="min-w-full divide-y divide-gray-200 hidden md:table">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
@@ -792,6 +793,40 @@ export default function FinancesPage() {
               ))}
             </tbody>
           </table>
+
+          {/* Cards (mobile) */}
+          <div className="md:hidden divide-y divide-gray-200">
+            {financialData.recentTransactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                onClick={() => {
+                  setSelectedService(transaction.serviceDetails)
+                  setShowServiceModal(true)
+                }}
+                className="p-4 hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {transaction.client}
+                    </p>
+                    <p className="text-sm text-gray-500 truncate">
+                      {transaction.service}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    {getStatusBadge(transaction.status)}
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-xs text-gray-500">{formatDate(transaction.date)}</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {formatCurrency(transaction.amount)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
           
           {financialData.recentTransactions.length === 0 && (
             <div className="text-center py-12">

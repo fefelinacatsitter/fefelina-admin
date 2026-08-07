@@ -20,7 +20,9 @@ const TIPO_VISITA_INFO: Record<string, { label: string; className: string }> = {
 
 export default function NotificationBell({ inSidebar = false }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
   const menuRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const navigate = useNavigate()
   const { notifications, markVisitAsRealizada, dismissNotification, resolvingId } = useNotifications()
 
@@ -41,6 +43,46 @@ export default function NotificationBell({ inSidebar = false }: NotificationBell
     }
   }, [isOpen])
 
+  // Calcula a posição do dropdown com base no botão, sempre dentro da viewport
+  // (posicionamento relativo ao botão pode sair da tela em telas estreitas)
+  useEffect(() => {
+    if (!isOpen) return
+
+    const updatePosition = () => {
+      if (!buttonRef.current) return
+      const rect = buttonRef.current.getBoundingClientRect()
+      const margin = 8
+      const width = Math.min(320, window.innerWidth - margin * 2)
+
+      if (inSidebar) {
+        const left = Math.min(Math.max(rect.left, margin), window.innerWidth - width - margin)
+        setDropdownStyle({
+          position: 'fixed',
+          left,
+          bottom: window.innerHeight - rect.top + margin,
+          width,
+        })
+      } else {
+        const left = Math.min(Math.max(rect.right - width, margin), window.innerWidth - width - margin)
+        setDropdownStyle({
+          position: 'fixed',
+          left,
+          top: rect.bottom + margin,
+          width,
+        })
+      }
+    }
+
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [isOpen, inSidebar])
+
   const goToVisits = () => {
     navigate('/visits')
     setIsOpen(false)
@@ -51,6 +93,7 @@ export default function NotificationBell({ inSidebar = false }: NotificationBell
   return (
     <div className="relative" ref={menuRef}>
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
         title="Notificações"
@@ -66,9 +109,10 @@ export default function NotificationBell({ inSidebar = false }: NotificationBell
       </button>
 
       {isOpen && (
-        <div className={`absolute ${inSidebar ? 'left-0' : 'right-0'} w-80 max-w-[90vw] bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 ${
-          inSidebar ? 'bottom-full mb-2' : 'top-full mt-2'
-        }`}>
+        <div
+          style={dropdownStyle}
+          className="bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50"
+        >
           <div className="px-4 py-2 border-b border-gray-100">
             <p className="text-sm font-semibold text-gray-900">Notificações</p>
           </div>

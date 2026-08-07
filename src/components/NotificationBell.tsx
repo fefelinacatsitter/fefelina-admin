@@ -86,10 +86,25 @@ export default function NotificationBell({ inSidebar = false }: NotificationBell
     }
 
     updatePosition()
+
+    // Recalcula em mais dois frames seguintes: logo após o app carregar (avatar, fontes,
+    // permissões chegando do backend etc.) o layout do sidebar/header pode se ajustar
+    // (ex.: UserMenu passando de "carregando" para o conteúdo final) alguns instantes
+    // depois dessa primeira medição, deixando o dropdown aberto na posição errada só na
+    // primeira vez que é aberto. Duas chamadas em requestAnimationFrame corrigem isso
+    // sem precisar de um novo clique do usuário.
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => {
+      updatePosition()
+      raf2 = requestAnimationFrame(updatePosition)
+    })
+
     window.addEventListener('resize', updatePosition)
     window.addEventListener('scroll', updatePosition, true)
 
     return () => {
+      cancelAnimationFrame(raf1)
+      if (raf2) cancelAnimationFrame(raf2)
       window.removeEventListener('resize', updatePosition)
       window.removeEventListener('scroll', updatePosition, true)
     }

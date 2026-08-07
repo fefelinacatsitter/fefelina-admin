@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useState, useMemo } from 'react'
 import { Menu, X, Eye, EyeOff } from 'lucide-react'
 import UserMenu from './UserMenu'
+import NotificationBell from './NotificationBell'
 import { usePermissions } from '../contexts/PermissionsContext'
 import { useValuesVisibility } from '../contexts/ValuesVisibilityContext'
 
@@ -133,15 +134,18 @@ export default function Layout({ children }: LayoutProps) {
                 })}
               </nav>
             </div>
-            <div className="flex-shrink-0 flex items-center justify-between border-t border-gray-200 p-4">
+            <div className="flex-shrink-0 border-t border-gray-200 p-4">
+              <div className="flex items-center justify-end gap-1 mb-2">
+                <NotificationBell inSidebar />
+                <button
+                  onClick={toggleShowValues}
+                  className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                  title={showValues ? 'Ocultar valores' : 'Mostrar valores'}
+                >
+                  {showValues ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                </button>
+              </div>
               <UserMenu inSidebar />
-              <button
-                onClick={toggleShowValues}
-                className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                title={showValues ? 'Ocultar valores' : 'Mostrar valores'}
-              >
-                {showValues ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
-              </button>
             </div>
           </div>
         </div>
@@ -167,6 +171,7 @@ export default function Layout({ children }: LayoutProps) {
                 <h1 className="text-base font-bold text-secondary-700">Fefelina Admin</h1>
               </div>
               <div className="flex items-center gap-1">
+                <NotificationBell />
                 <button
                   onClick={toggleShowValues}
                   className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"

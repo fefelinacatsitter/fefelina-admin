@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { PermissionsProvider } from './contexts/PermissionsContext'
+import { NotificationsProvider } from './contexts/NotificationsContext'
 import { ValuesVisibilityProvider } from './contexts/ValuesVisibilityContext'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -50,6 +51,7 @@ function App() {
     <ErrorBoundary>
     <Router basename="/fefelina-admin">
       <PermissionsProvider>
+      <NotificationsProvider>
       <ValuesVisibilityProvider>
       <Suspense fallback={<RouteFallback />}>
       <Routes>
@@ -223,6 +225,7 @@ function App() {
         }}
       />
       </ValuesVisibilityProvider>
+      </NotificationsProvider>
       </PermissionsProvider>
     </Router>
     </ErrorBoundary>
